@@ -38,15 +38,10 @@ cargo run -p cli -- run --algo demo --input "$INPUT" --out "$OUT"
 echo "🖼  Demo figure → $FIG"
 cargo run -p cli -- figure --from "$OUT" --out "$FIG"
 
-if command -v mdbook >/dev/null 2>&1; then
-  echo "📚 Rebuilding book for offline viewing (mdbook build docs)"
-  mdbook build docs
-else
-  echo "ℹ️  mdbook not found; skipping local book build (online reading recommended)."
-fi
+echo "📚 Rebuilding book for offline viewing (mdbook build docs)"
+mdbook build docs
 
 echo "✅ Reproduction complete. Outputs:"
 echo "   - Heavy: $OUT and $(dirname "$OUT")/provenance.json"
 echo "   - Small: $FIG and $(dirname "$FIG")/provenance.json"
 echo "   - Thesis (offline): docs/book/index.html (if mdbook was available)"
-
