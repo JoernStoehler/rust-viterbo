@@ -5,4 +5,4 @@ set -euo pipefail
 # State directories are persisted via devcontainer postCreate symlinks.
 echo "Starting Vibe Kanban (latest) via npx…"
 echo "State: $HOME/.local/share/vibe-kanban; Worktrees: /var/tmp/vibe-kanban/worktrees"
-exec npx @bloop/vibe-kanban@latest
+PORT=3000 exec npx -y vibe-kanban@latest

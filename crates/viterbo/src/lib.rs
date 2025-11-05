@@ -10,4 +10,3 @@ pub use geometry::parallelogram_area;
 
 /// Library version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-

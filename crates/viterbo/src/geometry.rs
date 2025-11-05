@@ -1,4 +1,4 @@
-use nalgebra::{Vector2, Matrix2};
+use nalgebra::{Matrix2, Vector2};
 
 /// TH: VITERBO-2.1
 /// VK: 00000000-0000-0000-0000-000000000000
@@ -14,7 +14,7 @@ pub fn parallelogram_area(a: Vector2<f64>, b: Vector2<f64>) -> f64 {
 mod tests {
     use super::*;
     use nalgebra::vector;
-    use rand::{SeedableRng, rngs::StdRng, Rng};
+    use rand::{rngs::StdRng, Rng, SeedableRng};
 
     #[test]
     fn area_axis_aligned() {
@@ -33,4 +33,3 @@ mod tests {
         assert!((parallelogram_area(a, b) - expected).abs() < 1e-12);
     }
 }
-

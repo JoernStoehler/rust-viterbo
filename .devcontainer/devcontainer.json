@@ -8,23 +8,16 @@
     "vscode": {
       "extensions": [
         "rust-lang.rust-analyzer",
-        "serayuzgur.crates",
         "vadimcn.vscode-lldb",
         "yzhang.markdown-all-in-one",
         "editorconfig.editorconfig",
         "tamasfe.even-better-toml",
         "redhat.vscode-yaml",
-        "PKief.material-icon-theme",
         "usernamehw.errorlens",
         "GitHub.copilot",
         "GitHub.copilot-chat",
-        "onecrayon.theme-quietlight-vsc",
         "openai.chatgpt"
-      ],
-      "settings": {
-        "workbench.colorTheme": "Quiet Light for VSC",
-        "workbench.iconTheme": "material-icon-theme"
-      }
+      ]
     }
   },
   "postCreateCommand": "bash .devcontainer/postCreate.sh",

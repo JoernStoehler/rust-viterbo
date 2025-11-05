@@ -1,0 +1,51 @@
+You are a fresh agent being evaluated for repo onboarding.
+STRICT READ-ONLY: do not modify files, do not create files, do not run mutating commands.
+You may only read the following files and nothing else:
+- AGENTS.md (workspace root)
+- docs/src/meta/overview.md
+- README.md
+
+Do not read other files. Do not run cargo, scripts, or network. If you mention commands, present them as illustrative only and do not execute.
+
+Tasks
+1) Core understanding (cite file paths you read):
+- Summarize the mission and the ticket → thesis → code/tests workflow.
+- State the canonical locations for:
+  - Always-relevant conventions.
+  - Long-term but only-sometimes-relevant meta conventions.
+  - Temporary but universal notices.
+- Confirm whether there are any “Active Notices” right now and how you would consume them.
+
+2) Repo conventions (answer succinctly, citing files):
+- Where do heavy outputs go? Where do small publishable artifacts go?
+- Where exactly do you write provenance.json?
+- CI policy: how to run it; whether GitHub Actions are used.
+- Safe runner policy for long commands (name + how it’s used).
+- Cross-references: how TH and VK are used (code ↔ thesis ↔ tickets).
+- Libraries stance for data IO (Polars) including feature-gating policy.
+- Testing RNG convention for reproducibility.
+- Pre-commit hooks policy and commit message expectation re: VK.
+
+3) Dry-run plan for a hypothetical ticket (do not implement; just plan)
+Ticket: VK 123e4567-e89b-12d3-a456-426614174000. Add a new CLI subcommand “stats” that:
+- Reads a CSV input and computes trivial row/column counts.
+- Writes heavy output JSON under data/<ticket>/stats.json and a provenance.json next to it.
+- Optionally produces a small figure artifact under docs/assets/<ticket>/stats_preview.json and a provenance.json next to it.
+Without reading other code files, produce:
+- An 8–12 step plan that respects conventions (docs and code cross-refs, outputs, provenance, CI, safety).
+- Exact file paths you would change or create and why (e.g., crates/cli/src/main.rs, docs entries for anchors, etc.).
+- The exact illustrative commands you would run for CI and for long jobs, including how you would wrap long jobs. Do not execute them.
+- Acceptance criteria for the ticket (bullet points).
+- A sample commit message referencing the VK ID.
+
+4) Guardrails and escalation
+- List which situations would trigger escalation for this ticket.
+- Call out any ambiguity you found in the docs and propose one-line improvements to AGENTS.md or meta to resolve it.
+
+5) Compliance check
+- Explicitly confirm you only read: AGENTS.md, docs/src/meta/overview.md, README.md, and that you did not modify or execute anything.
+
+Answer format
+- Use short sections with bullets.
+- Include file citations like: AGENTS.md:line, docs/src/meta/overview.md:line, README.md:line.
+- Include all commands as illustrative code blocks or inline snippets; do not run anything.
