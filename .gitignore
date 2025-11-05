@@ -1,7 +1,0 @@
-/target
-/data
-/docs/book
-**/.DS_Store
-
-# Local persistent data for devcontainer
-/.persist/
