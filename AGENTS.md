@@ -45,6 +45,7 @@ This file is the always‑relevant guide for coding agents on this project — a
   - Example: `bash scripts/safe.sh --timeout 60 -- cargo test --workspace`
 - Manual CI: `bash scripts/ci.sh`. No GitHub Actions.
 - No pre-commit hooks. Commit often. Reference `Ticket: <uuid>` in the message.
+- Docs (GitHub README): use GitHub KaTeX–safe math. Avoid macros like `\operatorname`; prefer `\mathrm{...}` or built-in operators. Verify via GitHub preview if unsure.
 
 ## Libraries and tech stack
 - Geometry: `nalgebra` in `viterbo`.

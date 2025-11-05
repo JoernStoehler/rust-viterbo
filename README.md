@@ -10,8 +10,8 @@ We study the systolic ratio on convex polytopes in $\mathbb{R}^4$ to understand 
 
 ## Background
 
-For a star‑shaped compact domain $X \subset \mathbb{R}^{2n}$, the systolic ratio is $\operatorname{sys}(X) = A_{\min}(X)^n / \bigl(n!\,\operatorname{vol}(X)\bigr)$, where $A_{\min}(X)$ is the minimal action of a closed Reeb orbit on $\partial X$.  
-Viterbo conjectured $\operatorname{sys}(X) \le 1$ for convex $X$. A recent explicit polytope in $\mathbb{R}^4$ violates this bound; our goal is to chart where convex polytopes sit relative to this threshold and why.
+For a star‑shaped compact domain $X \subset \mathbb{R}^{2n}$, the systolic ratio is $\mathrm{sys}(X) = A_{\min}(X)^n / \bigl(n!\,\mathrm{vol}(X)\bigr)$, where $A_{\min}(X)$ is the minimal action of a closed Reeb orbit on $\partial X$.  
+Viterbo conjectured $\mathrm{sys}(X) \le 1$ for convex $X$. A recent explicit polytope in $\mathbb{R}^4$ violates this bound; our goal is to chart where convex polytopes sit relative to this threshold and why.
 
 References
 - [1] J. Chaidez, M. Hutchings, Computing Reeb dynamics on 4d convex polytopes, arXiv:2008.10111.
