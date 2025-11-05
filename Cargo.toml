@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/viterbo", "crates/cli", "crates/safe-exec"]
+resolver = "2"

@@ -1,0 +1,8 @@
+[book]
+title = "MSc Thesis — Viterbo (working title)"
+language = "en"
+src = "src"
+
+[output.html]
+mathjax-support = true
+
