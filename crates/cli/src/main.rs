@@ -1,14 +1,17 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use polars::prelude::*;
+use serde_json::json;
 use std::path::Path;
 use tracing_subscriber::fmt::SubscriberBuilder;
+
+mod provenance;
 
 #[derive(Parser)]
 #[command(name = "cli")]
 #[command(about = "Orchestration and experiment runner")]
 struct Cmd {
-    /// Optional VK ticket UUID; propagated to outputs and logs
+    /// Optional VK ticket UUID; logged with tracing spans for easy correlation
     #[arg(long)]
     vk: Option<String>,
 
@@ -80,21 +83,14 @@ fn run(algo: String, input: String, out: String, vk: Option<String>) -> Result<(
     }
     std::fs::write(&out, b"{}")?;
 
-    // Write provenance.json next to the output (per AGENTS conventions)
-    let rev = option_env!("GIT_COMMIT").unwrap_or("unknown");
-    let provenance = serde_json::json!({
-        "code_rev": rev,
-        "vk": vk,
-        "th": [],
-        "params": {
+    provenance::write_sidecar(
+        out_path,
+        provenance::Payload::new(json!({
             "algo": algo,
             "input": input,
-            "input_head_shape": shape_opt
-        },
-        "outputs": [out]
-    });
-    let prov_path = out_path.with_file_name("provenance.json");
-    std::fs::write(prov_path, serde_json::to_vec_pretty(&provenance)?)?;
+            "input_head_shape": shape_opt,
+        })),
+    )?;
 
     Ok(())
 }
@@ -109,26 +105,18 @@ fn figure(from: String, out: String) -> Result<()> {
     }
     std::fs::write(&out, b"[]")?;
 
-    // Write provenance next to figure output as well
-    let rev = option_env!("GIT_COMMIT").unwrap_or("unknown");
-    let provenance = serde_json::json!({
-        "code_rev": rev,
-        "vk": null,
-        "th": [],
-        "params": {
-            "from": from
-        },
-        "outputs": [out]
-    });
-    let prov_path = out_path.with_file_name("provenance.json");
-    std::fs::write(prov_path, serde_json::to_vec_pretty(&provenance)?)?;
+    provenance::write_sidecar(
+        out_path,
+        provenance::Payload::new(json!({
+            "from": from,
+        })),
+    )?;
     Ok(())
 }
 
 fn report(vk: Option<String>) -> Result<()> {
-    let rev = option_env!("GIT_COMMIT").unwrap_or("unknown");
-    let obj = serde_json::json!({
-        "code_rev": rev,
+    let obj = json!({
+        "code_rev": provenance::current_git_rev(),
         "vk": vk,
         "th": [],
         "params": {},

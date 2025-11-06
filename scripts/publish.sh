@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 BOOK_DIR="$ROOT_DIR/docs/book"
 
 echo "🔧 Building the book..."
-mdbook build "$ROOT_DIR/docs"
+bash "$ROOT_DIR/scripts/safe.sh" --timeout 600 -- mdbook build "$ROOT_DIR/docs"
 
 # Prepare a temporary worktree
 TMP_DIR="$(mktemp -d)"
@@ -45,4 +45,3 @@ git push -u origin gh-pages
 popd >/dev/null
 
 echo "🎉 Published. Configure GitHub Pages (once) to serve from gh-pages / root."
-

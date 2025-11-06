@@ -40,7 +40,7 @@ This file is the always‑relevant guide for coding agents on this project — a
 - Outputs:
   - heavy → `data/...`
   - publishable small → `docs/assets/...`
-  - provenance → colocate a json that records provenance data, e.g. parameters or git commit hashes. Standardize later if mismatches arise.
+  - provenance → every artifact gets `<artifact_stem>.provenance.json`, generated via the CLI `provenance` helper. Sidecars already include the git commit and callsite; add only run-specific parameters (no VK/ticket IDs here).
 - Commands that may run long **must** go through `scripts/safe.sh`.
   - Example: `bash scripts/safe.sh --timeout 60 -- cargo test --workspace`
 - Manual CI: `bash scripts/ci.sh`. No GitHub Actions.
