@@ -29,13 +29,28 @@ packages = ["src/viterbo"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
-exclude = ["data", "docs/book", "**/.venv", "**/__pycache__"]
+# Limit analysis scope to real project code by default.
+include = ["src", "tests"]
+# Explicitly exclude heavyweight caches and generated artifacts. Keep .persist visible,
+# but do not allow tools to traverse it.
+exclude = [
+  "data",
+  "docs/book",
+  "target",
+  "**/.venv",
+  "**/.persist/**",
+  "**/.pytest_cache",
+  "**/.ruff_cache",
+  "**/__pycache__"
+]
 reportMissingTypeStubs = "none"
 reportMissingImports = "none"
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Belt-and-suspenders: ruff respects .gitignore, but we exclude caches explicitly too.
+extend-exclude = [".persist", "data", "docs/book", "target", ".venv", ".pytest_cache", ".ruff_cache"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -51,3 +66,14 @@ markers = [
   "e2e: end-to-end tests (select and run on demand)",
 ]
 addopts = "-q"
+# Prevent pytest from recursing into caches and persisted state
+norecursedirs = [
+  ".persist",
+  "data",
+  "docs/book",
+  "target",
+  ".venv",
+  ".pytest_cache",
+  ".ruff_cache",
+  "__pycache__"
+]

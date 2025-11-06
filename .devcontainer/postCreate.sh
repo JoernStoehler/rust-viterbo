@@ -10,7 +10,8 @@ fi
 
 # Persistent state under workspace .persist, symlinked into expected locations
 # SET UP SYMLINKS FIRST before any tool generates caches/config
-PERSIST_DIR="${WORKSPACE_FOLDER:-$PWD}/.persist"
+WORKSPACE_FOLDER="$PWD"
+PERSIST_DIR="$WORKSPACE_FOLDER/.persist"
 mkdir -p "$PERSIST_DIR"
 
 # Caches: rustup, cargo, sccache
@@ -47,7 +48,7 @@ rustup component add rustfmt clippy
 rustup set profile default
 
 # Install workspace helper commands into PATH via symlinks
-if [[ -n "${WORKSPACE_FOLDER:-}" && -f "${WORKSPACE_FOLDER}/scripts/safe.sh" ]]; then
+if [[ -f "${WORKSPACE_FOLDER}/scripts/safe.sh" ]]; then
   ln -sfn "${WORKSPACE_FOLDER}/scripts/safe.sh" "$HOME/.local/bin/safe"
   chmod +x "${WORKSPACE_FOLDER}/scripts/safe.sh"
 fi

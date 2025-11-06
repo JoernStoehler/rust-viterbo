@@ -25,8 +25,8 @@
           "**/.hg": true,
           "**/.DS_Store": true,
           "**/Thumbs.db": true,
-          // Exclude worktrees since they interfere with git
-          ".persist/vibe-worktrees/*": true, // interferes with git
+          // Exclude worktrees since they interfere with git (keep other .persist visible)
+          ".persist/vibe-worktrees/*": true,
           // python
           "**/__pycache__": true,
           "**/*.pyc": true,
@@ -36,7 +36,37 @@
           "**/.hypothesis": true,
           // rust
           "**/target": true // build artifacts
-        }
+        },
+        // Keep .persist visible in Explorer, but prevent crawls/indexing.
+        "files.watcherExclude": {
+          "**/.persist/**": true,
+          "**/data/**": true,
+          "**/target/**": true,
+          "**/.venv/**": true
+        },
+        "search.exclude": {
+          "**/.persist/**": true,
+          "**/data/**": true,
+          "**/target/**": true,
+          "**/.venv/**": true
+        },
+        // Prevent VS Code Git from scanning nested worktrees/caches under .persist
+        "git.repositoryScanIgnoredFolders": ["**/.persist/vibe-worktrees/**"],
+        // Avoid Rust Analyzer scanning caches and generated content
+        "rust-analyzer.files.excludeDirs": [
+          "**/.persist",
+          "**/data",
+          "**/docs/book",
+          "**/.venv",
+          "**/target"
+        ],
+        // If Pylance is present, mirror Pyright's ignore to avoid UI analysis on caches
+        "python.analysis.exclude": [
+          "**/.persist/**",
+          "**/data/**",
+          "**/target/**",
+          "**/.venv/**"
+        ]
       }
     }
   },
