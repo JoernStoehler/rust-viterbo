@@ -21,7 +21,7 @@ This file is the always‑relevant guide for coding agents on this project — a
   - Temporary but universal: add a dated note to “Active Notices” at the top of this file; prune when stale.
 - Do NOT write tutorials for common tools/libraries/conventions/workflows. Assume agents know them, just like you know them; record only project‑specific choices or reminders after observed mistakes.
 
-## Source of truth and cross‑references
+## Source of truth and cross-references
 - We use Vibe Kanban (VK) to provision new agents with their own git worktree in which to work on an assigned ticket.
 - We treat the tickets as the source of truth for our project.
 - Closely derived and interacting with the tickets are the thesis specs in `docs/src/thesis/`. They define algorithms, architectures, data formats, etc. from the relevant high-level mathematical / project goal perspective. They aggregate different tickets into coherent wholes.
@@ -33,6 +33,12 @@ This file is the always‑relevant guide for coding agents on this project — a
   - `Docs: docs/src/thesis/<path>#<anchor>` → the related thesis section(s).
   - `Ticket: <uuid>` → the related Vibe Kanban ticket uuid.
   - `Code: <path>::<symbol>` → the related code symbol.
+
+## VK workflow (ticket → worktree → merge)
+- VK provisions each ticket via `git worktree add <ticket-branch>`, then runs a setup hook (we use it to copy the current `data/` snapshot, e.g., existing paper downloads, into the new worktree).
+- Every agent turn ends with VK committing the worktree automatically; do not rely on uncommitted state surviving.
+- After an agent finishes, VK merges the ticket branch back to the main worktree. Gitignored paths (e.g., `data/`, `target/`) never reach main through this merge.
+- Because artifacts are gitignored, always regenerate them on main after VK merges. Run `bash scripts/reproduce.sh` (now includes `paper-download.sh --all`) to rebuild crates, rerun the demo pipeline, and refresh `data/downloads/` so the canonical worktree stays warm for the next agent.
 
 ## Daily conventions
 - Default to immutable FP style. Isolate imperative kernels when needed. Document invariants.

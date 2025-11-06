@@ -55,6 +55,9 @@ bash scripts/safe.sh --timeout 180 -- cargo run -p cli -- run --algo demo --inpu
 echo "🖼  Demo figure → $FIG"
 bash scripts/safe.sh --timeout 180 -- cargo run -p cli -- figure --from "$OUT" --out "$FIG"
 
+echo "📄  Syncing bibliography papers → data/downloads"
+bash scripts/paper-download.sh --all
+
 echo "📚 Rebuilding book for offline viewing (mdbook build docs)"
 bash scripts/safe.sh --timeout 600 -- mdbook build docs
 
