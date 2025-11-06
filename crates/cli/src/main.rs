@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use clap::{Parser, Subcommand};
 use polars::prelude::*;
 use serde_json::json;
@@ -44,6 +44,17 @@ enum Action {
         #[arg(long, default_value_t = 30)]
         days: u32,
     },
+    /// Write a provenance sidecar for an existing artifact
+    Provenance {
+        #[arg(long)]
+        artifact: String,
+        /// Inline JSON payload describing params (mutually exclusive with --params-file)
+        #[arg(long, value_name = "JSON")]
+        params: Option<String>,
+        /// Path to a JSON file describing params (preferred for complex payloads)
+        #[arg(long = "params-file", value_name = "PATH")]
+        params_file: Option<String>,
+    },
 }
 
 fn main() -> Result<()> {
@@ -54,6 +65,11 @@ fn main() -> Result<()> {
         Action::Figure { from, out } => figure(from, out),
         Action::Report => report(cmd.vk),
         Action::Clean { days } => clean(days),
+        Action::Provenance {
+            artifact,
+            params,
+            params_file,
+        } => provenance_cmd(artifact, params, params_file),
     }
 }
 
@@ -128,5 +144,28 @@ fn report(vk: Option<String>) -> Result<()> {
 
 fn clean(days: u32) -> Result<()> {
     tracing::info!(days, "clean");
+    Ok(())
+}
+
+fn provenance_cmd(
+    artifact: String,
+    params: Option<String>,
+    params_file: Option<String>,
+) -> Result<()> {
+    let artifact_path = Path::new(&artifact);
+    if !artifact_path.exists() {
+        bail!("artifact {} does not exist", artifact);
+    }
+    let params_value = if let Some(path) = params_file {
+        let body = std::fs::read_to_string(&path)
+            .with_context(|| format!("reading params file {}", path))?;
+        serde_json::from_str(&body)?
+    } else if let Some(json_body) = params {
+        serde_json::from_str(&json_body)?
+    } else {
+        json!({})
+    };
+
+    provenance::write_sidecar(artifact_path, provenance::Payload::new(params_value))?;
     Ok(())
 }

@@ -95,5 +95,5 @@ Purpose: a self‑contained, advisor‑friendly reference list with direct PDF l
 
 
 Notes
-- Local text sources live under `notes/papers/…` for offline reading; do not commit PDFs. Prefer `.tex` sources or PDF→text conversions for searchability.
+- Offline copies live under `data/downloads/` (gitignored). Run `bash scripts/paper-download.sh --match "keyword"` for a single entry or `--all` to sync every PDF link above; the script grabs arXiv sources when possible and records a manifest/provenance next to each download.
 - If an authoritative PDF is paywalled, link the official PDF page and note access constraints; prefer arXiv/author OA when available.

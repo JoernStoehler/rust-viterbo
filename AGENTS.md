@@ -41,6 +41,7 @@ This file is the always‑relevant guide for coding agents on this project — a
   - heavy → `data/...`
   - publishable small → `docs/assets/...`
   - provenance → every artifact gets `<artifact_stem>.provenance.json`, generated via the CLI `provenance` helper. Sidecars already include the git commit and callsite; add only run-specific parameters (no VK/ticket IDs here).
+- Paper downloads (text sources + PDFs) live under `data/downloads/`; check there first before curling the web. Use `bash scripts/paper-download.sh --match "..."` for a single entry or `--all` to sync everything in `docs/src/thesis/bibliography.md`. The script fetches arXiv sources (with PDFs as fallback), writes manifest metadata, and calls `cli provenance` for each artifact automatically.
 - Commands that may run long **must** go through `scripts/safe.sh`.
   - Example: `bash scripts/safe.sh --timeout 60 -- cargo test --workspace`
 - Manual CI: `bash scripts/ci.sh`. No GitHub Actions.
