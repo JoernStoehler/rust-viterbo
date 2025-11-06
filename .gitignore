@@ -1,8 +1,32 @@
-/target
-/data
-/docs/book
-**/.DS_Store
+# Rust + workspace
+# Ignore any Cargo build dir anywhere (fixes nested crates like crates/*/target/)
+target/
 
-# Local persistent data for devcontainer
+# Data artifacts (see AGENTS.md)
+/data/
+
+# mdBook build output (site is built by CI to gh-pages; sources live in docs/src)
+/docs/book/
+
+# OS/editor noise
+**/.DS_Store
+.vscode/
+
+# Devcontainer local state (never versioned)
 /.persist/
+
+# Python: caches, virtualenvs, build outputs
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+.coverage
 .venv/
+dist/
+build/
+*.egg-info/
+
+# PyO3/maturin develop builds that drop the extension next to sources
+src/viterbo/_native.*.so
