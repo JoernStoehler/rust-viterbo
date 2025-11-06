@@ -17,7 +17,20 @@
         "GitHub.copilot",
         "GitHub.copilot-chat",
         "openai.chatgpt"
-      ]
+      ],
+      "settings": {
+        "files.exclude": {
+          "**/.git": true,
+          "**/.svn": true,
+          "**/.hg": true,
+          "**/.DS_Store": true,
+          "**/Thumbs.db": true,
+          // Exclude build artifacts
+          "target": false, // useful to look at
+          "docs/book": false, // useful to look at
+          ".persist/vibe-worktrees/*": true // interferes with git
+        }
+      }
     }
   },
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
