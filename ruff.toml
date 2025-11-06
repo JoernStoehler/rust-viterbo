@@ -1,0 +1,13 @@
+line-length = 100
+target-version = "py311"
+
+[format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[lint]
+# Keep only high-signal rules that tend to catch real bugs.
+select = ["F"]
+# Avoid pedantic/noisy rules during fast iteration.
+ignore = ["F401"]  # unused imports

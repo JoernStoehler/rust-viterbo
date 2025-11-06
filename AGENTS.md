@@ -1,79 +1,147 @@
-# AGENTS.md — rapid onboarding
+# AGENTS.md — Python‑first onboarding
 
-This file is the always‑relevant guide for coding agents on this project — an MSc thesis in pure mathematics, using Rust to implement algorithms and data‑science artifacts. Keep this document short, unambiguous, specific, actionable, and low overhead.
+This is the always‑relevant guide for coding agents. Keep it lean, specific, and actionable. If anything is unclear, stop and escalate to the ticket owner.
 
 ## Active Temporary Notices
 - None
 
-## Repo map
-- `crates/viterbo`: math and core algorithms (Rust lib). Use `nalgebra` for fixed-size geometry.
-- `crates/cli`: orchestration (Rust bin). Reads/writes `data/` and `docs/assets/`.
-- `scripts/safe.sh`: safe runner for long commands (group kill + timeout).
-- `docs/`: mdBook site (thesis + meta). Publish small tables/figures to `docs/assets/`.
-- `data/`: heavy outputs; gitignored; add a `provenance.json` per run.
-- `scripts/`: devops (CI, safe run, VK integration, checks).
+## Source of Truth and Layers
+- Tickets (Vibe Kanban) are the source of truth.
+- Thesis specs in `docs/src/thesis/` define algorithms and data at a higher level.
+- Code/tests implement the specs; data artifacts are outputs.
+- Flow: tickets → thesis → code/tests → data. If problems are encountered, escalate to the thesis spec and tickets layers first.
+- Cross‑refs in code or markdown `<!-- comments -->`:
+  - `Docs: docs/src/thesis/<path>#<anchor>`
+  - `Ticket: <uuid>`
+  - `Code: <path>::<symbol>`
 
-## Meta Documentation
-- Self‑documenting project: agents must record project‑specific conventions, workflows, and reminders that fix encountered mistakes. Update docs as you work.
-- What goes where:
-  - Always relevant: this file (AGENTS.md at workspace root). Keep it lean and maintained.
-  - Long‑term but only sometimes relevant: `docs/src/meta/*` (book “Meta”). Use speaking filenames grouped by “when needed”. `overview.md` is a thin index with one‑line “when to read” hints.
-  - Temporary but universal: add a dated note to “Active Notices” at the top of this file; prune when stale.
-- Do NOT write tutorials for common tools/libraries/conventions/workflows. Assume agents know them, just like you know them; record only project‑specific choices or reminders after observed mistakes.
+## Components and Repo Map
+- High Performance Geometry and Algorithms in Rust:
+  - `Cargo.toml` (workspace)
+  - `crates/viterbo`: Math and core algorithms (Rust lib). Use `nalgebra` for fixed-size geometry. Uses unit tests, property tests (`proptest`), and benchmarks (`criterion`).
+  - `crates/viterbo-py`: PyO3 glue exposing `_native` to Python.
+- Orchestration and Data Science and Machine Learning in Python:
+  - `pyproject.toml`: Python package + maturin build.
+  - `src/viterbo/`: Python namespaces.
+    - `<experiment>/`: We favor fast development using isolated experiments, with acyclic dependencies. Code repetition for parallel development is beneficial, only stabilize common code once the experiments that use it have stabilized.
+    - `<experiment>/stage_<name>.py`: Pipeline stages (one file per entry point).
+    - `provenance.py`: Write simple JSON sidecars next to artifacts.
+    - `rust/`: Thin Python wrappers around `_native` (NumPy in/out).
+  - `tests/`: Unit and E2E tests for the Python codebase.
+    - `smoke/`: Fast smoke tests.
+    - `scratch/`: Ephemeral smoke tests during development. Safe to delete.
+    - `e2e/`: On‑demand E2E tests that assert on produced artifacts.
+  - `configs/<experiment>/`: Pipeline configs in JSON. Typically a tiny test config and a full production config.
+- Documentation of the thesis, and the development:
+  - `docs/src/thesis/`: MSc mathematics thesis with high-level specs for algorithms, datasets, experiments and interpretation of results.
+  - `docs/src/meta/`: Meta documentation about project-specific conventions, workflows, and other development knowledge.
+  - `docs/book.toml`: mdBook config.
+  - The documentation is hosted on GitHub Pages at https://joernstoehler.github.io/rust-viterbo/.
+- Data artifacts (gitignored; small publishable assets in `docs/assets/` are versioned):
+  - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json` (always present; contains the full config plus runtime info like git commit, timestamp, and command).
+  - `data/downloads/`: Paper downloads (text sources + PDFs).
+  - `docs/assets/`: Small data artifacts for publication (including interactive figures).
+- Explicit, documented devops:
+  - `AGENTS.md`: This file. Onboarding for all new agents.
+  - `scripts/`: Devops scripts.
+    - `safe.sh`: Must-use wrapper for potentially long-running commands (timeout + group kill).
+    - `checks.sh`: Fast format/lint/typecheck/smoke tests for early feedback on code changes.
+    - `ci.sh`: Manual full CI.
+    - `reproduce.sh`: Full reproduction of the entire thesis from scratch. Useful to look up and document the overall dataflow.
+    - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
 
-## Source of truth and cross-references
-- We use Vibe Kanban (VK) to provision new agents with their own git worktree in which to work on an assigned ticket.
-- We treat the tickets as the source of truth for our project.
-- Closely derived and interacting with the tickets are the thesis specs in `docs/src/thesis/`. They define algorithms, architectures, data formats, etc. from the relevant high-level mathematical / project goal perspective. They aggregate different tickets into coherent wholes.
-- Finally, the code, comments, tests, and data artifacts implement the specs and tickets.
-- Our flow is thus: tickets => thesis => code/tests.
-- When during work on the code/tests something is unclear or wrong, we escalate back to the ticket and fix it first. Agents are cheap to run, so we rather abandon an agent's attempt and start a new attempt after fixing the ticket or thesis spec to not repeat the same mistake or encounter the same blocker.
-- If anything is unclear or unknown, stop and ask the project owner.
-- To connect the three layers (code/tests, thesis, tickets), use these conventions in code comments or in markdown comments `<!-- ... -->`:
-  - `Docs: docs/src/thesis/<path>#<anchor>` → the related thesis section(s).
-  - `Ticket: <uuid>` → the related Vibe Kanban ticket uuid.
-  - `Code: <path>::<symbol>` → the related code symbol.
+## Tech Choices
+- Orchestration in Python. Hotspots in Rust; always called from Python.
+- PyO3 + maturin; module name: `viterbo._native`.
+- Interop via NumPy (`pyo3‑numpy`) for now; convert to/from Torch tensors in Python.
+- Geometry: `nalgebra`. Data wrangling: `polars`. RNG: `rand` in Rust, `numpy.random`/`random` and `torch.manual_seed(...)` in Python.
+- No Jupyter notebooks.
+- Vibe-Kanban (VK) for managing tickets and worktrees.
 
-## VK workflow (ticket → worktree → merge)
-- VK provisions each ticket via `git worktree add <ticket-branch>`, then runs a setup hook (we use it to copy the current `data/` snapshot, e.g., existing paper downloads, into the new worktree).
-- Every agent turn ends with VK committing the worktree automatically; do not rely on uncommitted state surviving.
-- After an agent finishes, VK merges the ticket branch back to the main worktree. Gitignored paths (e.g., `data/`, `target/`) never reach main through this merge.
-- Because artifacts are gitignored, always regenerate them on main after VK merges. Run `bash scripts/reproduce.sh` (now includes `paper-download.sh --all`) to rebuild crates, rerun the demo pipeline, and refresh `data/downloads/` so the canonical worktree stays warm for the next agent.
+## Ticketing and VK Workflow
+- VK manages tickets in a kanban board. Accessible via mcp function calls only.
+- Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, copies `data/`, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input.
+- After every agent turn, VK commits the worktree automatically; Please update .gitignore early if needed, do not rely on uncommitted state.
+- Project owner can post follow-up messages to the agent, agent can pause and ask for clarifications.
+- After the project owner closes the ticket, VK merges the ticket branch back to main. Gitignored paths (`data/`, `target/`) never merge; Instead we regenerate on main or in worktrees by running the new/relevant sections of `bash scripts/reproduce.sh`.
 
-## Daily conventions
-- Default to immutable FP style. Isolate imperative kernels when needed. Document invariants.
-- Tests use `StdRng::seed_from_u64(SEED)`; record SEED on failures.
-- Outputs:
-  - heavy → `data/...`
-  - publishable small → `docs/assets/...`
-  - provenance → every artifact gets `<artifact_stem>.provenance.json`, generated via the CLI `provenance` helper. Sidecars already include the git commit and callsite; add only run-specific parameters (no VK/ticket IDs here).
-- Paper downloads (text sources + PDFs) live under `data/downloads/`; check there first before curling the web. Use `bash scripts/paper-download.sh --match "..."` for a single entry or `--all` to sync everything in `docs/src/thesis/bibliography.md`. The script fetches arXiv sources (with PDFs as fallback), writes manifest metadata, and calls `cli provenance` for each artifact automatically.
-- Commands that may run long **must** go through `scripts/safe.sh`.
-  - Example: `bash scripts/safe.sh --timeout 60 -- cargo test --workspace`
-- Manual CI: `bash scripts/ci.sh`. No GitHub Actions.
-- No pre-commit hooks. Commit often. Reference `Ticket: <uuid>` in the message.
-- Docs (GitHub README): use GitHub KaTeX–safe math. Avoid macros like `\operatorname`; prefer `\mathrm{...}` or built-in operators. Verify via GitHub preview if unsure.
+## Command Line Quick Reference
+- For any command that may run a long time or hang, wrap it in `scripts/safe.sh` with an explicit timeout to catch unexpected issues:
+  - `bash scripts/safe.sh --timeout <seconds> -- <your command here>`
+  - Example: `bash scripts/safe.sh --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
+  - The timeout is in seconds; pick a value beyond which you'd consider the command to have taken abnormally long.
+  - The command is run in a subprocess group; on timeout, all subprocesses are killed.
+  - The exit code of `safe.sh` is that of the command, or 124 on timeout.
+- Manual CI before handing in work to the project owner for merge:
+  - `bash scripts/safe.sh --timeout 300 -- bash scripts/ci.sh`
+- Run ad-hoc python or bash code for multi-line operations:
+  ```bash
+  bash scripts/safe.sh --timeout 10 -- uv run python - <<'PY'
+  import viterbo
+  # your code here
+  PY
+  ```
+- Get feedback fast after working on code:
+  - `bash scripts/safe.sh --timeout 10 -- bash scripts/checks.sh`
+  - `bash scripts/safe.sh --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
+  - `bash scripts/safe.sh --timeout 60 -- cargo test -q -p viterbo`
+  - `bash scripts/safe.sh --timeout 300 -- uv run pytest -q -m e2e tests/e2e/atlas/test_atlas_build.py::test_NaNs_absent`
+- Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
 
-## Libraries and tech stack
-- Geometry: `nalgebra` in `viterbo`.
-- Data IO/wrangling: `polars` (required; no feature-gating).
-- Optimization: pick per-need later (`good_lp`, `clarabel`, `osqp`, `argmin`).
-- Graphs: pick later (`petgraph` likely).
-- RNG: `rand` (StdRng). Property tests optional.
-- Bench: `criterion`.
+## Rust Conventions
+- Use Rust for hotspots only; profile first.
+- Use `nalgebra` for fixed-size geometry (e.g., `Vector4<f64>`).
+- Use property tests (`proptest`) where appropriate to skip hand-written values.
+- Use `criterion` for benchmarks; write results to `data/bench/` (gitignored).
+- Expose functions to Python via PyO3 in `crates/viterbo-py`.
+- Functional style preferred.
+- Comment to reference tickets and thesis specs.
+- comment to explain the why, not the what.
+- Avoid over-abstraction; prefer simple, explicit, locally understandable code.
+
+## Data and Pipeline Conventions
+- Data artifacts go to `data/<experiment>/...` (gitignored; small publishable assets go to `docs/assets/`, which is versioned).
+- Every artifact `X.ext` has a provenance sidecar `X.ext.run.json`.
+- Stages are modules `bash scripts/safe.sh --timeout 300 -- uv run python -m viterbo.<experiment>.stage_<name> --config configs/<experiment>/<config>.json`.
+- The json config specifies all constants, paths, and parameters.
+- Keep stages composable; reuse helpers; do not over‑abstract (YAGNI, KISS).
+- Provide tiny test config variants for fast dev cycles (≤10s); Use E2E tests to assert on the outputs of the test configs.
+- Rust kernels do not write provenance; Python orchestrator owns it.
+
+## Python Conventions
+- Use basic type hints where it disambiguates; Pyright basic only needed.
+- Favor immutable/functional style; move imperative orchestration closer to the command line entry points.
+- Use `numpy`, `torch`, `polars` for data wrangling.
+- Always run via `scripts/safe.sh` and `uv run` to get timeouts and the right environment.
+- Comment to reference tickets and thesis specs.
+- Comment to explain the why, not the what.
+- Repeat code rather than prematurely abstracting; stabilize common code only once experiments stabilize.
+- Use `tests/scratch/` for on the fly testing that can be deleted once done. No need to maintain large sets of unit tests.
+- Or move tests to `tests/smoke/` if important to keep around long-term, e.g. to detect future regressions.
+- Use `tests/e2e/` with `@pytest.mark.e2e` to make assertions on the data artifacts produced by pipeline stages, especially test configs that run fast. Also add assertions into the production pipeline stages where appropriate to catch bugs that tests may miss.
+- Don't use Jupyter notebooks. You do not have command line tools that can interact with them. Instead use multi-line python commands, or scratch/smoke tests, or small python scripts.
+
+## Documentation Conventions
+- High-level specs in `docs/src/thesis/` about the mathematics, algorithms, data formats, and experiment ideas.
+- Meta documentation in `docs/src/meta/` about project-specific conventions, workflows, and reminders that fix encountered mistakes.
+- Keep `AGENTS.md` lean and always relevant; move situational info to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`
+- Use GitHub Pages to host the mdBook site at https://joernstoehler.github.io/rust-viterbo/.
+- Write in a clear, unambiguous, specific, actionable, explicit style with low cognitive overhead, so that development agents can read text and get to work quickly without needing to think through ambiguities or infer implications that weren't spelled out.
+- Use markdown comments `<!-- ... -->` to reference tickets and thesis specs.
+- Use KaTeX-safe math only (no `\\operatorname`); verify via GitHub preview.
+- Publish tables/figures/interactive plots to `docs/assets/` for inclusion in the mdBook site.
 
 ## Escalation
-- When to escalate:
-  - Lemmas/specs are underspecified.
-  - Solver/library choice blocks you.
-  - Runtime exceeds budget or needs GPU/CUDA setup.
-  - You discover a blocker that is too large to fix within the ticket scope, so you need a new sub-ticket to be opened and completed before proceeding.
-- How to escalate: stop your turn and notify the project owner with a concise summary and options (Ticket comment or direct channel).
+- Escalate when: specs underspecified, solver/library choice blocks progress, runtime exceeds budget, or scope bloat requires a sub‑ticket.
+- How: pause work, leave a concise summary + options.
 
-## General Principles
-- Keep decisions and choices standard and common. We want to be intuitive, predictable, and low-overhead for future agents.
-- Update the meta documentation as you work, so that the project remains self-documenting.
-- Escalate to the project owner when in doubt or blocked. Ask for forgiveness rather than permission, since it's easy to roll back changes or restart a ticket after improving the specs.
-- Keep AGENTS.md lean for fast onboarding. Move info that is relevant only for some tickets into `docs/src/meta/` with clear “when to read” hints.
-- Assume agents know common tools/libraries/conventions/workflows. Record only project-specific choices or reminders after observed mistakes.
-- Write in a clear, unambiguous, specific, actionable, and low-overhead style.
+## Design Principles and Goals of this Project
+- High performance: use Rust for hotspots; profile first.
+- Fast development cycles: use Python for orchestration; isolate experiments for parallel development; tiny test configs for fast feedback.
+- Mathematical Correctness: spec in the thesis; correctness theorems and formal arguments/proofs; excessive tests of the algorithms and their edge cases.
+- Reproducibility: provenance sidecars for all data artifacts; `reproduce.sh` to rebuild everything from scratch.
+- Simplicity and Maintainability: favor explicit and simple code over clever abstractions; document the why, not the what; pick popular, well-known patterns, libraries and workflows.
+- Self‑documenting project: record conventions, workflows, and reminders in `docs/src/meta/`; cross-reference tickets and thesis specs.
+- AI Agents as first-class developers: design everything for easy onboarding of new agents; clear, specific, and actionable tickets; maintain always‑relevant knowledge in a lean `AGENTS.md`, and move situational info to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`; avoid overhead for agents, reduce tool friction and keep related information close together to minimize search time; 
+- Continuous Improvement: accept feedback from agents and the project owner; refactor with breaking changes, rewrite documentation, open additional tickets when it raises the quality of the project for future agents.
+

@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "viterbo"
+version = "0.1.0"
+description = "Python-first orchestration for Viterbo pipelines, with Rust hotspots."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+  "polars>=1.6",
+  "pyarrow>=15",
+]
+authors = [{ name = "Project Viterbo", email = "n/a@example.com" }]
+license = { text = "MIT" }
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/viterbo"]
+

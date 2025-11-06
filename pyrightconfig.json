@@ -1,0 +1,11 @@
+{
+  "typeCheckingMode": "basic",
+  "exclude": [
+    "data",
+    "docs/book",
+    "**/.venv",
+    "**/__pycache__"
+  ],
+  "reportMissingTypeStubs": "none",
+  "reportMissingImports": "none"
+}

@@ -1,3 +1,4 @@
 [workspace]
-members = ["crates/viterbo", "crates/cli"]
+members = ["crates/viterbo"]
 resolver = "2"
+exclude = ["crates/viterbo-py"]

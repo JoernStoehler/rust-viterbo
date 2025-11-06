@@ -1,0 +1,16 @@
+[package]
+name = "viterbo-py"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+name = "viterbo_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.21", features = ["extension-module", "abi3-py311"] }
+nalgebra = "0.33"
+viterbo = { path = "../viterbo" }
+
+[workspace]

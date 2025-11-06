@@ -33,13 +33,14 @@ Pick an environment; both give the same results.
   4) Wait for “✅ Post-create setup completed successfully.”
 
 After the environment is ready:
-1) Run `bash scripts/reproduce.sh` to build the code, tests, data artifacts, and the book.
-2) Run `mdbook serve docs -p 4000` and view the book in your browser.
+1) Run `bash scripts/safe.sh --timeout 60 -- bash scripts/checks.sh` for fast feedback (format/lint typecheck smoke + Rust tests).
+2) Run `bash scripts/safe.sh --timeout 120 -- bash scripts/reproduce.sh` to produce a tiny example dataset under `data/atlas/`.
+3) Optional: `mdbook serve docs -p 4000` to preview the book.
 
 ## Onboard
 
-- Quick path: ask your coding agent to read `AGENTS.md` and the documentation, then summarize how to work with the codebase for your task.
-- Manual path: start with `AGENTS.md` and `docs/src/meta/overview.md`, later dive into `crates/cli` (orchestration) and `crates/viterbo` (algorithms).
+- Quick path: read `AGENTS.future.md` (post‑migration onboarding) and `docs/src/meta/overview.md`.
+- Manual path: Python orchestration lives in `src/viterbo/<experiment>/stage_*.py` and configs under `configs/<experiment>/`; Rust math kernels live in `crates/viterbo` and are optionally exposed to Python via PyO3 in `crates/viterbo-py`.
 
 ## License
 

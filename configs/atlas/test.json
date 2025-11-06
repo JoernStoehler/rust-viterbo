@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "rows": 10,
+  "seed": 42,
+  "out": {
+    "dataset": "data/atlas/test.parquet"
+  }
+}

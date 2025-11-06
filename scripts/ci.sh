@@ -1,7 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
-bash scripts/safe.sh --timeout 900  -- cargo fmt --all -- --check
-bash scripts/safe.sh --timeout 1200 -- cargo clippy --workspace --all-targets -- -D warnings
-bash scripts/safe.sh --timeout 1800 -- cargo test --workspace
-bash scripts/safe.sh --timeout 600  -- mdbook build docs
-echo "CI OK"
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+bash scripts/checks.sh
+
+if [[ "${WITH_NATIVE:-0}" == "1" ]]; then
+  echo ">>> Build native extension with maturin..."
+  uvx maturin develop -m crates/viterbo-py/Cargo.toml
+fi
+
+echo "CI: (optional) run selected E2E with: uv run pytest -m e2e -k atlas"

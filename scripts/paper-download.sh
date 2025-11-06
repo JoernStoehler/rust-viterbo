@@ -25,8 +25,8 @@ Notes:
   - --all iterates over every PDF link in the bibliography.
   - For arXiv links, the script tries to fetch the source tarball first and
     falls back to the PDF if the source is unavailable.
-  - Each artifact gets a provenance sidecar via `cargo run -p cli -- provenance ...`
-    (or an already-built target/debug/cli binary if available).
+  - Each artifact gets a provenance sidecar via the Python helper
+    `viterbo.provenance.write(...)`.
 EOF
 }
 
@@ -220,40 +220,24 @@ record_pdf_only() {
   PDF_ONLY+=("$1")
 }
 
-ensure_cli() {
-  if [[ -x "$ROOT_DIR/target/debug/cli" ]]; then
-    echo "$ROOT_DIR/target/debug/cli"
-    return 0
-  fi
-  if command -v cargo >/dev/null 2>&1; then
-    echo "cargo"
-    return 0
-  fi
-  return 1
-}
-
 write_provenance() {
-  # Always prefer the already-built cli binary; fall back to cargo run.
   local artifact="$1"
   local params_json="$2"
   [[ -f "$artifact" ]] || return 0
-  local cli
-  if ! cli="$(ensure_cli)"; then
-    echo "warning: skipping provenance for $artifact (cargo not available)" >&2
-    return 0
-  fi
   local tmp
   tmp="$(mktemp)"
   printf '%s' "$params_json" > "$tmp"
-  if [[ "$cli" == "cargo" ]]; then
-    if ! cargo run -q -p cli -- provenance --artifact "$artifact" --params-file "$tmp" >/dev/null; then
-      echo "warning: failed to write provenance for $artifact" >&2
-    fi
-  else
-    if ! "$cli" provenance --artifact "$artifact" --params-file "$tmp" >/dev/null; then
-      echo "warning: failed to write provenance for $artifact" >&2
-    fi
-  fi
+  # Use uv to ensure the same Python environment as the rest of the repo.
+  uv run python - <<'PY' "$artifact" "$tmp" || echo "warning: failed to write provenance for $artifact" >&2
+import json, sys
+from pathlib import Path
+from viterbo.provenance import write
+artifact = Path(sys.argv[1])
+params_path = Path(sys.argv[2])
+cfg = json.loads(params_path.read_text())
+# For downloads, we treat the parsed params as the config.
+write(artifact, cfg, {"producer": "scripts/paper-download.sh"})
+PY
   rm -f "$tmp"
 }
 
