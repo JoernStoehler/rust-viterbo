@@ -46,6 +46,12 @@ source "$HOME/.cargo/env"
 rustup component add rustfmt clippy
 rustup set profile default
 
+# Install workspace helper commands into PATH via symlinks
+if [[ -n "${WORKSPACE_FOLDER:-}" && -f "${WORKSPACE_FOLDER}/scripts/safe.sh" ]]; then
+  ln -sfn "${WORKSPACE_FOLDER}/scripts/safe.sh" "$HOME/.local/bin/safe"
+  chmod +x "${WORKSPACE_FOLDER}/scripts/safe.sh"
+fi
+
 # Install pre-built binaries (much faster than cargo install)
 # -------------------- helper: fetch prebuilt tar/zip into ~/.cargo/bin --------------------
 install_bin() {

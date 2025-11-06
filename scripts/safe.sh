@@ -2,17 +2,45 @@
 set -euo pipefail
 
 TIMEOUT=0
-if [[ "${1:-}" == "--timeout" ]]; then
-  TIMEOUT="$2"
-  shift 2
-fi
-# Allow a standalone "--" separator between options and command
-if [[ "${1:-}" == "--" ]]; then
-  shift
-fi
+
+usage() {
+  cat >&2 <<EOF
+usage: safe [-t SEC|--timeout SEC] [--] <command ...>
+Runs a command in its own process group and cleans it up on exit.
+EOF
+}
+
+# Parse flags: support --timeout SEC and -t SEC, stop on -- or first non-flag
+while [[ $# -gt 0 ]]; do
+  case "${1:-}" in
+    --timeout)
+      [[ $# -ge 2 ]] || { echo "error: --timeout requires an argument" >&2; exit 2; }
+      TIMEOUT="$2"; shift 2
+      ;;
+    -t)
+      [[ $# -ge 2 ]] || { echo "error: -t requires an argument" >&2; exit 2; }
+      TIMEOUT="$2"; shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -h|--help)
+      usage; exit 0
+      ;;
+    -*)
+      echo "error: unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
 
 if [[ $# -eq 0 ]]; then
-  echo "usage: $0 [--timeout SEC] <command...>" >&2
+  usage
   exit 2
 fi
 
