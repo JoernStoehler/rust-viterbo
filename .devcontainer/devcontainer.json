@@ -25,10 +25,17 @@
           "**/.hg": true,
           "**/.DS_Store": true,
           "**/Thumbs.db": true,
-          // Exclude build artifacts
-          "target": false, // useful to look at
-          "docs/book": false, // useful to look at
-          ".persist/vibe-worktrees/*": true // interferes with git
+          // Exclude worktrees since they interfere with git
+          ".persist/vibe-worktrees/*": true, // interferes with git
+          // python
+          "**/__pycache__": true,
+          "**/*.pyc": true,
+          "**/.mypy_cache": true,
+          "**/.pytest_cache": true,
+          "**/.venv": true,
+          "**/.hypothesis": true,
+          // rust
+          "**/target": true // build artifacts
         }
       }
     }
