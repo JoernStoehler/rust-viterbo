@@ -89,7 +89,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
   - `safe --timeout 300 -- uv run pytest -q -m e2e tests/e2e/test_atlas_build.py::test_build_dataset_tiny`
   - Atlas data (full): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
 - Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
-- Native build: `safe -t 300 -- uvx maturin develop -m crates/viterbo-py/Cargo.toml`.
+  - Native build: `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`.
 
 ## Rust Conventions
 - Use Rust for hotspots only; profile first.

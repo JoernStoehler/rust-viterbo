@@ -17,8 +17,37 @@ authors = [{ name = "Project Viterbo", email = "n/a@example.com" }]
 license = { text = "MIT" }
 
 [project.optional-dependencies]
-dev = ["pytest>=8"]
+dev = [
+  "pytest>=8",
+  "pyright>=1.1.380",
+  "ruff>=0.6",
+  "maturin>=1,<2",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/viterbo"]
 
+[tool.pyright]
+typeCheckingMode = "basic"
+exclude = ["data", "docs/book", "**/.venv", "**/__pycache__"]
+reportMissingTypeStubs = "none"
+reportMissingImports = "none"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
+
+[tool.ruff.lint]
+select = ["F"]
+ignore = ["F401"]
+
+[tool.pytest.ini_options]
+markers = [
+  "e2e: end-to-end tests (select and run on demand)",
+]
+addopts = "-q"

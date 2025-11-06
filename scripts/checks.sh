@@ -5,10 +5,10 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 echo ">>> Formatting (ruff)..."
-uvx ruff format src tests || true
+uv run ruff format src tests || true
 
 echo ">>> Lint (ruff)..."
-uvx ruff check src tests || true
+uv run ruff check src tests || true
 
 echo ">>> Ensure Python venv + deps sync..."
 if [[ ! -d ".venv" ]]; then
@@ -18,7 +18,7 @@ fi
 uv sync --extra dev --locked
 
 echo ">>> Type check (pyright basic)..."
-uvx pyright || true
+bash scripts/safe.sh --timeout 20 -- uv run pyright || true
 
 echo ">>> Python smoke tests..."
 uv run pytest -q -m "not e2e"

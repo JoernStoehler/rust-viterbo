@@ -3,7 +3,7 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "init": true,
+  "init": false, // I was told "true" would prevent lots of issues... but pyright outright seems broken with "true"?
   "customizations": {
     "vscode": {
       "extensions": [

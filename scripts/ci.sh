@@ -8,7 +8,7 @@ bash scripts/checks.sh
 
 if [[ "${WITH_NATIVE:-0}" == "1" ]]; then
   echo ">>> Build native extension with maturin..."
-  uvx maturin develop -m crates/viterbo-py/Cargo.toml
+  uv run maturin develop -m crates/viterbo-py/Cargo.toml
 fi
 
 echo "CI: (optional) run selected E2E with: uv run pytest -m e2e -k atlas"

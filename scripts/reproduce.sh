@@ -22,7 +22,7 @@ echo "=== Reproduce: run end-to-end tests (pytest -m e2e) ==="
 bash scripts/safe.sh --timeout 600 -- uv run pytest -q -m e2e
 
 echo "=== Reproduce: build native Python extension (maturin) ==="
-bash scripts/safe.sh --timeout 300 -- uvx maturin develop -m crates/viterbo-py/Cargo.toml
+bash scripts/safe.sh --timeout 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml
 
 echo "=== Reproduce: run data pipeline ==="
 bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/full.json
