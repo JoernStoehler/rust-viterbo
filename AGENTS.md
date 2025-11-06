@@ -46,7 +46,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
     - `safe.sh`: Must-use wrapper for potentially long-running commands (timeout + group kill).
     - `checks.sh`: Fast format/lint/typecheck/smoke tests for early feedback on code changes.
     - `ci.sh`: Manual full CI.
-    - `reproduce.sh`: Full reproduction of the entire thesis from scratch. Useful to look up and document the overall dataflow.
+    - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
 
 ## Platform and Tooling
@@ -87,6 +87,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
   - `safe --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
   - `safe --timeout 60 -- cargo test -q -p viterbo`
   - `safe --timeout 300 -- uv run pytest -q -m e2e tests/e2e/test_atlas_build.py::test_build_dataset_tiny`
+  - Atlas data (full): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
 - Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
 - Native build: `safe -t 300 -- uvx maturin develop -m crates/viterbo-py/Cargo.toml`.
 

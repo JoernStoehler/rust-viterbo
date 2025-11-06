@@ -33,9 +33,8 @@ Pick an environment; both give the same results.
   4) Wait for “✅ Post-create setup completed successfully.”
 
 After the environment is ready:
-1) Run `bash scripts/safe.sh --timeout 60 -- bash scripts/checks.sh` for fast feedback (format/lint typecheck smoke + Rust tests).
-2) Run `bash scripts/safe.sh --timeout 120 -- bash scripts/reproduce.sh` to produce a tiny example dataset under `data/atlas/`.
-3) Optional: `mdbook serve docs -p 4000` to preview the book.
+1) Run `bash scripts/reproduce.sh` to build the code, tests (including E2E), data artifacts, and the book.
+2) Run `mdbook serve docs -p 4000` and view the book in your browser.
 
 ## Onboard
 

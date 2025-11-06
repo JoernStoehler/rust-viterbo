@@ -1,20 +1,33 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-# Documentation-oriented, full rebuild would be long in the future.
-# For now, keep it fast and demonstrative.
+# Reproduction entrypoint defined in README: builds code/tests/data and the book at this commit.
+# Minimal by design; see README.md → “Reproduce” for the contract and usage.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-echo "=== Reproduce: ensure Python env and package ==="
-uv pip install -q -e .[dev]
+echo "=== Reproduce: ensure Python venv ==="
+if [[ ! -d ".venv" ]]; then
+  bash scripts/safe.sh --timeout 300 -- uv venv
+fi
 
-echo "=== Reproduce: build (optional) native extension with maturin (skipped by default) ==="
-echo "Skip: run 'uvx maturin develop -m crates/viterbo-py/Cargo.toml' if/when native bindings are needed."
+echo "=== Reproduce: sync project deps (uv, locked) ==="
+# Keep env exact to the lock, include extras 'dev' like `.[dev]` used to.
+bash scripts/safe.sh --timeout 300 -- uv sync --extra dev --locked
 
-echo "=== Reproduce: run tiny atlas pipeline ==="
-bash scripts/safe.sh --timeout 60 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/test.json
+echo "=== Reproduce: run code checks and tests (checks.sh) ==="
+bash scripts/safe.sh --timeout 300 -- bash scripts/checks.sh
+
+echo "=== Reproduce: run end-to-end tests (pytest -m e2e) ==="
+bash scripts/safe.sh --timeout 600 -- uv run pytest -q -m e2e
+
+echo "=== Reproduce: build native Python extension (maturin) ==="
+bash scripts/safe.sh --timeout 300 -- uvx maturin develop -m crates/viterbo-py/Cargo.toml
+
+echo "=== Reproduce: run data pipeline ==="
+bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/full.json
+
+echo "=== Reproduce: build thesis book (mdBook) ==="
+bash scripts/safe.sh --timeout 600 -- mdbook build docs
 
 echo "=== Reproduce: done. Artifacts under data/atlas/"
-

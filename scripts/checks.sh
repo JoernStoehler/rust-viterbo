@@ -10,11 +10,12 @@ uvx ruff format src tests || true
 echo ">>> Lint (ruff)..."
 uvx ruff check src tests || true
 
-echo ">>> Ensure Python venv + editable install..."
+echo ">>> Ensure Python venv + deps sync..."
 if [[ ! -d ".venv" ]]; then
   uv venv
 fi
-uv pip install -q -e .[dev]
+# Keep environment in sync with the lockfile; include extras 'dev'
+uv sync --extra dev --locked
 
 echo ">>> Type check (pyright basic)..."
 uvx pyright || true
