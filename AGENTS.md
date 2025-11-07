@@ -92,6 +92,14 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `SAFE_TIMEOUT=<seconds>` if a timeout was provided.
 - On timeout: `safe.sh` returns a non-zero code and kills the process group. Do not auto-retry inside scripts; adjust the plan or escalate if the budget is unclear.
 
+### Agent Autonomy (verification defaults)
+<!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
+- Do not ask the project owner before running fast verification. Proactively run:
+  - `safe --timeout 180 -- bash scripts/checks.sh` (ruff, pyright, pytest smoke, cargo check/tests)
+  - `safe --timeout 120 -- mdbook build docs` (docs sanity)
+- Only escalate before running when the action is potentially destructive, requires unusually long budgets beyond those above, or needs external services beyond our local toolchain.
+- Always summarize what you ran and any failures; include exact commands and key logs. The owner’s time is valuable—minimize round trips.
+
 ## Ticketing and VK Workflow
 - VK manages tickets in a kanban board. Accessible via mcp function calls only.
 - Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input. The hook recreates baseline dirs, installs Git LFS, and pulls tracked artifacts so agents begin with hydrated `data/` contents.
@@ -175,6 +183,14 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Write in a clear, unambiguous, specific, actionable, explicit style with low cognitive overhead, so that development agents can read text and get to work quickly without needing to think through ambiguities or infer implications that weren't spelled out.
 - Use KaTeX-safe math only (no `\\operatorname`).
 - Create small tables/figures/interactive plots for inclusion in the mdBook site via `docs/assets/`.
+
+### Thesis Writing Conventions (mdBook)
+- Section layout (keep it brief and consistent):
+  1) one-paragraph context; 2) Setting and Notation; 3) Definitions; 4) Main Facts/Theorems (with footnote citations); 5) “What We Use Later” bullets for algorithms; 6) optional “Deviations and clarifications for review”.
+- Citations: use non-obstructive footnotes with author–year text; prefer official DOI or arXiv link; no proposition/page numbers (they vary across PDFs). Example: `[^HK19]: Haim‑Kislev (2019) ...`.
+- Cross‑refs: link to sibling chapters via relative paths; avoid duplicate headers; prefer section names over numbers.
+- HTML comments at the top: include `Ticket: <uuid>` and any brief editing notes for future agents.
+- Rendering checks: after edits run `safe --timeout 180 -- bash scripts/checks.sh` and `safe --timeout 120 -- mdbook build docs` without asking.
 
 ## Escalation
 - Escalate when: specs underspecified, solver/library choice blocks progress, runtime exceeds budget, or scope bloat requires a sub‑ticket.
