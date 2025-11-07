@@ -6,9 +6,9 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use nalgebra::Vector2;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use viterbo::poly2::{Affine2, HPoly2, HPoly2Ordered, Hs2};
+use viterbo::geom2::{Aff2 as Affine2, Poly2 as HPoly2Ordered, Hs2};
 
-fn random_halfspaces(m: usize, seed: u64) -> HPoly2 {
+fn random_halfspaces(m: usize, seed: u64) -> HPoly2Ordered {
     let mut rng = StdRng::seed_from_u64(seed);
     let mut hs = Vec::with_capacity(m);
     for _ in 0..m {
@@ -18,27 +18,19 @@ fn random_halfspaces(m: usize, seed: u64) -> HPoly2 {
         let c = rng.gen_range(0.5..1.5);
         hs.push(Hs2::new(n, c));
     }
-    HPoly2 { hs }
+    let mut ordered = HPoly2Ordered::default();
+    for h in hs { ordered.insert_halfspace(h); }
+    ordered
 }
 
 fn bench_poly2(c: &mut Criterion) {
     let mut group = c.benchmark_group("poly2");
     for &m in &[0usize, 10, 20, 50, 100] {
-        group.bench_with_input(BenchmarkId::new("normalize_to_ordered", m), &m, |b, &m| {
+        group.bench_with_input(BenchmarkId::new("halfspace_intersection", m), &m, |b, &m| {
             b.iter_batched(
-                || random_halfspaces(m, 42),
-                |p| {
-                    let _o = p.to_ordered();
-                },
-                BatchSize::SmallInput,
-            )
-        });
-
-        group.bench_with_input(BenchmarkId::new("hpi_empty_or_vertices", m), &m, |b, &m| {
-            b.iter_batched(
-                || random_halfspaces(m, 43).to_ordered(),
+                || random_halfspaces(m, 43),
                 |po| {
-                    let _res = po.hpi();
+                    let _res = po.halfspace_intersection();
                 },
                 BatchSize::SmallInput,
             )
@@ -50,7 +42,7 @@ fn bench_poly2(c: &mut Criterion) {
                 t: Vector2::new(0.3, -0.2),
             };
             b.iter_batched(
-                || random_halfspaces(m, 44).to_ordered(),
+                || random_halfspaces(m, 44),
                 |po| {
                     let _p2 = po.push_forward(&f).unwrap();
                 },
@@ -63,4 +55,3 @@ fn bench_poly2(c: &mut Criterion) {
 
 criterion_group!(benches, bench_poly2);
 criterion_main!(benches);
-
