@@ -49,6 +49,11 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
     - `checks.sh`: Fast format/lint/typecheck/smoke tests for early feedback on code changes.
     - `ci.sh`: Manual full CI.
     - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
+    - `rust-test.sh`: Convenience wrapper for `cargo check`/`cargo test` with `safe` and timeouts.
+    - `rust-bench.sh`: Convenience wrapper for `cargo bench` (Criterion). Defaults `CARGO_TARGET_DIR` to `data/bench/` (gitignored).
+    - Both Rust wrappers default `CARGO_TARGET_DIR` if not set:
+      - tests: `data/target/`
+      - benches: `data/bench/`
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
     - `vk.sh`: Local VK web server for the human project owner.
     - `vk-setup.sh`: VK worktree setup hook.
@@ -67,6 +72,23 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Fast feedback: `bash scripts/checks.sh` runs ruff format/check, pyright (basic), pytest (non‑e2e), and cargo check/test.
   - Optional native build is available via maturin (only if a ticket requires native code changes; see Quick Reference).
 
+## Safe Wrapper (timeouts & cleanup)
+- Purpose: apply explicit timeouts at the top level and clean up entire process groups if a command hangs or runs longer than intended.
+- How to use:
+  - Pattern: `bash scripts/safe.sh --timeout <seconds> -- <your command>` (short: `safe -t <seconds> -- <cmd>`).
+  - Choose timeouts to be safely above expected runtime yet low enough to catch bugs and accidental heavy runs:
+    - 10–20s: format/lint/typecheck, tiny smoke tests.
+    - 60–120s: `cargo test` for a single crate, small benches compile-only.
+    - 300–600s: selected E2E, full benches, mdBook build.
+- Scope and policy:
+  - Apply timeouts at the top level. Most scripts in `scripts/` assume they run under `safe.sh` and will exit if not (they check `SAFE_WRAPPED=1`, exported by `safe.sh`).
+  - Do not nest `safe.sh` inside those scripts.
+  - Exception: `scripts/reproduce.sh` is human-facing and documents sensible per-stage timeouts; it self-wraps each stage with `safe.sh`. You may run it directly or wrap it at the top level—both are acceptable.
+- Environment markers set by `safe.sh`:
+  - `SAFE_WRAPPED=1` for all children (used by scripts to validate top-level wrapping).
+  - `SAFE_TIMEOUT=<seconds>` if a timeout was provided.
+- On timeout: `safe.sh` returns a non-zero code and kills the process group. Do not auto-retry inside scripts; adjust the plan or escalate if the budget is unclear.
+
 ## Ticketing and VK Workflow
 - VK manages tickets in a kanban board. Accessible via mcp function calls only.
 - Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, copies `data/`, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input.
@@ -81,18 +103,19 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - VK automatically commits after every agent turn, but you can commit manually as needed.
 
 ## Command Line Quick Reference
-- For any command that may run a long time or hang, wrap it in `scripts/safe.sh` with an explicit timeout to catch unexpected issues:
-  - Pattern: `bash scripts/safe.sh --timeout <seconds> -- <your command here>` or in short `safe -t <seconds> -- <your command here>`
+- Wrap long/unknown‑cost commands in `scripts/safe.sh` with an explicit timeout; see “Safe Wrapper” section for policy and budgets.
   - Example: `bash scripts/safe.sh --timeout 10 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/test.json`
-  - Timeouts are in seconds; pick a value that is safely above expected runtime but low enough to catch bugs or mistakenly started operations.
 - Manual CI before handing in work to the project owner for merge:
   - `safe --timeout 300 -- bash scripts/ci.sh`
 - Get feedback fast after working on code:
   - `safe --timeout 10 -- bash scripts/checks.sh`
   - `safe --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
   - `safe --timeout 60 -- cargo test -q -p viterbo`
+  - `safe --timeout 120 -- bash scripts/rust-test.sh -p viterbo -- -q`
   - `safe --timeout 300 -- uv run pytest -q -m e2e tests/e2e/test_atlas_build.py::test_build_dataset_tiny`
   - Atlas data (full): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
+  - Rust benches (compile only): `safe --timeout 120 -- bash scripts/rust-bench.sh -- --no-run`
+  - Rust benches (run, write to data/bench): `CARGO_TARGET_DIR=data/bench safe --timeout 300 -- bash scripts/rust-bench.sh`
 - Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
   - Native build: `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`.
 

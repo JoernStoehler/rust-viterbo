@@ -1,7 +1,23 @@
 #!/usr/bin/env bash
+# safe.sh — top-level timeout + process-group cleanup wrapper
+# Purpose
+# - Apply explicit timeouts at the top level and ensure all child processes are
+#   terminated on timeout or exit. This catches both bugs and accidental heavy
+#   runs beyond the agent's intent.
+# Exports
+# - SAFE_WRAPPED=1     (for scripts to detect they are under a top-level timeout)
+# - SAFE_TIMEOUT=<sec> (if a timeout was provided)
+# Usage
+# - bash scripts/safe.sh --timeout 300 -- <command>
+# - safe -t 60 -- uv run pytest -q
+# Policy
+# - Most scripts in scripts/ require SAFE_WRAPPED and will fail if run directly.
+# - Exception: scripts/reproduce.sh is human-facing and self-wraps each stage.
 set -euo pipefail
 
 TIMEOUT=0
+export SAFE_WRAPPED="1"
+export SAFE_TIMEOUT="${SAFE_TIMEOUT:-0}"
 
 usage() {
   cat >&2 <<EOF
@@ -46,6 +62,7 @@ fi
 
 cmd=("$@")
 if (( TIMEOUT > 0 )); then
+  export SAFE_TIMEOUT="${TIMEOUT}"
   cmd=(timeout --kill-after=10 "${TIMEOUT}s" "${cmd[@]}")
 fi
 # We go through `bash -lc` so we can (a) preserve the caller's command/quoting via "$@"
