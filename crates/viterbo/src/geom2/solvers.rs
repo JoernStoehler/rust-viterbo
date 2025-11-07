@@ -114,7 +114,7 @@ pub fn fixed_point_in_poly(
                         let mut best: Option<(Vector2<f64>, f64)> = None;
                         for z in verts {
                             let val = a.eval(z);
-                            if best.map_or(true, |(_, v)| val < v) {
+                            if best.as_ref().is_none_or(|(_, v)| val < *v) {
                                 best = Some((z, val));
                             }
                         }

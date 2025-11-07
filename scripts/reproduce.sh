@@ -9,9 +9,11 @@ set -euo pipefail
 # - Stage timeouts (tuned to catch mistakes yet allow expected runs):
 #   * uv venv: 300s
 #   * uv sync (locked): 300s
-#   * checks.sh (format/lint/typecheck/unit tests/cargo): 300s
-#   * benches (optional; RUN_RUST_BENCH=1): 600s
+#   * python-lint-type-test.sh: 300s
+#   * rust-lint-test.sh: 300s
 #   * pytest -m e2e: 600s
+#   * Criterion benches: 600s
+#   * bench docs stage: 120s
 #   * maturin develop: 300s
 #   * atlas pipeline: 300s
 #   * mdBook build: 600s
@@ -28,15 +30,17 @@ echo "=== Reproduce: sync project deps (uv, locked) ==="
 # Keep env exact to the lock, include extras 'dev' like `.[dev]` used to.
 bash scripts/safe.sh --timeout 300 -- uv sync --extra dev --locked
 
-echo "=== Reproduce: run code checks and tests (checks.sh) ==="
-# Note: checks.sh expects SAFE_WRAPPED when called directly, so we wrap it here.
-bash scripts/safe.sh --timeout 300 -- bash scripts/checks.sh
+echo "=== Reproduce: Python lint/type/tests ==="
+bash scripts/safe.sh --timeout 300 -- bash scripts/python-lint-type-test.sh
 
-# Optional: run Rust benches (Criterion) if RUN_RUST_BENCH=1 is set.
-if [[ "${RUN_RUST_BENCH:-0}" == "1" ]]; then
-  echo "=== Reproduce: run Rust benches (Criterion) to data/bench ==="
-  CARGO_TARGET_DIR=data/bench bash scripts/safe.sh --timeout 600 -- bash scripts/rust-bench.sh
-fi
+echo "=== Reproduce: Rust lint/tests ==="
+bash scripts/safe.sh --timeout 300 -- bash scripts/rust-lint-test.sh
+
+echo "=== Reproduce: Criterion benchmarks (raw data/bench/criterion) ==="
+bash scripts/safe.sh --timeout 600 -- BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh
+
+echo "=== Reproduce: Criterion → docs assets stage ==="
+bash scripts/safe.sh --timeout 180 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
 
 echo "=== Reproduce: run end-to-end tests (pytest -m e2e) ==="
 bash scripts/safe.sh --timeout 600 -- uv run pytest -q -m e2e

@@ -1,0 +1,5 @@
+{
+  "bench_root": "data/bench/criterion",
+  "assets_root": "docs/assets/bench",
+  "keep": 5
+}

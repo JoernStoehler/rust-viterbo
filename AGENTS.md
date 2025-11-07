@@ -41,19 +41,20 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`. Both live in Git LFS; commit the artifact and its `.run.json` together to keep provenance aligned.
   - `data/downloads/`: Paper downloads (text sources + PDFs). Also under Git LFS so offline copies travel with the repo.
   - `docs/assets/`: Small publication artifacts (including interactive figures) that stay in the regular git history for easy diffs/review.
-  - `data/` now rides through Git LFS instead of VK rsyncs. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. Use `scripts/reproduce.sh` to regenerate artifacts when provenance changes.
+- `data/` now rides through Git LFS instead of VK rsyncs. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. `scripts/reproduce.sh` is the single source of truth for regenerating *every* artifact that shows up in the docs/thesis (bench tables, figures, data files, etc.). Whenever you add or change an artifact, update `scripts/reproduce.sh` in the same ticket so nobody ever has to guess whether it belongs there.
 - Explicit, documented devops:
   - `AGENTS.md`: This file. Onboarding for all new agents.
   - `scripts/`: Devops scripts.
     - `safe.sh`: Must-use wrapper for potentially long-running commands (timeout + group kill). Symlinked as `~/.local/bin/safe` for convenience.
-    - `checks.sh`: Fast format/lint/typecheck/smoke tests for early feedback on code changes.
+    - `python-lint-type-test.sh`: Fast Ruff/Pyright/pytest (non-e2e) loop for Python code.
+    - `rust-lint-test.sh`: Runs cargo fmt/clippy/test with shared settings.
     - `ci.sh`: Manual full CI.
     - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
     - `rust-test.sh`: Convenience wrapper for `cargo check`/`cargo test` with `safe` and timeouts.
-    - `rust-bench.sh`: Convenience wrapper for `cargo bench` (Criterion). Defaults `CARGO_TARGET_DIR` to `data/bench/` (gitignored).
+    - `rust-bench.sh`: Convenience wrapper for `cargo bench` (Criterion). Builds in `target/` and rsyncs curated Criterion JSON into `data/bench/criterion` (Git LFS) after the run. Set `BENCH_RUN_POSTPROCESS=1` to chain the docs stage automatically.
     - Both Rust wrappers default `CARGO_TARGET_DIR` if not set:
       - tests: `data/target/`
-      - benches: `data/bench/`
+      - benches: `target/` (rsynced into `data/bench/criterion` afterward)
       - `data/target/` remains gitignored (even though the rest of `data/` is tracked via LFS) so transient Cargo outputs never pollute commits.
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
     - `vk.sh`: Local VK web server for the human project owner.
@@ -67,12 +68,12 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Geometry: `nalgebra`. Data wrangling: `polars`. RNG: `rand` in Rust, `random`, `numpy.random`, and `torch.manual_seed(...)` in Python.
   - No Jupyter notebooks.
 - Vibe‑Kanban (VK) provisions the environment and worktree; agents do not perform manual setup unless a ticket explicitly asks for it.
-- Development environment: everything runs inside a single VS Code devcontainer on the project owner’s Ubuntu desktop. There is one clone of the repo, no GitHub-hosted CI, and all automation (vk-setup, scripts/checks.sh, etc.) executes inside that container. Assume local resources; escalate before assuming external services exist.
+- Development environment: everything runs inside a single VS Code devcontainer on the project owner’s Ubuntu desktop. There is one clone of the repo, no GitHub-hosted CI, and all automation (vk-setup, scripts/python-lint-type-test.sh, etc.) executes inside that container. Assume local resources; escalate before assuming external services exist.
 - Tooling:
   - Python 3.11+ runtime; examples use `safe --timeout 60 -- uv run ...` for command execution.
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
   - Git LFS (latest 3.x). Run `git lfs install --local` once per worktree and `git lfs pull --include "data/**" --exclude ""` after switching branches so large artifacts are available locally.
-  - Fast feedback: `bash scripts/checks.sh` runs ruff format/check, pyright (basic), pytest (non‑e2e), and cargo check/test.
+  - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test) plus `bash scripts/rust-lint-test.sh` cover the common loops before running selective smoke/e2e tests.
   - Optional native build is available via maturin (only if a ticket requires native code changes; see Quick Reference).
 
 ## Safe Wrapper (timeouts & cleanup)
@@ -86,7 +87,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Scope and policy:
   - Apply timeouts at the top level. Most scripts in `scripts/` assume they run under `safe.sh` and will exit if not (they check `SAFE_WRAPPED=1`, exported by `safe.sh`).
   - Do not nest `safe.sh` inside those scripts.
-  - Exception: `scripts/reproduce.sh` is human-facing and documents sensible per-stage timeouts; it self-wraps each stage with `safe.sh`. You may run it directly or wrap it at the top level—both are acceptable.
+- Exception: `scripts/reproduce.sh` is human-facing and documents sensible per-stage timeouts; it self-wraps each stage with `safe.sh`. You may run it directly or wrap it at the top level—both are acceptable. Today it includes the Criterion benchmarks → docs-assets stage, so the mdBook always renders from freshly generated tables; treat future artifacts the same way.
 - Environment markers set by `safe.sh`:
   - `SAFE_WRAPPED=1` for all children (used by scripts to validate top-level wrapping).
   - `SAFE_TIMEOUT=<seconds>` if a timeout was provided.
@@ -110,7 +111,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 
 ## Git Conventions
 - Commit often; include `Ticket: <uuid>` in commit messages.
-- No pre‑commit hooks; rely on `bash scripts/checks.sh` and selective E2E runs for validation.
+- No pre‑commit hooks; rely on `bash scripts/python-lint-type-test.sh`, `bash scripts/rust-lint-test.sh`, and selective E2E runs for validation.
 - VK automatically commits after every agent turn, but you can commit manually as needed.
 
 ## Command Line Quick Reference
@@ -119,14 +120,16 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Manual CI before handing in work to the project owner for merge:
   - `safe --timeout 300 -- bash scripts/ci.sh`
 - Get feedback fast after working on code:
-  - `safe --timeout 10 -- bash scripts/checks.sh`
+  - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
+  - `safe --timeout 10 -- bash scripts/rust-lint-test.sh`
   - `safe --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
   - `safe --timeout 60 -- cargo test -q -p viterbo`
   - `safe --timeout 120 -- bash scripts/rust-test.sh -p viterbo -- -q`
   - `safe --timeout 300 -- uv run pytest -q -m e2e tests/e2e/test_atlas_build.py::test_build_dataset_tiny`
   - Atlas data (full): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
   - Rust benches (compile only): `safe --timeout 120 -- bash scripts/rust-bench.sh -- --no-run`
-  - Rust benches (run, write to data/bench): `CARGO_TARGET_DIR=data/bench safe --timeout 300 -- bash scripts/rust-bench.sh`
+  - Rust benches (full run → data/bench/criterion): `safe --timeout 300 -- bash scripts/rust-bench.sh`
+  - Bench docs stage (CSV/Markdown refresh): `safe --timeout 120 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json`
 - Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
   - Native build: `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`.
 
@@ -172,7 +175,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 ## Testing Policy
 - Rust cores (algorithms): unit tests + property tests required; benchmarks with `criterion` under `data/bench/` (committed via Git LFS).
 - Python orchestration: smoke tests and selective E2E on tiny configs; add unit tests when logic is non‑trivial.
-- CI defaults: `scripts/checks.sh` (ruff/pyright/pytest non‑e2e + cargo) and on‑demand E2E by selection (`-m e2e -k ...`).
+- CI defaults: `scripts/python-lint-type-test.sh`, `scripts/rust-lint-test.sh`, `scripts/rust-bench.sh` (+ `python -m viterbo.bench.stage_docs`), and on-demand E2E by selection (`-m e2e -k ...`).
 - Default: prefer smoke + E2E over broad Python unit test suites unless justified by complexity.
 
 ## Documentation Conventions

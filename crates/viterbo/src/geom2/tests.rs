@@ -21,7 +21,7 @@ fn rotation_angle_pure_rotations_and_reflection() {
         t: vector![0.0, 0.0],
     };
     let rho_shear = rotation_angle(&sh).unwrap();
-    assert!(rho_shear >= 0.0 && rho_shear <= 0.5 + 1e-12);
+    assert!((0.0..=0.5 + 1e-12).contains(&rho_shear));
     // Reflection -> None
     let refl = Aff2 {
         m: matrix![-1.0, 0.0; 0.0, 1.0],

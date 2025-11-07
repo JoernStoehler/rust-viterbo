@@ -210,12 +210,12 @@ fn hsi_ordered(hs: &[Hs2], eps: f64) -> HalfspaceIntersection {
     let inter =
         |i1: usize, i2: usize| -> Option<Vector2<f64>> { line_intersection(hs[i1], hs[i2]) };
 
-    for i in 0..hs.len() {
+    for (i, h) in hs.iter().enumerate() {
         while dq.len() >= 2 {
             let l1 = dq[dq.len() - 2];
             let l2 = dq[dq.len() - 1];
             if let Some(p) = inter(l1, l2) {
-                if hs[i].satisfies_eps(p, eps) {
+                if h.satisfies_eps(p, eps) {
                     break;
                 }
             }
@@ -225,7 +225,7 @@ fn hsi_ordered(hs: &[Hs2], eps: f64) -> HalfspaceIntersection {
             let f1 = dq[0];
             let f2 = dq[1];
             if let Some(p) = inter(f1, f2) {
-                if hs[i].satisfies_eps(p, eps) {
+                if h.satisfies_eps(p, eps) {
                     break;
                 }
             }

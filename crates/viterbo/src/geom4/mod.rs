@@ -231,9 +231,9 @@ pub struct Face1 {
 ///
 /// Algorithm
 /// - Convert H→V (if needed).
-/// - For each vertex, record indices of near‑tight inequalities.
-/// - Group vertices by 1/2/3 saturated facets to get edges, 2‑faces, facets.
-/// Dedups are applied to handle degeneracy.
+/// - For each vertex, record indices of near-tight inequalities.
+/// - Group vertices by 1/2/3 saturated facets to get edges, 2-faces, facets.
+///   Dedups are applied to handle degeneracy.
 pub fn enumerate_faces_from_h(
     hs: &[Hs4],
 ) -> (Vec<Vector4<f64>>, Vec<Face1>, Vec<Face2>, Vec<Face3>) {
@@ -534,7 +534,7 @@ fn det3(m: [[f64; 3]; 3]) -> f64 {
         + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
 }
 
-fn combinations<T: Copy>(items: &Vec<T>, k: usize) -> Vec<Vec<T>> {
+fn combinations<T: Copy>(items: &[T], k: usize) -> Vec<Vec<T>> {
     fn rec<T: Copy>(items: &[T], k: usize, start: usize, cur: &mut Vec<T>, out: &mut Vec<Vec<T>>) {
         if cur.len() == k {
             out.push(cur.clone());

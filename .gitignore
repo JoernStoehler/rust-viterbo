@@ -5,6 +5,9 @@ target/
 # Data artifacts live in Git LFS (see AGENTS.md)
 # Keep local build caches out of git even though they live under data/
 data/target/
+data/bench/release/
+data/bench/tmp/
+data/bench/.rustc_info.json
 
 # mdBook build output (site is built by CI to gh-pages; sources live in docs/src)
 /docs/book/
