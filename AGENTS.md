@@ -222,3 +222,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Self‑documenting project: record conventions, workflows, and reminders in `docs/src/meta/`; cross-reference tickets and thesis specs.
 - AI Agents as first-class developers: design everything for easy onboarding of new agents; clear, specific, and actionable tickets; maintain always‑relevant knowledge in a lean `AGENTS.md`, and move situational info to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`; avoid overhead for agents, reduce tool friction and keep related information close together to minimize search time; 
 - Continuous Improvement: accept feedback from agents and the project owner; refactor with breaking changes, rewrite documentation, open additional tickets when it raises the quality of the project for future agents.
+
+## API Policy (Internal Only)
+- We have no stable public API. All Rust modules are project‑internal.
+- Prefer better, clearer APIs over compatibility. Breaking changes are not just allowed, they’re expected when they improve quality or align us with the thesis/specs.
+- Don’t carry legacy shims or deprecations unless a ticket explicitly asks for a staged transition. Keeping low churn for its own sake causes rot.
+- Use `viterbo::api` and `viterbo::prelude` for convenience imports in internal code. These surfaces are curated for agents and may change at any time.
+- If an external‑looking boundary appears (e.g., PyO3), treat it as internal too unless a ticket declares support guarantees for a specific consumer.

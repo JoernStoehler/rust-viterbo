@@ -1,6 +1,23 @@
+//! Strict, ordered H-representation in 2D (Poly2).
+//!
+//! Purpose
+//! - Provide a single strict, angle‑ordered H‑rep (`Poly2`) with unit normals,
+//!   coalesced parallels, and numerically explicit operations.
+//!
+//! Why this design
+//! - Aligns with the oriented‑edge algorithm (push‑forward + HPI).
+//! - Stable ordering by angle plus coalescing gives fast merges and predictable
+//!   numerics for downstream algorithms.
+//!
+//! References
+//! - TH: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md
+//! - Code cross-refs: `types::{Hs2, Aff2, GeomCfg}`, `util::{angle_of, canonicalize_unit}`
+
 use nalgebra::Vector2;
 
-use super::types::{Affine2, Hs2};
+use super::types::Hs2;
+use super::util::{angle_of, canonicalize_unit};
+use super::Aff2;
 
 /// Strict, ordered H-representation in 2D.
 ///
@@ -94,7 +111,7 @@ impl Poly2 {
     }
 
     /// Affine push-forward; result remains strict (re-normalize, sort, coalesce).
-    pub fn push_forward(&self, f: &Affine2) -> Option<Poly2> {
+    pub fn push_forward(&self, f: &Aff2) -> Option<Poly2> {
         let minv = f.m.try_inverse()?;
         let mut tmp: Vec<Hs2> = Vec::with_capacity(self.hs.len());
         for h in &self.hs {
@@ -278,10 +295,6 @@ fn hsi_ordered(hs: &[Hs2], eps: f64) -> HalfspaceIntersection {
 }
 
 #[inline]
-pub(crate) fn angle_of(n: Vector2<f64>) -> f64 {
-    n.y.atan2(n.x)
-}
-#[inline]
 pub(crate) fn wrap_angle(a: f64) -> f64 {
     let mut x = a;
     while x <= -std::f64::consts::PI {
@@ -303,13 +316,6 @@ pub(crate) fn push_or_coalesce(out: &mut Vec<Hs2>, n: Vector2<f64>, c: f64) {
         }
     }
     out.push(Hs2::new(n, c));
-}
-pub(crate) fn canonicalize_unit(n: Vector2<f64>, c: f64) -> Option<(Vector2<f64>, f64)> {
-    let norm = n.norm();
-    if !(norm.is_finite()) || norm <= 0.0 {
-        return None;
-    }
-    Some((n / norm, c / norm))
 }
 fn line_intersection(h1: Hs2, h2: Hs2) -> Option<Vector2<f64>> {
     let a = nalgebra::matrix![h1.n.x, h1.n.y; h2.n.x, h2.n.y];

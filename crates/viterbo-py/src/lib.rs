@@ -1,3 +1,11 @@
+//! PyO3 bindings for selected `viterbo` functions.
+//!
+//! Notes
+//! - Keep bindings thin and predictable; conversions use simple tuples/NumPy
+//!   in higher-level wrappers in `src/viterbo/rust/`.
+//! - Most native functionality remains in Rust (`viterbo` crate). We only bind
+//!   pieces that are proven hot or ergonomically valuable for Python callers.
+
 use nalgebra::Vector2;
 use pyo3::prelude::*;
 

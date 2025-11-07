@@ -1,14 +1,31 @@
+//! Geometry helpers for 2D strict H-representations.
+//!
+//! Purpose
+//! - Small, reusable utilities used across `geom2` (ordering by angle,
+//!   normalization, convex hull, and strict H‑rep construction from points).
+//!
+//! Why this design
+//! - Keep numerics explicit and local (no hidden globals). Helpers are
+//!   `pub(crate)` so other `geom2` modules can reuse them without leaking
+//!   unnecessary API surface to the crate root.
+//!
+//! References
+//! - TH: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md
+//! - Code cross-refs: `ordered::Poly2`, `types::{Hs2}`
+
 use nalgebra::Vector2;
 
 use super::{ordered::Poly2, types::Hs2};
 
+/// Angle of a unit normal (stable ordering key).
 #[inline]
-fn angle_of(n: Vector2<f64>) -> f64 {
+pub(crate) fn angle_of(n: Vector2<f64>) -> f64 {
     n.y.atan2(n.x)
 }
 
+/// Normalize `(n, c)` so that `||n||=1` (returns `None` for non-finite/zero).
 #[inline]
-fn canonicalize_unit(n: Vector2<f64>, c: f64) -> Option<(Vector2<f64>, f64)> {
+pub(crate) fn canonicalize_unit(n: Vector2<f64>, c: f64) -> Option<(Vector2<f64>, f64)> {
     let norm = n.norm();
     if !(norm.is_finite()) || norm <= 0.0 {
         return None;

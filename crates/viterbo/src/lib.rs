@@ -3,11 +3,18 @@
 //! Cross-refs live in doc comments:
 //! TH: anchors refer to docs/src/thesis/*.md headings.
 //! VK: UUIDs refer to Vibe Kanban tickets.
+//!
+//! API Policy
+//! - This crate is project-internal. There is no stable public API.
+//! - Agents prefer clarity and better design over compatibility; breaking changes
+//!   are encouraged when they improve quality and align with tickets/specs.
+//! - See AGENTS.md → “API Policy (Internal Only)”.
 
 pub mod geom2;
 pub mod geom4;
 pub mod oriented_edge;
 pub mod rand4;
+pub mod api;
 
 /// Library version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -29,8 +36,8 @@ pub mod prelude {
     pub use nalgebra::{Matrix2 as Mat2, Vector2 as Vec2};
 }
 
-/// Signed area of the parallelogram spanned by vectors `a` and `b` in R^2.
-/// Positive for a→b counterclockwise, negative otherwise.
+/// Signed area of the parallelogram spanned by vectors `a` and `b` in R².
+/// Positive for a→b counterclockwise, negative otherwise. Used by Python bindings.
 #[inline]
 pub fn parallelogram_area(a: Vec2<f64>, b: Vec2<f64>) -> f64 {
     a.x * b.y - a.y * b.x

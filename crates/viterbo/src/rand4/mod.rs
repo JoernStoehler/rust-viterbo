@@ -13,6 +13,10 @@
 //! References
 //! - TH: docs/src/thesis/random-polytopes.md
 //! - Ticket: 0f48-random-polytopes
+//!
+//! Status
+//! - Rarely used outside targeted experiments right now; kept feature-ready and
+//!   tested in-place so agents can wire it into pipelines as tickets land.
 
 use crate::geom2::{
     rand::{

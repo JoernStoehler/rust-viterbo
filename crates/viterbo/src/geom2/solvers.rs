@@ -1,11 +1,17 @@
+//! Small 2D solvers used by oriented‑edge search and experiments.
+//!
+//! - `rotation_angle`: orientation‑preserving polar factor angle/π in [0,1].
+//! - `fixed_point_in_poly`: constrained fixed‑point solve with action minimization.
+//!
+//! References
+//! - TH: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md
+//! - Code cross-refs: `ordered::{Poly2,HalfspaceIntersection}`, `types::{Aff1,Aff2,GeomCfg}`
 use nalgebra::{Matrix2, Vector2, SVD};
 
-use super::{
-    ordered::HalfspaceIntersection, ordered::Poly2, types::Aff1, types::Affine2, types::GeomCfg,
-};
+use super::{ordered::HalfspaceIntersection, ordered::Poly2, types::Aff1, types::GeomCfg, Aff2};
 
 /// Rotation via polar factor (Option B): returns angle/π in [0,1] or None if orientation-reversing.
-pub fn rotation_angle(f: &Affine2) -> Option<f64> {
+pub fn rotation_angle(f: &Aff2) -> Option<f64> {
     let svd = SVD::new(f.m, true, true);
     let u = svd.u?;
     let vt = svd.v_t?;
@@ -20,7 +26,7 @@ pub fn rotation_angle(f: &Affine2) -> Option<f64> {
 
 /// Fixed-point solver for ψ(z) = M z + t constrained to a strict polygon C, minimizing A.
 pub fn fixed_point_in_poly(
-    psi: Affine2,
+    psi: Aff2,
     c: &Poly2,
     a: &Aff1,
     cfg: GeomCfg,

@@ -12,7 +12,7 @@
 //! - TH: docs/src/thesis/geom2d_polytopes.md (section “Random 2D polygons”)
 //! - Code cross-refs: `Poly2`, `from_points_convex_hull_strict`
 
-use super::{ordered::HalfspaceIntersection, ordered::Poly2, types::Affine2};
+use super::{ordered::HalfspaceIntersection, ordered::Poly2, Aff2};
 use nalgebra::Vector2;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
@@ -137,7 +137,7 @@ pub fn recenter_rescale(poly: &Poly2, bounds: Bounds2) -> Option<(Poly2, f64, f6
     };
     let c = polygon_area_centroid(&verts)?;
     // Translate by -centroid.
-    let translated = poly.push_forward(&Affine2 {
+    let translated = poly.push_forward(&Aff2 {
         m: nalgebra::Matrix2::identity(),
         t: -c,
     })?;
@@ -175,7 +175,7 @@ pub fn recenter_rescale(poly: &Poly2, bounds: Bounds2) -> Option<(Poly2, f64, f6
     } else {
         s_min.clamp(1e-12, s_max)
     };
-    let scaled = translated.push_forward(&Affine2 {
+    let scaled = translated.push_forward(&Aff2 {
         m: nalgebra::Matrix2::identity() * s,
         t: Vector2::zeros(),
     })?;

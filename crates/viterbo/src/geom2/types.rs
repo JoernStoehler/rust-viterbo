@@ -1,3 +1,13 @@
+//! Basic 2D types and tolerances used by strict H-representations.
+//!
+//! - `GeomCfg`: centralizes epsilons for determinant, feasibility, and tau checks.
+//! - `Hs2`: closed half‑space `n·x <= c` with helper predicates.
+//! - `Affine2`, `Aff1`: 2D affine map and 1D affine functional used by search.
+//!
+//! References
+//! - TH: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md
+//! - Code cross-refs: `ordered::Poly2`, `solvers::{rotation_angle,fixed_point_in_poly}`
+
 use nalgebra::{Matrix2, Vector2};
 
 /// Geometry configuration (tolerances).
