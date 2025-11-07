@@ -47,6 +47,7 @@
   - Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.
   - Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.
   <!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
+  - Orientation convention (decision): for every ridge i, fix the chart π_i to have positive orientation. This pins the sign of rotation angles extracted from Dψ_ij consistently across ridges.
 
 ## Notation Recap
 - Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.
@@ -99,6 +100,31 @@ Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathc
   <!-- Comment: We explicitly avoid parameterization of the Reeb vector field. Straight-line geometry suffices to locate exits and compute actions. -->
 <!-- review: confirm chart orientation convention below works for rotation sign consistency. -->
 
+Symbol map (equations above)
+- $\psi_{ij}$: push‑forward map (code: `EdgeData.map_ij`).
+- $\operatorname{dom}\psi_{ij}\subset A_i$: domain polygon in ridge $i$ (code: `EdgeData.dom_in`).
+- $\operatorname{im}\psi_{ij}\subset A_j$: image polygon in ridge $j$ (code: `EdgeData.img_out`).
+- $\tau_{ij}$: first‑exit time on facet $F$ (affine on the region where $j$ is first exit).
+- $A_{ij}$: action increment (code: `EdgeData.action_inc`).
+- $\rho_{ij}$: rotation increment from the polar angle of $D\psi_{ij}$ (code: `EdgeData.rotation_inc`).
+- $U_i,U_j$: ridge charts (code: `Ridge.chart_u`; left‑inverse on the plane: `Ridge.chart_ut`).
+- $v_F=J n_F$: facet Reeb direction (code: `geom4::reeb_on_facets`).
+- $A_i$: ridge polygon in chart $i$ (code: `Ridge.poly`).
+<!-- note: reviewers — this symbol map keeps equations compact while aligning with code identifiers for agents. -->
+
+### Worked Example (axis‑aligned facet in the 4D cube)
+Consider $K=[-1,1]^4$ in coordinates $(x_1,x_2,y_1,y_2)$ with the standard $J$ (so $v=J n$). Take the facet
+$F=\{x_1=1\}$ with outward normal $n_F=e_{x_1}$ and $b_F=1$, hence $v_F=J n_F = e_{y_1}$.
+
+- Choose ridges $i = F\cap\{y_1=-1\}$ and $j = F\cap\{y_1=+1\}$. The co‑facet for $j$ is $H_{G(j,F)}:\{y_1=1\}$ with $n_{G(j,F)}=e_{y_1}$, $b_{G(j,F)}=1$.
+- Then $d_j=\langle n_{G(j,F)}, v_F\rangle = \langle e_{y_1}, e_{y_1}\rangle = 1 > 0$, and
+  $$\tau_{ij}(x)=\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{d_j} = 1 - y_1.$$
+  All other co‑facets $k$ with $\langle n_k, v_F\rangle\le 0$ are inadmissible, so $j$ is uniquely first exit.
+- Charts: the ridge planes $R_i=R_j=\{x_1=\pm 1,\ y_1=\mp 1\}$ are spanned by the $(x_2,y_2)$ axes, so we may take $\pi_i,\pi_j$ as identity on $(x_2,y_2)$. Thus $U_iU_j^\top=I$ and the push‑forward map $\psi_{ij}$ is the identity on $(x_2,y_2)$.
+- Rotation increment: $D\psi_{ij}=I_2 \Rightarrow \rho_{ij}=0$.
+- Action increment: $A_{ij}(x)=\tfrac{b_F}{2}\tau_{ij}(x)=\tfrac{1}{2}(1 - y_1)$, which is affine and, in the chart, constant with respect to $(x_2,y_2)$.
+<!-- note: reviewers — this concrete example shows the formulas reduce correctly to identity ψ and zero ρ in a simple axis‑aligned setting. -->
+
 ## Action Increment per Edge (explicit affine form)
 For $x\in i$ that flows to $j$ across facet $F$, the action increment along the segment is
 $$
@@ -135,8 +161,16 @@ We will proceed with a constant per-edge increment $\rho_{ij}$ and enforce parti
   - Compute the polar decomposition $D\psi_{ij}=Q_{ij} S_{ij}$, with $Q_{ij}\in SO(2)$ and $S_{ij}$ symmetric positive-definite.
   - Set $\rho_{ij} := \tfrac{1}{\pi}\,\mathrm{arg}(Q_{ij}) \in [0,1]$ (units of “half-turns”, so one full turn contributes 2).
   - This is constant per edge and trivial to compute once $\psi_{ij}$ is built.
-- Safety: rotation pruning is optional. For full correctness we can set the budget to $+\infty$ (disable pruning), and enable it once we finalize the formal link to CZ index in the background doc.
+- Rotation pruning policy: enforced in production with the theory‑fixed 4D threshold (prune as soon as $\rho>2$). The on/off switch is retained only for benchmarks/ablations to measure impact.
 <!-- review: confirm Option B + “half-turn” units align with CZ index 3 ⇒ ρ∈(1,2). -->
+
+### Decisions (2025‑11‑07)
+- Ridge chart orientation: fix all ridge charts to positive orientation for consistent rotation signs across edges.
+- Rotation normalization: adopt Option B (polar rotation of $D\\psi_{ij}$) with $\\rho_{ij}\\in[0,1]$.
+- Rotation pruning: enforced in production; theory fixes the 4D index‑3 threshold — prune as soon as $\\rho>2$. The on/off switch is kept only for benchmarks/ablations to measure impact.
+
+### Determinism Note
+- Because $\\rho_{ij}$ is obtained from the polar factor of $D\\psi_{ij}$ (via SVD), small numerical differences (compiler flags, CPU features like FMA, BLAS/SIMD choices) can change pruning decisions when a branch is near the $\\rho=2$ threshold. In practice this may alter the DFS node/edge counts visited, even though the minimum cycle and action remain the same (action/primal feasibility ultimately certify the result). We accept this variability and do not aim for cross‑toolchain identical traversal statistics.
 
 ## Search Over Directed Cycles (push-forward variant)
 We now describe the core enumeration and pruning in the 2-face digraph using push-forwards (no pull-backs of polytopes).
@@ -175,6 +209,17 @@ Heuristics and ordering:
   - If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.
   - If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.
 - Tolerances: treat $|\det(I-M)|<\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.
+<!-- note: reviewers — we keep equations compact and map symbols to code below. -->
+
+Symbol map (fixed‑point and tolerances)
+- $M,t$: entries of the composed affine map $\Psi_p$ (code: `State.phi_start_to_current`).
+- $z,z_\star$: points in the start ridge chart (code: `Vec2`; returned by `dfs_solve_with_fp` helpers).
+- $C_p$: candidate polygon at the start ridge (code: `State.candidate` on closure).
+- $A_p$: accumulated action on the start chart (code: `State.action`).
+- $\varepsilon_{\det}$: determinant threshold (code: `GeomCfg.eps_det`).
+- $\varepsilon_{\mathrm{feas}}$: feasibility/membership slack (code: `GeomCfg.eps_feas`).
+- $\varepsilon_{\tau}$: tie‑breaking and admissibility slack (code: `GeomCfg.eps_tau`).
+<!-- note: agents — fixed_point_in_poly implements the 2D/1D branches with these exact eps values. -->
 
 ### Fixed-point solver (deterministic and robust)
 - Write $\Psi_p(z)=Mz+t$ in the start chart. Solve $(I-M)z=t$:

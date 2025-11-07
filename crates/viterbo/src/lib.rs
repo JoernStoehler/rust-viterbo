@@ -7,6 +7,7 @@
 pub mod geom2;
 pub mod geom4;
 pub mod rand4;
+pub mod oriented_edge;
 
 /// Library version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
