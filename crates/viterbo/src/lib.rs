@@ -22,4 +22,5 @@ pub mod prelude {
         fixed_point_in_poly, rotation_angle, Aff1, Aff2, GeomCfg, HalfspaceIntersection, Hs2, Poly2,
         from_points_convex_hull_strict,
     };
+    pub use crate::geom2::rand::{draw_polygon_radial, polar, recenter_rescale, Bounds2, RadialCfg, ReplayToken, VertexCount};
 }

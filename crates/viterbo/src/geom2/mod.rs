@@ -18,6 +18,7 @@ mod types;
 pub mod ordered;
 mod solvers;
 mod util;
+pub mod rand;
 
 pub use ordered::{HalfspaceIntersection, Poly2};
 pub use solvers::{fixed_point_in_poly, rotation_angle};

@@ -29,6 +29,17 @@ Goal: extremely fast, robust‑enough 2D routines for half‑space polytopes use
 - Build from 2D points by convex hull (Andrew’s monotone chain) → outward half‑spaces. Useful when projecting 4D faces to 2D.
   - Code: `Poly2::from_points_convex_hull`.
 
+## Random 2D Polygons
+- Purpose: provide small, deterministic test instances for Mahler‑product experiments and algorithm smoke tests.
+- Location: `crates/viterbo/src/geom2/rand.rs` (module `geom2::rand`).
+- API:
+  - `draw_polygon_radial(cfg, token) -> Poly2`: radial jitter model over `n` equally spaced angles with bounded angular (`angle_jitter_frac`) and radial (`radial_jitter`) noise.
+  - `recenter_rescale(poly, Bounds2) -> (Poly2, r_in, r_out)`: translate to the area‑centroid and scale about the origin to satisfy in‑/out‑radius bounds when consistent.
+  - `polar(poly) -> Poly2`: compute the polar polygon `K^\\circ` in H‑rep (requires origin in the interior).
+- Replay tokens: `(seed: u64, index: u64)`. The sampler uses `StdRng::seed_from_u64(mix(seed,index))` so that:
+  - Same `(seed,index)` → same polygon.
+  - Different `index` values partition the stream reproducibly, independent of call order.
+
 ## Conventions
 - Tolerance: `eps = 1e-9` for predicates; scale‑agnostic inputs preferred.
 - Orientation: standard 2D orientation; outward normal constructed by 90° CCW rotation of hull edges.
