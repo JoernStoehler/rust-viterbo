@@ -31,11 +31,10 @@ uv run pyright
 echo ">>> Python smoke tests"
 uv run pytest -q -m "not e2e"
 
-echo ">>> Rust fmt/clippy/tests"
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-data/target}"
-cargo fmt --all --check
-cargo clippy -p viterbo --all-targets -- -D warnings
-cargo test -p viterbo -q
+echo ">>> Rust fmt/test/clippy"
+bash scripts/rust-fmt.sh
+bash scripts/rust-test.sh
+bash scripts/rust-clippy.sh
 
 echo ">>> Build native extension (maturin) — fail fast if missing"
 uv run maturin develop -m crates/viterbo-py/Cargo.toml

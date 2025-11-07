@@ -34,7 +34,9 @@ echo "=== Reproduce: Python lint/type/tests ==="
 bash scripts/safe.sh --timeout 300 -- bash scripts/python-lint-type-test.sh
 
 echo "=== Reproduce: Rust lint/tests ==="
-bash scripts/safe.sh --timeout 300 -- bash scripts/rust-lint-test.sh
+bash scripts/safe.sh --timeout 300 -- bash scripts/rust-fmt.sh
+bash scripts/safe.sh --timeout 300 -- bash scripts/rust-test.sh
+bash scripts/safe.sh --timeout 300 -- bash scripts/rust-clippy.sh
 
 echo "=== Reproduce: Criterion benchmarks (raw data/bench/criterion) ==="
 bash scripts/safe.sh --timeout 600 -- BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh

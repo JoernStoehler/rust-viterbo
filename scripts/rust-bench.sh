@@ -35,6 +35,17 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Bench defaults tuned from quick sweeps (m=50) to reduce run time while keeping
+# low variance for our numerics/HPC kernels. See ticket discussion for details.
+# Rationale:
+# - Warm-up 1.0s crosses initial cache/JIT effects without long waits.
+# - Measurement 4.0s gives stable means for poly2 benches with outliers ~10–20%.
+# - Sample size 50 balances CI time and statistical power.
+# Agents may re-tune with: cargo bench --bench poly2_bench -- --warm-up-time X --measurement-time Y --sample-size Z <filter>
+BENCH_WARMUP="${BENCH_WARMUP:-1.0}"
+BENCH_MEASURE="${BENCH_MEASURE:-4.0}"
+BENCH_SAMPLES="${BENCH_SAMPLES:-50}"
+
 # Default cargo target dir to the workspace target/ unless overridden.
 DEFAULT_TARGET_DIR="$ROOT_DIR/target"
 TARGET_DIR="${CARGO_TARGET_DIR:-$DEFAULT_TARGET_DIR}"
@@ -43,6 +54,11 @@ if [[ "$TARGET_DIR" != /* ]]; then
 fi
 export CARGO_TARGET_DIR="$TARGET_DIR"
 mkdir -p "$CARGO_TARGET_DIR"
+
+# Prefer sccache if available for faster compiles across worktrees.
+if command -v sccache >/dev/null 2>&1; then
+  export RUSTC_WRAPPER="${RUSTC_WRAPPER:-sccache}"
+fi
 
 EXPORT_ROOT="${BENCH_EXPORT_DIR:-$ROOT_DIR/data/bench}"
 if [[ "$EXPORT_ROOT" != /* ]]; then
@@ -60,8 +76,30 @@ if [[ "$ASSETS_ROOT" != /* ]]; then
   ASSETS_ROOT="$ROOT_DIR/$ASSETS_ROOT"
 fi
 
-echo ">>> cargo bench (-p $PKG) target=$CARGO_TARGET_DIR ${EXTRA[*]:-}"
-cargo bench -p "$PKG" "${EXTRA[@]:-}"
+echo ">>> Discovering benches for package $PKG"
+# Simple discovery: parse benches declared in crates/$PKG/Cargo.toml
+CRATE_MANIFEST="$ROOT_DIR/crates/$PKG/Cargo.toml"
+BENCH_NAMES=()
+if [[ -f "$CRATE_MANIFEST" ]]; then
+  while IFS= read -r name; do
+    [[ -n "$name" ]] && BENCH_NAMES+=("$name")
+  done < <(awk '/^\[\[bench\]\]/{flag=1;next}/^\[/{flag=0}flag && /name *=/{gsub(/.*name *= *\"|\".*/,""); print}' "$CRATE_MANIFEST")
+fi
+
+if (( ${#BENCH_NAMES[@]} > 0 )); then
+  echo ">>> Running benches: ${BENCH_NAMES[*]}"
+  for bname in "${BENCH_NAMES[@]}"; do
+    echo ">>> cargo bench (-p $PKG --bench $bname) target=$CARGO_TARGET_DIR warmup=$BENCH_WARMUP measure=$BENCH_MEASURE samples=$BENCH_SAMPLES ${EXTRA[*]:-}"
+    cargo bench -p "$PKG" --bench "$bname" -- \
+      --warm-up-time "$BENCH_WARMUP" \
+      --measurement-time "$BENCH_MEASURE" \
+      --sample-size "$BENCH_SAMPLES" \
+      "${EXTRA[@]:-}"
+  done
+else
+  echo "warning: could not discover bench names; running cargo bench without per-bench args"
+  cargo bench -p "$PKG"
+fi
 echo "Rust benches completed."
 
 if [[ "$COPY_RESULTS" == "1" ]] && [[ -d "$CARGO_TARGET_DIR/criterion" ]]; then

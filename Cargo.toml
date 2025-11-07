@@ -2,3 +2,8 @@
 members = ["crates/viterbo"]
 resolver = "2"
 exclude = ["crates/viterbo-py"]
+
+[profile.dev]
+# Reduce debug info for faster incremental builds in dev/test loops.
+# Keeps debug assertions and overflow checks enabled.
+debug = 1

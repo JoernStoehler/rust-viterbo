@@ -47,11 +47,13 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `scripts/`: Devops scripts.
     - `safe.sh`: Must-use wrapper for potentially long-running commands (timeout + group kill). Symlinked as `~/.local/bin/safe` for convenience.
     - `python-lint-type-test.sh`: Fast Ruff/Pyright/pytest (non-e2e) loop for Python code.
-    - `rust-lint-test.sh`: Runs cargo fmt/clippy/test with shared settings.
+    - `rust-fmt.sh`: `cargo fmt --all --check`.
+    - `rust-test.sh`: `cargo nextest run` (fallback to `cargo test`) under `safe`.
+    - `rust-clippy.sh`: `cargo clippy -p viterbo --all-targets -- -D warnings`.
     - `ci.sh`: Manual full CI.
     - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
-    - `rust-test.sh`: Convenience wrapper for `cargo check`/`cargo test` with `safe` and timeouts.
-    - `rust-bench.sh`: Convenience wrapper for `cargo bench` (Criterion). Builds in `target/` and rsyncs curated Criterion JSON into `data/bench/criterion` (Git LFS) after the run. Set `BENCH_RUN_POSTPROCESS=1` to chain the docs stage automatically.
+    - `rust-bench.sh`: Criterion benches (regular preset; exports curated JSON into `data/bench/criterion`). Set `BENCH_RUN_POSTPROCESS=1` to chain the docs stage automatically.
+    - `rust-bench-quick.sh`: Criterion quick preset for local iteration (reduced warm-up/measurement; does not export).
     - Both Rust wrappers default `CARGO_TARGET_DIR` if not set:
       - tests: `data/target/`
       - benches: `target/` (rsynced into `data/bench/criterion` afterward)
@@ -73,8 +75,8 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Python 3.11+ runtime; examples use `safe --timeout 60 -- uv run ...` for command execution.
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
   - Git LFS (latest 3.x). Run `git lfs install --local` once per worktree and `git lfs pull --include "data/**" --exclude ""` after switching branches so large artifacts are available locally.
-  - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test) plus `bash scripts/rust-lint-test.sh` cover the common loops before running selective smoke/e2e tests.
-  - Native extension: we keep a committed `.so` in `src/viterbo/` for fast worktrees. Build/refresh via `bash scripts/safe.sh --timeout 120 -- bash scripts/rust-build.sh`. CI also builds natively to catch drift early. We do not publish to PyPI; packaging-for-distribution assumptions do not apply in this repo.
+  - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test), then `bash scripts/rust-fmt.sh`, `bash scripts/rust-test.sh`, and `bash scripts/rust-clippy.sh` before running selective smoke/e2e tests.
+  - Native extension: build/refresh via `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`. CI also builds natively to catch drift early. We do not publish to PyPI; packaging-for-distribution assumptions do not apply in this repo.
 
 ## Safe Wrapper (timeouts & cleanup)
 - Purpose: apply explicit timeouts at the top level and clean up entire process groups if a command hangs or runs longer than intended.
@@ -97,7 +99,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 <!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
 - Do not ask the project owner before running fast verification. Prefer these focused loops:
   - Python quick loop: `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
-  - Rust quick loop: `safe --timeout 10 -- bash scripts/rust-lint-test.sh`
+  - Rust quick loops:
+    - Format: `safe --timeout 10 -- bash scripts/rust-fmt.sh`
+    - Tests: `safe --timeout 120 -- bash scripts/rust-test.sh`
+    - Clippy: `safe --timeout 120 -- bash scripts/rust-clippy.sh`
   - mdBook quick build: `safe --timeout 120 -- mdbook build docs`
   - Selected tests: `safe --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
   - Optional native build (for code paths that depend on it): `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`
@@ -114,7 +119,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 
 ## Git Conventions
 - Commit often; include `Ticket: <uuid>` in commit messages.
-- No pre‑commit hooks; rely on `bash scripts/python-lint-type-test.sh`, `bash scripts/rust-lint-test.sh`, and selective E2E runs for validation.
+- No pre‑commit hooks; rely on `bash scripts/python-lint-type-test.sh`, `bash scripts/rust-fmt.sh`, `bash scripts/rust-test.sh`, `bash scripts/rust-clippy.sh`, and selective E2E runs for validation.
 - VK automatically commits after every agent turn, but you can commit manually as needed.
 
 ## Command Line Quick Reference
@@ -124,16 +129,18 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `safe --timeout 300 -- bash scripts/ci.sh`
 - Get feedback fast after working on code:
   - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
-  - `safe --timeout 10 -- bash scripts/rust-lint-test.sh`
+  - `safe --timeout 10 -- bash scripts/rust-fmt.sh`
+  - `safe --timeout 120 -- bash scripts/rust-test.sh`
+  - `safe --timeout 120 -- bash scripts/rust-clippy.sh`
   - `safe --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
   - `safe --timeout 60 -- cargo test -q -p viterbo`
   - `safe --timeout 120 -- bash scripts/rust-test.sh -p viterbo -- -q`
   - `safe --timeout 300 -- uv run pytest -q -m e2e tests/e2e/test_atlas_build.py::test_build_dataset_tiny`
   - Atlas data (full): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
-  - Rust benches (compile only): `safe --timeout 120 -- bash scripts/rust-bench.sh -- --no-run`
-  - Rust benches (full run → data/bench/criterion): `safe --timeout 300 -- bash scripts/rust-bench.sh`
+  - Rust benches (quick): `safe --timeout 180 -- bash scripts/rust-bench-quick.sh`
+  - Rust benches (regular → data/bench/criterion): `safe --timeout 300 -- bash scripts/rust-bench.sh`
   - Bench docs stage (CSV/Markdown refresh): `safe --timeout 120 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json`
-  - Native extension: `safe --timeout 120 -- bash scripts/rust-build.sh` (or `--copy-only` after CI/reproduce has built it)
+  - Native extension: `safe --timeout 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`
 - Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
   - Native build: `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`.
 
@@ -179,7 +186,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 ## Testing Policy
 - Rust cores (algorithms): unit tests + property tests required; benchmarks with `criterion` under `data/bench/` (committed via Git LFS).
 - Python orchestration: smoke tests and selective E2E on tiny configs; add unit tests when logic is non‑trivial.
-- CI defaults: `scripts/python-lint-type-test.sh`, `scripts/rust-lint-test.sh`, `scripts/rust-bench.sh` (+ `python -m viterbo.bench.stage_docs`), and on-demand E2E by selection (`-m e2e -k ...`).
+- CI defaults: `scripts/python-lint-type-test.sh`, `scripts/rust-fmt.sh`, `scripts/rust-test.sh`, `scripts/rust-clippy.sh`, `scripts/rust-bench.sh` (+ `python -m viterbo.bench.stage_docs`), and on-demand E2E by selection (`-m e2e -k ...`).
 - Default: prefer smoke + E2E over broad Python unit test suites unless justified by complexity.
 
 ## Documentation Conventions
@@ -197,7 +204,12 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Citations: use non-obstructive footnotes with author–year text; prefer official DOI or arXiv link; no proposition/page numbers (they vary across PDFs). Example: `[^HK19]: Haim‑Kislev (2019) ...`.
 - Cross‑refs: link to sibling chapters via relative paths; avoid duplicate headers; prefer section names over numbers.
 - HTML comments at the top: include `Ticket: <uuid>` and any brief editing notes for future agents.
-- Rendering checks: after edits run `safe --timeout 180 -- bash scripts/checks.sh` and `safe --timeout 120 -- mdbook build docs` without asking.
+- Rendering checks: after edits run the quick loops and docs build without asking:
+  - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
+  - `safe --timeout 10 -- bash scripts/rust-fmt.sh`
+  - `safe --timeout 120 -- bash scripts/rust-test.sh`
+  - `safe --timeout 120 -- bash scripts/rust-clippy.sh`
+  - `safe --timeout 120 -- mdbook build docs`
 
 ## Escalation
 - Escalate when: specs underspecified, solver/library choice blocks progress, runtime exceeds budget, or scope bloat requires a sub‑ticket.
@@ -210,7 +222,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Remove bench build artifacts by running\
   `git filter-repo --force --invert-paths --path data/bench/release --path data/bench/release/ --path data/bench/tmp --path data/bench/tmp/ --path data/bench/.rustc_info.json --path data/target --path data/target/ --message-callback 'return message + b"\n[chore] Drop legacy bench artifacts (Ticket <uuid>)\n"'`
 - Verify before publishing: `git rev-list --objects --all | grep data/bench/release` (should be empty), `git fsck --full`, `git lfs fetch --all`, `git lfs fsck`.
-- Push the result to a staging branch (e.g., `main-clean`) in `/workspaces/rust-viterbo`, have the owner force-push to GitHub and reset + rehydrate LFS (`git lfs pull --include "data/**" --exclude ""`) followed by the two quick loops (`bash scripts/python-lint-type-test.sh`, `bash scripts/rust-lint-test.sh`).
+- Push the result to a staging branch (e.g., `main-clean`) in `/workspaces/rust-viterbo`, have the owner force-push to GitHub and reset + rehydrate LFS (`git lfs pull --include "data/**" --exclude ""`) followed by the two quick loops (`bash scripts/python-lint-type-test.sh`, `bash scripts/rust-test.sh`).
 - Record what you did (hashes + commands) in the ticket; no extra files need to be committed for the rewrite itself.
 
 ## Design Principles

@@ -22,6 +22,11 @@ cd "$ROOT_DIR"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-data/target}"
 mkdir -p "$CARGO_TARGET_DIR"
 
+# Prefer sccache if available for faster compiles across worktrees.
+if command -v sccache >/dev/null 2>&1; then
+  export RUSTC_WRAPPER="${RUSTC_WRAPPER:-sccache}"
+fi
+
 PKG="viterbo"
 EXTRA=()
 
@@ -33,8 +38,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo ">>> cargo check (-p $PKG)"
-cargo check -p "$PKG"
-echo ">>> cargo test  (-p $PKG) ${EXTRA[*]:-}"
-cargo test -p "$PKG" "${EXTRA[@]:-}"
+# Run via nextest if available; fall back to cargo test.
+if command -v cargo-nextest >/dev/null 2>&1; then
+  echo ">>> cargo nextest run (-p $PKG) ${EXTRA[*]:-}"
+  cargo nextest run -p "$PKG" -q "${EXTRA[@]:-}"
+else
+  echo ">>> cargo test (-p $PKG) ${EXTRA[*]:-}"
+  cargo test -p "$PKG" -q "${EXTRA[@]:-}"
+fi
 echo "Rust tests completed."

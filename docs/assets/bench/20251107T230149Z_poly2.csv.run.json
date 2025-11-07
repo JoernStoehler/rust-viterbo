@@ -1,0 +1,10 @@
+{
+  "git_commit": "efb3711b4a42b7797a1520cbf0cb38730c3b9746",
+  "timestamp": "2025-11-07T23:01:49.381078+00:00",
+  "row_count": 10,
+  "group": "poly2",
+  "hostname": "58a0cbf58a7c",
+  "cpu": "x86_64",
+  "os": "Linux 6.8.0-87-generic",
+  "rustc": "rustc 1.91.0 (f8297e351 2025-10-28)"
+}
