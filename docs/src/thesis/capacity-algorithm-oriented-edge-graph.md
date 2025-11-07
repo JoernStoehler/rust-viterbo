@@ -105,3 +105,20 @@ Implementation Details:
 - Potential Optimization: a quick check before computing permissibility whether the edge pair $k-1, k, k+1$ has empty $C_{i j k}$, to reject paths earlier. This boolean matrix may be precomputed in phase 1.
 
 There are other algorithm ideas, such as caching subpaths of interest beyond length 2, but that seems less promising and more costly. So we won't go there likely, and be satisfied with what above algorithm does instead.
+
+
+TODO: Idea after writing all the above: we should probably not do pullbacks, but pushforwards for lower compute cost (sorry if premature optimization). I.e. the state after exploring a path $1, \dots, k$ is a set $C \subset A_k$ of points where the backwards trajectory came from the path $1, \dots, k$ and is admissible, low in action-so-far, low in rotation-so-far. On $C$, due to their shared combinatorics, all trajectories/points have an affine action $A: C \to \mathbb{R}$ and a constant rotation $\rho \in \mathbb{R}$. For the final fixed-point search we also store the accumulated $\psi_{1, \dots, k}$. When extending the path by an edge $k \to k+1$, we then do:
+- accumulate rotation $\rho_{1 \dots k+1} = \rho_{k, k+1} + \rho_{1 \dots k}$; reject if $>2$
+- accumulate action $A_{1, \dots, k+1} = A_{1, \dots, k} \circ \psi_{k, k+1}^{-1} + A_{k, k+1} \circ \psi_{k, k+1}^{-1}$
+- compute the image $C^1$ of $C$ under the flow map $\psi_{k, k+1}$
+- cut $C^2 = C^1 \cap \{z: A_{1, \dots, k+1}(z) \leq A_{\mathrm{best}}\}$; reject if empty
+- cut $C_{1, \dots, k+1} = C^2 \cap A_{k+1}$; reject if empty
+- update the path list
+- indicate to force closure if the end 2-face flows into a 3-face that flows into the start 2-face
+At the end, when we have a closed loop, we do
+- solve the fixed point problem $\psi_{1, \dots, k, 1}(z) = z$
+- check if the fixed point lies in $C_{1, \dots, k, 1} \subset A_1$
+- if no, reject
+- if yes, store the new best candidate with action $A_{1, \dots, k, 1}(z)$
+
+We basically now only have push-forwards under the maps $\psi_{i j}$, where we can precompute operations, or even intermediate variables such as store $A_{i j} \circ \psi_{i j}^{-1}$ instead of $A_{i j}$ itself. Basically, all our variables ought to be more like "if you are a point at j, and your trajectory came from i, then here's your accumulated action/rotation/map/etc." This also makes it easier to think, since the data attached to $j$ is now in $j$'s coordinate system. And the extension with $i \to j$ just converts all that data from $j$ to $i$'s coordinate system via push-forwards. This seems cleaner.
