@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This is the always‑relevant guide for coding agents. Keep it lean, specific, and actionable. If anything is unclear, stop and escalate to the ticket owner.
+This is the always‑relevant guide for coding agents. Keep it lean, clear, unambiguous, specific, correct, up-to-date and actionable. If anything is unclear, stop and escalate to the ticket owner.
 
 ## Active Temporary Notices
 - None
@@ -14,9 +14,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
   - `Docs: docs/src/thesis/<path>#<anchor>`
   - `Ticket: <uuid>`
   - `Code: <path>::<symbol>`
+- All code files start with a comment block that explains the purpose of the file, the why behind its architecture, and references useful further readings. These comment blocks help freshly onboarded agents get up to speed quickly. They are also colocated with the code to minimize search time, and to make maintenance both faster and more likely.
 
 ## Components and Repo Map
-- High Performance Geometry and Algorithms in Rust:
+- High Performance Geometry and Algorithms in Rust with PyO3/maturin bindings:
   - `Cargo.toml` (workspace)
   - `crates/viterbo`: Math and core algorithms (Rust lib). Use `nalgebra` for fixed-size geometry. Uses unit tests, property tests (`proptest`), and benchmarks (`criterion`).
   - `crates/viterbo-py`: PyO3 glue exposing `_native` to Python.
@@ -34,20 +35,23 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
   - `configs/<experiment>/`: Pipeline configs in JSON. Typically a tiny test config and a full production config.
 - Documentation of the thesis, and the development:
   - `docs/src/thesis/`: MSc mathematics thesis with high-level specs for algorithms, datasets, experiments and interpretation of results.
-  - `docs/src/meta/`: Meta documentation about project-specific conventions, workflows, and other development knowledge.
+  - `docs/src/meta/`: Meta documentation about project-specific conventions, workflows, and other development knowledge. Basically anything that would be out of scope in `AGENTS.md`, but is situationally useful to look up. Include "when to read" hints in `.../meta/README.md`.
   - `docs/book.toml`: mdBook config.
-- Data artifacts (gitignored; small publishable assets in `docs/assets/` are versioned):
-  - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`.
-  - `data/downloads/`: Paper downloads (text sources + PDFs).
-  - `docs/assets/`: Small data artifacts for publication (including interactive figures).
+- Data artifacts:
+  - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`. Both are gitignored.
+  - `data/downloads/`: Paper downloads (text sources + PDFs). Gitignored.
+  - `docs/assets/`: Small data artifacts for publication (including interactive figures). Versioned.
+  - `data/` is copied into VK worktrees from the main branch, but not merged back. Regenerate as needed by reading `scripts/reproduce.sh` and running the relevant sections.
 - Explicit, documented devops:
   - `AGENTS.md`: This file. Onboarding for all new agents.
   - `scripts/`: Devops scripts.
-    - `safe.sh`: Must-use wrapper for potentially long-running commands (timeout + group kill).
+    - `safe.sh`: Must-use wrapper for potentially long-running commands (timeout + group kill). Symlinked as `~/.local/bin/safe` for convenience.
     - `checks.sh`: Fast format/lint/typecheck/smoke tests for early feedback on code changes.
     - `ci.sh`: Manual full CI.
     - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
+    - `vk.sh`: Local VK web server for the human project owner.
+    - `vk-setup.sh`: VK worktree setup hook.
 
 ## Platform and Tooling
 - Platform:
@@ -58,7 +62,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
   - No Jupyter notebooks.
   - Vibe‑Kanban (VK) provisions the environment and worktree; agents do not perform manual setup unless a ticket explicitly asks for it.
 - Tooling:
-  - Python 3.11+ runtime; examples use `safe.sh --timeout 60 -- uv run ...` for command execution.
+  - Python 3.11+ runtime; examples use `safe --timeout 60 -- uv run ...` for command execution.
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
   - Fast feedback: `bash scripts/checks.sh` runs ruff format/check, pyright (basic), pytest (non‑e2e), and cargo check/test.
   - Optional native build is available via maturin (only if a ticket requires native code changes; see Quick Reference).
@@ -66,14 +70,15 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
 ## Ticketing and VK Workflow
 - VK manages tickets in a kanban board. Accessible via mcp function calls only.
 - Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, copies `data/`, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input.
-- After every agent turn, VK commits the worktree automatically; Please update .gitignore early if needed, do not rely on uncommitted state.
+- After every agent turn, VK commits the worktree automatically; Please update `.gitignore` early if you plan to add files that need to be ignored; Do not rely on uncommitted state.
 - Project owner can post follow-up messages to the agent, agent can pause and ask for clarifications.
 - After the project owner closes the ticket, VK merges the ticket branch back to main. Gitignored paths (`data/`, `target/`) never merge; Instead we regenerate on main or in worktrees by running the new/relevant sections of `bash scripts/reproduce.sh`.
-- (situational) Humans may run a local VK server: `bash scripts/vk.sh` (serves on port 3000). Agents interact with VK via MCP tools.
+- The human project owner runs a local VK server: `bash scripts/vk.sh` (serves on port 3000). Agents interact with VK via their MCP tools.
 
 ## Git Conventions
 - Commit often; include `Ticket: <uuid>` in commit messages.
 - No pre‑commit hooks; rely on `bash scripts/checks.sh` and selective E2E runs for validation.
+- VK automatically commits after every agent turn, but you can commit manually as needed.
 
 ## Command Line Quick Reference
 - For any command that may run a long time or hang, wrap it in `scripts/safe.sh` with an explicit timeout to catch unexpected issues:
@@ -139,11 +144,11 @@ This is the always‑relevant guide for coding agents. Keep it lean, specific, a
 ## Documentation Conventions
 - High-level specs in `docs/src/thesis/` about the mathematics, algorithms, data formats, and experiment ideas.
 - Meta documentation in `docs/src/meta/` about project-specific conventions, workflows, and reminders that fix encountered mistakes.
-- Keep `AGENTS.md` lean and always relevant; move situational info to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`
-- Use GitHub Pages to host the mdBook site at https://joernstoehler.github.io/rust-viterbo/.
+- Keep `AGENTS.md` lean and always relevant; move situational further readings to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`
+- Use GitHub Pages to host the mdBook site at https://joernstoehler.github.io/rust-viterbo/ via `scripts/publish.sh`.
 - Write in a clear, unambiguous, specific, actionable, explicit style with low cognitive overhead, so that development agents can read text and get to work quickly without needing to think through ambiguities or infer implications that weren't spelled out.
-- Use KaTeX-safe math only (no `\\operatorname`); verify via GitHub preview.
-- Publish small tables/figures/interactive plots for inclusion in the mdBook site.
+- Use KaTeX-safe math only (no `\\operatorname`).
+- Create small tables/figures/interactive plots for inclusion in the mdBook site via `docs/assets/`.
 
 ## Escalation
 - Escalate when: specs underspecified, solver/library choice blocks progress, runtime exceeds budget, or scope bloat requires a sub‑ticket.
