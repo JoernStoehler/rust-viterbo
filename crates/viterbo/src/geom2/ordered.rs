@@ -207,7 +207,8 @@ fn hsi_ordered(hs: &[Hs2], eps: f64) -> HalfspaceIntersection {
         }
     }
     let mut dq: VecDeque<usize> = VecDeque::new();
-    let inter = |i1: usize, i2: usize| -> Option<Vector2<f64>> { line_intersection(hs[i1], hs[i2]) };
+    let inter =
+        |i1: usize, i2: usize| -> Option<Vector2<f64>> { line_intersection(hs[i1], hs[i2]) };
 
     for i in 0..hs.len() {
         while dq.len() >= 2 {

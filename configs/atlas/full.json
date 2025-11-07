@@ -1,7 +1,12 @@
 {
-  "version": 1,
-  "rows": 10000,
+  "version": 2,
   "seed": 1234,
+  "sources": [
+    { "name": "symmetric_halfspaces", "rows": 4500 },
+    { "name": "mahler", "rows": 3000 },
+    { "name": "regular_products", "max_rows": 1800 },
+    { "name": "special_catalog", "rows": 700 }
+  ],
   "out": {
     "dataset": "data/atlas/full.parquet"
   }

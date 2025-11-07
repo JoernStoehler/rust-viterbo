@@ -6,7 +6,7 @@
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use nalgebra::Vector2;
 use rand::{rngs::StdRng, Rng, SeedableRng};
-use viterbo::geom2::{Aff2 as Affine2, Poly2 as HPoly2Ordered, Hs2};
+use viterbo::geom2::{Aff2 as Affine2, Hs2, Poly2 as HPoly2Ordered};
 
 fn random_halfspaces(m: usize, seed: u64) -> HPoly2Ordered {
     let mut rng = StdRng::seed_from_u64(seed);
@@ -19,22 +19,28 @@ fn random_halfspaces(m: usize, seed: u64) -> HPoly2Ordered {
         hs.push(Hs2::new(n, c));
     }
     let mut ordered = HPoly2Ordered::default();
-    for h in hs { ordered.insert_halfspace(h); }
+    for h in hs {
+        ordered.insert_halfspace(h);
+    }
     ordered
 }
 
 fn bench_poly2(c: &mut Criterion) {
     let mut group = c.benchmark_group("poly2");
     for &m in &[0usize, 10, 20, 50, 100] {
-        group.bench_with_input(BenchmarkId::new("halfspace_intersection", m), &m, |b, &m| {
-            b.iter_batched(
-                || random_halfspaces(m, 43),
-                |po| {
-                    let _res = po.halfspace_intersection();
-                },
-                BatchSize::SmallInput,
-            )
-        });
+        group.bench_with_input(
+            BenchmarkId::new("halfspace_intersection", m),
+            &m,
+            |b, &m| {
+                b.iter_batched(
+                    || random_halfspaces(m, 43),
+                    |po| {
+                        let _res = po.halfspace_intersection();
+                    },
+                    BatchSize::SmallInput,
+                )
+            },
+        );
 
         group.bench_with_input(BenchmarkId::new("push_forward_strict", m), &m, |b, &m| {
             let f = Affine2 {

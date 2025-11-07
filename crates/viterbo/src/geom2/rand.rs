@@ -149,7 +149,11 @@ pub fn recenter_rescale(poly: &Poly2, bounds: Bounds2) -> Option<(Poly2, f64, f6
         _ => return None,
     };
     let r_out0 = verts_t.iter().map(|p| p.norm()).fold(0.0, f64::max);
-    let r_in0 = translated.hs.iter().map(|h| h.c).fold(f64::INFINITY, f64::min);
+    let r_in0 = translated
+        .hs
+        .iter()
+        .map(|h| h.c)
+        .fold(f64::INFINITY, f64::min);
     let mut s_min = 0.0;
     let mut s_max = f64::INFINITY;
     if bounds.r_in_min > 0.0 {
@@ -241,10 +245,7 @@ mod tests {
             base_radius: 1.0,
             random_phase: true,
         };
-        let tok = ReplayToken {
-            seed: 42,
-            index: 7,
-        };
+        let tok = ReplayToken { seed: 42, index: 7 };
         let p1 = draw_polygon_radial(cfg, tok).expect("poly");
         let p2 = draw_polygon_radial(cfg, tok).expect("poly");
         assert_eq!(p1.hs.len(), p2.hs.len());

@@ -36,14 +36,20 @@ fn strict_emptiness_detects_contradiction() {
     let mut p = Poly2::default();
     p.insert_halfspace(Hs2::new(vector![1.0, 0.0], 0.0));
     p.insert_halfspace(Hs2::new(vector![-1.0, 0.0], -1.0));
-    assert!(matches!(p.halfspace_intersection(), HalfspaceIntersection::Empty));
+    assert!(matches!(
+        p.halfspace_intersection(),
+        HalfspaceIntersection::Empty
+    ));
     // Unit box -> non-empty
     let mut q = Poly2::default();
     q.insert_halfspace(Hs2::new(vector![1.0, 0.0], 1.0));
     q.insert_halfspace(Hs2::new(vector![-1.0, 0.0], 0.0));
     q.insert_halfspace(Hs2::new(vector![0.0, 1.0], 1.0));
     q.insert_halfspace(Hs2::new(vector![0.0, -1.0], 0.0));
-    assert!(matches!(q.halfspace_intersection(), HalfspaceIntersection::Bounded(_)));
+    assert!(matches!(
+        q.halfspace_intersection(),
+        HalfspaceIntersection::Bounded(_)
+    ));
 
     // eps semantics: positive eps enlarges (empty remains empty), negative shrinks (may become empty)
     assert!(p.is_empty_eps(1e-9)); // still empty

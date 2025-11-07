@@ -2,7 +2,13 @@
 
 This document describes an experiment idea, or rather a dataset idea that can be reused by many other experiments.
 
-We want to create a dataset with many different polytopes as rows, and various computed quantities as columns. We can use different sources for (4d, convex, star-shaped) polytopes, importantly different random distributions to sample from, and enumerations of certain classes, and lists of special polytopes from the literature or that are interesting for other reasons.
+We want to create a dataset with many different polytopes as rows, and various computed quantities as columns. We can use different sources for (4d, convex, star-shaped) polytopes, importantly different random distributions to sample from, and enumerations of certain classes, and lists of special polytopes from the literature or that are interesting for other reasons. Generator design, interface conventions, and the growing catalogue now live in [Random Polytope Generators](./random-polytopes.md#random-polytopes); this page focuses on how the atlas experiment consumes those generators.
+
+## Config Format
+
+- JSON configs (see `configs/atlas/test.json`) enumerate `sources`, each with a `name` and an explicit `rows` count. Enumerative sources may use `max_rows` when they halt naturally (the build stage treats `max_rows` as the emitted row count for reproducible datasets).
+- Global knobs (`seed`, output path, provenance) remain at the top level; there is no single `rows_total` anymore. Scaling up/down is done by editing the per-source integers.
+- The build stage records `source`, `source_row`, and `replay_token` columns so downstream analysis knows exactly how many rows originated from each generator.
 
 Random distributions mainly distinguish themselves by whether we target a half-space or vertex count, whether there are constraints we respect, e.g. an in-sphere, or a circum-sphere, or a lagrangian product structure.
 We don't care about affine symplectomorphisms, so volume normalization doesn't matter, and at most helps with numerics. We care about star-shapedness, so we recenter, or discard invalid polytopes during generation.
@@ -10,7 +16,7 @@ We don't care about affine symplectomorphisms, so volume normalization doesn't m
 We may want to enumerate the class of lagrangian products of 2d regular polygons with a rational rotation angle. The viterbo counterexample is of this form, and we may find more counterexamples this way.
 This is in addition to random lagrangian products.
 
-Another random class of interest are Mahler-conjecture polygons, i.e. products $K x K^o$ for 2d convex bodies K. We can sample K randomly. It's proven that the Viterbo Conjecture is equivalent to the Mahler Conjecture in this case, and the Mahler Conjecture is known to be true in 2d, so these polytopes should all have systolic ratio <= 1.
+Another random class of interest are Mahler-conjecture polygons, i.e. products $K x K^o$ for 2d convex bodies K. We can sample K randomly (see the Mahler sampler in [Random Polytope Generators](./random-polytopes.md#random-polytopes)). It's proven that the Viterbo Conjecture is equivalent to the Mahler Conjecture in this case, and the Mahler Conjecture is known to be true in 2d, so these polytopes should all have systolic ratio <= 1.
 
 For special polytopes, we mainly care about
 - the viterbo counterexample by Heim-Kisliv (2024)
@@ -54,5 +60,3 @@ For E2E testing we simply create ~10 rows, maybe 1-3 per random distribution to 
 We may also have a profiled version, where the full dataset creation is profiled to identify hotspots. If we include extra benchmark columns, we can then connect polytope size and distribution to the runtime cost of different algorithms.
 
 The building of large datasets also matters for the simplex-dataset, that may yield a computer-assisted proof of the viterbo conjecture for simplices.
-
-

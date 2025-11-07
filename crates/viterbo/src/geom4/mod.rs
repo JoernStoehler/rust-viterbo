@@ -117,7 +117,9 @@ impl Poly4 {
         if self.h.is_empty() {
             self.ensure_halfspaces_from_v();
         }
-        self.v.iter().all(|&x| self.h.iter().all(|h| h.satisfies(x)))
+        self.v
+            .iter()
+            .all(|&x| self.h.iter().all(|h| h.satisfies(x)))
     }
 
     /// Check star-shaped wrt origin (contains 0).
@@ -171,7 +173,7 @@ pub fn j_matrix_4() -> Matrix4<f64> {
     Matrix4::new(
         0.0, 0.0, -1.0, 0.0, //
         0.0, 0.0, 0.0, -1.0, //
-        1.0, 0.0, 0.0, 0.0,  //
+        1.0, 0.0, 0.0, 0.0, //
         0.0, 1.0, 0.0, 0.0,
     )
 }
@@ -232,7 +234,9 @@ pub struct Face1 {
 /// - For each vertex, record indices of near‑tight inequalities.
 /// - Group vertices by 1/2/3 saturated facets to get edges, 2‑faces, facets.
 /// Dedups are applied to handle degeneracy.
-pub fn enumerate_faces_from_h(hs: &[Hs4]) -> (Vec<Vector4<f64>>, Vec<Face1>, Vec<Face2>, Vec<Face3>) {
+pub fn enumerate_faces_from_h(
+    hs: &[Hs4],
+) -> (Vec<Vector4<f64>>, Vec<Face1>, Vec<Face2>, Vec<Face3>) {
     let verts = h_to_vertices(hs);
     // For each vertex, collect which inequalities are (nearly) tight.
     let mut tight: Vec<BTreeSet<usize>> = Vec::with_capacity(verts.len());
@@ -329,7 +333,12 @@ pub fn enumerate_faces_from_h(hs: &[Hs4]) -> (Vec<Vector4<f64>>, Vec<Face1>, Vec
 /// - This function only toggles the sign to give callers control. A canonical
 ///   orientation (e.g., compatible with the ambient symplectic 2‑form) can be
 ///   imposed later once the thesis fixes the convention.
-pub fn oriented_orth_map_face2(hs: &[Hs4], i: usize, j: usize, orientation_positive: bool) -> Option<(nalgebra::Matrix2x4<f64>, nalgebra::Matrix4x2<f64>)> {
+pub fn oriented_orth_map_face2(
+    hs: &[Hs4],
+    i: usize,
+    j: usize,
+    orientation_positive: bool,
+) -> Option<(nalgebra::Matrix2x4<f64>, nalgebra::Matrix4x2<f64>)> {
     if i >= hs.len() || j >= hs.len() || i == j {
         return None;
     }
@@ -337,7 +346,11 @@ pub fn oriented_orth_map_face2(hs: &[Hs4], i: usize, j: usize, orientation_posit
     let n2 = hs[j].n.normalize();
     // Orthonormal basis of the 2D face plane = orthogonal complement of span{n1, n2}.
     let (u1, u2) = orthonormal_complement_2d(n1, n2)?;
-    let (u1, u2) = if orientation_positive { (u1, u2) } else { (u1, -u2) };
+    let (u1, u2) = if orientation_positive {
+        (u1, u2)
+    } else {
+        (u1, -u2)
+    };
     let u = nalgebra::Matrix2x4::from_rows(&[u1.transpose(), u2.transpose()]);
     let ut = nalgebra::Matrix4x2::from_columns(&[u1, u2]);
     Some((u, ut))
@@ -412,7 +425,9 @@ pub fn v_to_halfspaces(vs: &[Vector4<f64>]) -> Vec<Hs4> {
     let idxs: Vec<usize> = (0..vs.len()).collect();
     let mut seen: HashSet<(i64, i64, i64, i64, i64)> = HashSet::new();
     for comb in combinations(&idxs, 4) {
-        if let Some((n, c)) = supporting_plane_from4([vs[comb[0]], vs[comb[1]], vs[comb[2]], vs[comb[3]]]) {
+        if let Some((n, c)) =
+            supporting_plane_from4([vs[comb[0]], vs[comb[1]], vs[comb[2]], vs[comb[3]]])
+        {
             // Orient so that all vertices satisfy n·x <= c
             let mut on_pos = false;
             let mut on_neg = false;
@@ -442,9 +457,7 @@ pub fn v_to_halfspaces(vs: &[Vector4<f64>]) -> Vec<Hs4> {
 /// Supporting plane from 4 points (if coplanar and oriented).
 ///
 /// Uses cofactor expansion (Hodge dual of 3-form) to avoid SVD.
-fn supporting_plane_from4(
-    pts: [Vector4<f64>; 4],
-) -> Option<(Vector4<f64>, f64)> {
+fn supporting_plane_from4(pts: [Vector4<f64>; 4]) -> Option<(Vector4<f64>, f64)> {
     let a = pts[1] - pts[0];
     let b = pts[2] - pts[0];
     let c = pts[3] - pts[0];
@@ -541,18 +554,17 @@ fn combinations<T: Copy>(items: &Vec<T>, k: usize) -> Vec<Vec<T>> {
 
 fn dedup_points_in_place(points: &mut Vec<Vector4<f64>>, tol: f64) {
     points.sort_by(|a, b| {
-        a[0]
-            .partial_cmp(&b[0])
+        a[0].partial_cmp(&b[0])
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| {
-                a[1]
-                    .partial_cmp(&b[1])
+                a[1].partial_cmp(&b[1])
                     .unwrap_or(std::cmp::Ordering::Equal)
                     .then_with(|| {
-                        a[2]
-                            .partial_cmp(&b[2])
+                        a[2].partial_cmp(&b[2])
                             .unwrap_or(std::cmp::Ordering::Equal)
-                            .then_with(|| a[3].partial_cmp(&b[3]).unwrap_or(std::cmp::Ordering::Equal))
+                            .then_with(|| {
+                                a[3].partial_cmp(&b[3]).unwrap_or(std::cmp::Ordering::Equal)
+                            })
                     })
             })
     });
@@ -564,7 +576,13 @@ fn dedup_faces1(faces: &mut Vec<Face1>) {
         dedup_points_in_place(&mut f.vertices, 1e-9);
     }
     faces.sort_by_key(|f| f.vertices.len());
-    faces.dedup_by(|a, b| a.vertices.len() == b.vertices.len() && a.vertices.iter().zip(&b.vertices).all(|(x, y)| (*x - *y).norm() < 1e-9));
+    faces.dedup_by(|a, b| {
+        a.vertices.len() == b.vertices.len()
+            && a.vertices
+                .iter()
+                .zip(&b.vertices)
+                .all(|(x, y)| (*x - *y).norm() < 1e-9)
+    });
 }
 
 fn dedup_faces2(faces: &mut Vec<Face2>) {
@@ -572,7 +590,13 @@ fn dedup_faces2(faces: &mut Vec<Face2>) {
         dedup_points_in_place(&mut f.vertices, 1e-9);
     }
     faces.sort_by_key(|f| f.vertices.len());
-    faces.dedup_by(|a, b| a.vertices.len() == b.vertices.len() && a.vertices.iter().zip(&b.vertices).all(|(x, y)| (*x - *y).norm() < 1e-9));
+    faces.dedup_by(|a, b| {
+        a.vertices.len() == b.vertices.len()
+            && a.vertices
+                .iter()
+                .zip(&b.vertices)
+                .all(|(x, y)| (*x - *y).norm() < 1e-9)
+    });
 }
 
 fn quantize4(v: Vector4<f64>, tol: f64) -> (i64, i64, i64, i64) {
@@ -591,7 +615,10 @@ fn quantize5(n: Vector4<f64>, c: f64, tol: f64) -> (i64, i64, i64, i64, i64) {
     (qx, qy, qz, qw, (c * s).round() as i64)
 }
 
-fn orthonormal_complement_2d(n1: Vector4<f64>, n2: Vector4<f64>) -> Option<(Vector4<f64>, Vector4<f64>)> {
+fn orthonormal_complement_2d(
+    n1: Vector4<f64>,
+    n2: Vector4<f64>,
+) -> Option<(Vector4<f64>, Vector4<f64>)> {
     let mut a = n1;
     if a.norm() < EPS {
         return None;

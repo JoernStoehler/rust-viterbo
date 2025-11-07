@@ -1,6 +1,8 @@
-use nalgebra::{Matrix2, SVD, Vector2};
+use nalgebra::{Matrix2, Vector2, SVD};
 
-use super::{ordered::HalfspaceIntersection, ordered::Poly2, types::Aff1, types::Affine2, types::GeomCfg};
+use super::{
+    ordered::HalfspaceIntersection, ordered::Poly2, types::Aff1, types::Affine2, types::GeomCfg,
+};
 
 /// Rotation via polar factor (Option B): returns angle/π in [0,1] or None if orientation-reversing.
 pub fn rotation_angle(f: &Affine2) -> Option<f64> {

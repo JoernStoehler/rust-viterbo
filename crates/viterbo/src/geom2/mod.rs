@@ -14,11 +14,11 @@
 //! - AGENTS: AGENTS.md (Rust conventions, testing policy)
 //! - Code cross-refs: `Poly2`, `Hs2`, `Aff2`, `Aff1`, `GeomCfg`
 
-mod types;
 pub mod ordered;
-mod solvers;
-mod util;
 pub mod rand;
+mod solvers;
+mod types;
+mod util;
 
 pub use ordered::{HalfspaceIntersection, Poly2};
 pub use solvers::{fixed_point_in_poly, rotation_angle};

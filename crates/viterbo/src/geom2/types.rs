@@ -139,4 +139,3 @@ impl std::ops::Neg for Aff1 {
         }
     }
 }
-

@@ -22,12 +22,12 @@ fn convex_hull(points: &[Vector2<f64>]) -> Option<Vec<Vector2<f64>>> {
         return None;
     }
     let mut pts: Vec<_> = points.to_vec();
-    pts.sort_by(|a, b| {
-        match a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal) {
+    pts.sort_by(
+        |a, b| match a.x.partial_cmp(&b.x).unwrap_or(std::cmp::Ordering::Equal) {
             std::cmp::Ordering::Equal => a.y.partial_cmp(&b.y).unwrap_or(std::cmp::Ordering::Equal),
             o => o,
-        }
-    });
+        },
+    );
     pts.dedup_by(|a, b| (*a - *b).norm() < 1e-12);
     if pts.len() < 2 {
         return None;
