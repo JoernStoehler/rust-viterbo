@@ -2,8 +2,9 @@
 # Ignore any Cargo build dir anywhere (fixes nested crates like crates/*/target/)
 target/
 
-# Data artifacts (see AGENTS.md)
-/data/
+# Data artifacts live in Git LFS (see AGENTS.md)
+# Keep local build caches out of git even though they live under data/
+data/target/
 
 # mdBook build output (site is built by CI to gh-pages; sources live in docs/src)
 /docs/book/

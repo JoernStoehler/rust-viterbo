@@ -38,10 +38,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `docs/src/meta/`: Meta documentation about project-specific conventions, workflows, and other development knowledge. Basically anything that would be out of scope in `AGENTS.md`, but is situationally useful to look up. Include "when to read" hints in `.../meta/README.md`.
   - `docs/book.toml`: mdBook config.
 - Data artifacts:
-  - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`. Both are gitignored.
-  - `data/downloads/`: Paper downloads (text sources + PDFs). Gitignored.
-  - `docs/assets/`: Small data artifacts for publication (including interactive figures). Versioned.
-  - `data/` is copied into VK worktrees from the main branch, but not merged back. Regenerate as needed by reading `scripts/reproduce.sh` and running the relevant sections.
+  - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`. Both live in Git LFS; commit the artifact and its `.run.json` together to keep provenance aligned.
+  - `data/downloads/`: Paper downloads (text sources + PDFs). Also under Git LFS so offline copies travel with the repo.
+  - `docs/assets/`: Small publication artifacts (including interactive figures) that stay in the regular git history for easy diffs/review.
+  - `data/` now rides through Git LFS instead of VK rsyncs. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. Use `scripts/reproduce.sh` to regenerate artifacts when provenance changes.
 - Explicit, documented devops:
   - `AGENTS.md`: This file. Onboarding for all new agents.
   - `scripts/`: Devops scripts.
@@ -54,6 +54,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
     - Both Rust wrappers default `CARGO_TARGET_DIR` if not set:
       - tests: `data/target/`
       - benches: `data/bench/`
+      - `data/target/` remains gitignored (even though the rest of `data/` is tracked via LFS) so transient Cargo outputs never pollute commits.
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
     - `vk.sh`: Local VK web server for the human project owner.
     - `vk-setup.sh`: VK worktree setup hook.
@@ -65,10 +66,12 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Interop via NumPy (`pyo3‑numpy`) for now; convert to/from Torch tensors in Python.
   - Geometry: `nalgebra`. Data wrangling: `polars`. RNG: `rand` in Rust, `random`, `numpy.random`, and `torch.manual_seed(...)` in Python.
   - No Jupyter notebooks.
-  - Vibe‑Kanban (VK) provisions the environment and worktree; agents do not perform manual setup unless a ticket explicitly asks for it.
+- Vibe‑Kanban (VK) provisions the environment and worktree; agents do not perform manual setup unless a ticket explicitly asks for it.
+- Development environment: everything runs inside a single VS Code devcontainer on the project owner’s Ubuntu desktop. There is one clone of the repo, no GitHub-hosted CI, and all automation (vk-setup, scripts/checks.sh, etc.) executes inside that container. Assume local resources; escalate before assuming external services exist.
 - Tooling:
   - Python 3.11+ runtime; examples use `safe --timeout 60 -- uv run ...` for command execution.
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
+  - Git LFS (latest 3.x). Run `git lfs install --local` once per worktree and `git lfs pull --include "data/**" --exclude ""` after switching branches so large artifacts are available locally.
   - Fast feedback: `bash scripts/checks.sh` runs ruff format/check, pyright (basic), pytest (non‑e2e), and cargo check/test.
   - Optional native build is available via maturin (only if a ticket requires native code changes; see Quick Reference).
 
@@ -91,10 +94,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 
 ## Ticketing and VK Workflow
 - VK manages tickets in a kanban board. Accessible via mcp function calls only.
-- Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, copies `data/`, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input.
+- Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input. The hook recreates baseline dirs, installs Git LFS, and pulls tracked artifacts so agents begin with hydrated `data/` contents.
 - After every agent turn, VK commits the worktree automatically; Please update `.gitignore` early if you plan to add files that need to be ignored; Do not rely on uncommitted state.
 - Project owner can post follow-up messages to the agent, agent can pause and ask for clarifications.
-- After the project owner closes the ticket, VK merges the ticket branch back to main. Gitignored paths (`data/`, `target/`) never merge; Instead we regenerate on main or in worktrees by running the new/relevant sections of `bash scripts/reproduce.sh`.
+- After the project owner closes the ticket, VK merges the ticket branch back to main. `target/` stays local-only, but everything under `data/` now merges through Git LFS, so always commit artifacts + provenance as part of the ticket.
 - The human project owner runs a local VK server: `bash scripts/vk.sh` (serves on port 3000). Agents interact with VK via their MCP tools.
 
 ## Git Conventions
@@ -123,7 +126,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Use Rust for hotspots only; profile first.
 - Use `nalgebra` for fixed-size geometry (e.g., `Vector4<f64>`).
 - Use property tests (`proptest`) where appropriate to skip hand-written values.
-- Use `criterion` for benchmarks; write results to `data/bench/` (gitignored).
+- Use `criterion` for benchmarks; write results to `data/bench/` (tracked via Git LFS) and keep summaries in docs when reviewers need diffable numbers.
 - Expose functions to Python via PyO3 in `crates/viterbo-py`.
 - Functional style preferred.
 - Comment to reference tickets and thesis specs.
@@ -131,7 +134,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Avoid over-abstraction; prefer simple, explicit, locally understandable code.
 
 ## Data and Pipeline Conventions
-- Data artifacts go to `data/<experiment>/...` (gitignored; small publishable assets go to `docs/assets/`, which is versioned).
+- Data artifacts go to `data/<experiment>/...` (tracked via Git LFS); keep small publishable assets in `docs/assets/` when you need them diffable on GitHub without LFS.
 - Every artifact `X.ext` has a provenance sidecar `X.ext.run.json`.
 - Sidecar schema: `config`, `git_commit`, `timestamp`. Create via `viterbo.provenance.write(path, config)`.
 - Stages run as Python modules.
@@ -159,7 +162,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
  
 
 ## Testing Policy
-- Rust cores (algorithms): unit tests + property tests required; benchmarks with `criterion` under `data/bench/`.
+- Rust cores (algorithms): unit tests + property tests required; benchmarks with `criterion` under `data/bench/` (committed via Git LFS).
 - Python orchestration: smoke tests and selective E2E on tiny configs; add unit tests when logic is non‑trivial.
 - CI defaults: `scripts/checks.sh` (ruff/pyright/pytest non‑e2e + cargo) and on‑demand E2E by selection (`-m e2e -k ...`).
 - Default: prefer smoke + E2E over broad Python unit test suites unless justified by complexity.

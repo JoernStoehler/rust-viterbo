@@ -7,4 +7,4 @@
 - Force-refresh: rerun with `--match "Title" --force` after updating a link (e.g., when you finally obtain the JAMS PDF for Viterbo (2000)).
 - Custom URLs: use `--url <pdf> --title "Title"` for items outside the bibliography or paywalled copies you have locally.
 
-Outputs stay gitignored under `data/`; keep only manifests + `.run.json` provenance as breadcrumbs for other agents.
+Outputs stay under `data/` and are versioned via Git LFS; commit the artifacts plus manifests + `.run.json` provenance so other agents can reuse them without rerunning downloads.

@@ -95,5 +95,5 @@ Purpose: a self‑contained, advisor‑friendly reference list with direct PDF l
 
 
 Notes
-- Offline copies live under `data/downloads/` (gitignored). Run `bash scripts/paper-download.sh --match "keyword"` for a single entry or `--all` to sync every PDF link above; the script grabs arXiv sources when possible and records a `manifest.json` plus `.run.json` provenance next to each download.
+- Offline copies live under `data/downloads/` (tracked via Git LFS). Run `bash scripts/paper-download.sh --match "keyword"` for a single entry or `--all` to sync every PDF link above; the script grabs arXiv sources when possible and records a `manifest.json` plus `.run.json` provenance next to each download.
 - If an authoritative PDF is paywalled, link the official PDF page and note access constraints; prefer arXiv/author OA when available.

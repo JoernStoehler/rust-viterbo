@@ -5,8 +5,8 @@ set -euo pipefail
 # Vibe Kanban setup hook.
 # Runs after VK provisions a new worktree (git worktree add + file copies)
 # and before an agent receives the ticket payload. Responsibilities:
-#   * Recreate high-signal empty directories (e.g., data/) so agents see them
-#     even if VK skipped copying because they were empty.
+#   * Recreate high-signal directories (e.g., data/) and hydrate Git LFS
+#     pointers so agents see the latest artifacts without manual steps.
 #   * Ensure Python tooling (uv + .venv) is ready and matches uv.lock, so
 #     agents can run `uv run …` commands immediately.
 #   * Pre-fetch Rust crates so the first `cargo check/test` does not block on
@@ -32,6 +32,7 @@ need_cmd() {
 }
 
 need_cmd git
+need_cmd git-lfs "Install Git LFS (https://git-lfs.com/) before launching VK agents."
 need_cmd python3 "Install Python 3.11+ before launching VK agents."
 need_cmd uv "Install uv: https://docs.astral.sh/uv/getting-started/installation/."
 need_cmd cargo "Install Rust via rustup (https://rustup.rs/) before continuing."
@@ -42,6 +43,19 @@ log "Commit: $(git rev-parse --short HEAD)"
 
 log "Ensuring baseline directories exist (data/, docs/assets/)..."
 mkdir -p data docs/assets
+
+log "Ensuring Git LFS filters are installed locally..."
+git lfs install --local >/dev/null
+
+log "Hydrating data/ via Git LFS (safe to skip if empty)..."
+data_lfs_count=$(git lfs ls-files --name-only data 2>/dev/null | wc -l | tr -d " ")
+if [[ "${data_lfs_count:-0}" -gt 0 ]]; then
+  if ! git lfs pull --include "data/**" --exclude ""; then
+    log "git lfs pull failed (maybe offline); continuing with pointers only."
+  fi
+else
+  log "No Git LFS-tracked data artifacts yet; skipping hydration."
+fi
 
 log "Ensuring uv virtual environment exists..."
 if [[ ! -d ".venv" ]]; then

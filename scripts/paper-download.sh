@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Paper downloader: sync PDFs/arXiv sources listed in docs/src/thesis/bibliography.md
 # - Stores everything under data/downloads/(arxiv|web)/...
+# - Artifacts are tracked via Git LFS, so commit the downloads + manifests after each run
 # - Writes manifest + provenance sidecars for every artifact
 # - Falls back to PDFs when arXiv sources are unavailable
 set -euo pipefail

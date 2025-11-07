@@ -1,0 +1,4 @@
+# Git LFS configuration for large artifacts
+# Track everything under data/ via LFS to keep artifacts versioned without bloating the repo.
+data/** filter=lfs diff=lfs merge=lfs -text
+

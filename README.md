@@ -36,6 +36,10 @@ After the environment is ready:
 1) Run `bash scripts/reproduce.sh` to build the code, tests (including E2E), data artifacts, and the book.
 2) Run `mdbook serve docs -p 4000` and view the book in your browser.
 
+**Git LFS**
+- Install Git LFS (https://git-lfs.com/) before cloning locally (or run `git lfs install --local` inside the repo/worktree).
+- Hydrate the tracked artifacts with `git lfs pull --include "data/**" --exclude ""` so `data/` contents are available before running pipelines.
+
 ## Onboard
 
 - Quick path: read `AGENTS.future.md` (post‑migration onboarding) and `docs/src/meta/overview.md`.
