@@ -18,9 +18,9 @@
 //!   `geom4::{Poly4,enumerate_faces_from_h,face2_as_poly2_hrep,oriented_orth_map_face2,reeb_on_facets}`.
 //!
 //! Notes
-//! - Rotation pruning is optional. We expose a search config knob and default
-//!   to “off” to keep smoke tests fast and deterministic while the background
-//!   normalization is finalized per the thesis.
+//! - Rotation pruning is part of the production algorithm. We expose a search
+//!   config knob for ablations, but the default is ON to reflect the intended
+//!   behavior.
 //! - Determinism note: Because ρ is read from the polar factor of Dψ (via SVD),
 //!   numerical differences across compiler flags/CPU features/BLAS paths may
 //!   change pruning near the ρ=2 boundary and thus the DFS node counts, even if

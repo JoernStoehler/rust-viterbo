@@ -28,3 +28,10 @@ pub mod prelude {
     };
     pub use nalgebra::{Matrix2 as Mat2, Vector2 as Vec2};
 }
+
+/// Signed area of the parallelogram spanned by vectors `a` and `b` in R^2.
+/// Positive for a→b counterclockwise, negative otherwise.
+#[inline]
+pub fn parallelogram_area(a: Vec2<f64>, b: Vec2<f64>) -> f64 {
+    a.x * b.y - a.y * b.x
+}

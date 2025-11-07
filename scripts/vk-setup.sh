@@ -66,6 +66,8 @@ if [[ -f "pyproject.toml" ]]; then
   else
     uv sync --extra dev
   fi
+  # Keep setup fast (<1s): do NOT build native here. Native is built in CI and
+  # on-demand via: uv run maturin develop -m crates/viterbo-py/Cargo.toml
 else
   log "No pyproject.toml found; skipping uv environment setup."
 fi

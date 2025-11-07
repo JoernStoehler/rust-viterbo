@@ -235,6 +235,10 @@ def run_stage(cfg: StageConfig, context: dict[str, str]) -> None:
 
     timestamp_tag = dt.datetime.fromisoformat(context["timestamp"]).strftime("%Y%m%dT%H%M%SZ")
     generated_groups: List[tuple[str, Path]] = []
+    # Mirror location under mdBook src so {{#include}} resolves without preprocessor errors.
+    # We only mirror the rolling 'current_<group>.md' file (tiny) to keep src tidy.
+    assets_src_md_root = REPO_ROOT / "docs" / "src" / "assets" / "bench"
+    assets_src_md_root.mkdir(parents=True, exist_ok=True)
 
     for group_dir in sorted(p for p in bench_root.iterdir() if p.is_dir()):
         rows = collect_group_rows(group_dir, context)
@@ -247,6 +251,9 @@ def run_stage(cfg: StageConfig, context: dict[str, str]) -> None:
         write_provenance(csv_path, context, rows)
         update_symlink(assets_root / f"current_{group_dir.name}.csv", csv_path.name)
         update_symlink(assets_root / f"current_{group_dir.name}.md", md_path.name)
+        # Write/overwrite the mirrored mdBook-src copy with the current snapshot content.
+        mirror_md = assets_src_md_root / f"current_{group_dir.name}.md"
+        mirror_md.write_text(md_path.read_text(encoding="utf-8"), encoding="utf-8")
         prune_history(group_dir.name, assets_root, cfg.keep, ".csv")
         prune_history(group_dir.name, assets_root, cfg.keep, ".md")
         try:

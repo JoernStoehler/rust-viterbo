@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# ci.sh — manual CI entrypoint (requires safe.sh)
+# ci.sh — strict CI entrypoint (requires safe.sh)
 # Contract
 # - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
-# - Runs python-lint-type-test + rust-lint-test, then (optionally) benches + native build.
+# - Strict: formatting, lint, and type errors fail the run (no `|| true`).
+# - Builds the native extension unconditionally so failures surface early.
+# - Optionally runs benches and renders docs tables (controlled via RUN_BENCH_IN_CI=0/1).
 # - No internal timeouts; inherits top-level timeout from safe.sh.
 set -euo pipefail
 
@@ -14,25 +16,37 @@ fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-bash scripts/python-lint-type-test.sh
-bash scripts/rust-lint-test.sh
+echo ">>> Ensure Python env (uv, locked)"
+if [[ ! -d ".venv" ]]; then
+  uv venv
+fi
+uv sync --extra dev --locked
+
+echo ">>> Python format check (ruff --check)"
+uv run ruff format --check src tests
+echo ">>> Python lint (ruff)"
+uv run ruff check src tests
+echo ">>> Type check (pyright)"
+uv run pyright
+echo ">>> Python smoke tests"
+uv run pytest -q -m "not e2e"
+
+echo ">>> Rust fmt/clippy/tests"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-data/target}"
+cargo fmt --all --check
+cargo clippy -p viterbo --all-targets -- -D warnings
+cargo test -p viterbo -q
+
+echo ">>> Build native extension (maturin) — fail fast if missing"
+uv run maturin develop -m crates/viterbo-py/Cargo.toml
 
 if [[ "${RUN_BENCH_IN_CI:-1}" == "1" ]]; then
   echo ">>> CI running Criterion benches"
   BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh
   echo ">>> CI rendering bench tables"
-  if command -v uv >/dev/null 2>&1; then
-    uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
-  else
-    python3 -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
-  fi
+  uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
 else
   echo ">>> skipping benches (RUN_BENCH_IN_CI=$RUN_BENCH_IN_CI)"
 fi
 
-if [[ "${WITH_NATIVE:-0}" == "1" ]]; then
-  echo ">>> Build native extension with maturin..."
-  uv run maturin develop -m crates/viterbo-py/Cargo.toml
-fi
-
-echo "CI: (optional) run selected E2E with: uv run pytest -m e2e -k atlas"
+echo ">>> Suggested E2E (on-demand): uv run pytest -q -m e2e -k atlas"

@@ -42,7 +42,7 @@ After the environment is ready:
 
 ## Onboard
 
-- Quick path: read `AGENTS.future.md` (post‑migration onboarding) and `docs/src/meta/overview.md`.
+- Quick path: read `AGENTS.md` (always‑relevant onboarding) and `docs/src/meta/overview.md`.
 - Manual path: Python orchestration lives in `src/viterbo/<experiment>/stage_*.py` and configs under `configs/<experiment>/`; Rust math kernels live in `crates/viterbo` and are optionally exposed to Python via PyO3 in `crates/viterbo-py`.
 
 ## License

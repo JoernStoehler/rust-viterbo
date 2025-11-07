@@ -74,7 +74,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
   - Git LFS (latest 3.x). Run `git lfs install --local` once per worktree and `git lfs pull --include "data/**" --exclude ""` after switching branches so large artifacts are available locally.
   - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test) plus `bash scripts/rust-lint-test.sh` cover the common loops before running selective smoke/e2e tests.
-  - Optional native build is available via maturin (only if a ticket requires native code changes; see Quick Reference).
+  - Native extension: we keep a committed `.so` in `src/viterbo/` for fast worktrees. Build/refresh via `bash scripts/safe.sh --timeout 120 -- bash scripts/rust-build.sh`. CI also builds natively to catch drift early. We do not publish to PyPI; packaging-for-distribution assumptions do not apply in this repo.
 
 ## Safe Wrapper (timeouts & cleanup)
 - Purpose: apply explicit timeouts at the top level and clean up entire process groups if a command hangs or runs longer than intended.
@@ -95,9 +95,12 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 
 ### Agent Autonomy (verification defaults)
 <!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
-- Do not ask the project owner before running fast verification. Proactively run:
-  - `safe --timeout 180 -- bash scripts/checks.sh` (ruff, pyright, pytest smoke, cargo check/tests)
-  - `safe --timeout 120 -- mdbook build docs` (docs sanity)
+- Do not ask the project owner before running fast verification. Prefer these focused loops:
+  - Python quick loop: `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
+  - Rust quick loop: `safe --timeout 10 -- bash scripts/rust-lint-test.sh`
+  - mdBook quick build: `safe --timeout 120 -- mdbook build docs`
+  - Selected tests: `safe --timeout 10 -- uv run pytest -q tests/smoke/test_xyz.py::test_abc`
+  - Optional native build (for code paths that depend on it): `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`
 - Only escalate before running when the action is potentially destructive, requires unusually long budgets beyond those above, or needs external services beyond our local toolchain.
 - Always summarize what you ran and any failures; include exact commands and key logs. The owner’s time is valuable—minimize round trips.
 
@@ -130,6 +133,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Rust benches (compile only): `safe --timeout 120 -- bash scripts/rust-bench.sh -- --no-run`
   - Rust benches (full run → data/bench/criterion): `safe --timeout 300 -- bash scripts/rust-bench.sh`
   - Bench docs stage (CSV/Markdown refresh): `safe --timeout 120 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json`
+  - Native extension: `safe --timeout 120 -- bash scripts/rust-build.sh` (or `--copy-only` after CI/reproduce has built it)
 - Avoid auto‑running all E2E tests. Select by hand; it’s way faster and clearer.
   - Native build: `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`.
 
