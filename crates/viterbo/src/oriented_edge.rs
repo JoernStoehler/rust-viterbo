@@ -34,7 +34,9 @@ use nalgebra::{Matrix2, Matrix2x4, Matrix4x2, Vector2};
 use crate::geom2::{
     ordered::HalfspaceIntersection, rotation_angle, Aff1, Aff2, GeomCfg, Hs2, Poly2,
 };
-use crate::geom4::{enumerate_faces_from_h, face2_as_poly2_hrep, oriented_orth_map_face2, reeb_on_facets, Poly4};
+use crate::geom4::{
+    enumerate_faces_from_h, face2_as_poly2_hrep, oriented_orth_map_face2, reeb_on_facets, Poly4,
+};
 
 /// Public alias to match thesis/spec naming used across tickets.
 pub type HPoly2Ordered = Poly2;
@@ -126,7 +128,8 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
     for (ridx, f2) in faces2.iter().enumerate() {
         let (fi, fj) = f2.facets;
         // Orientation choice: positive; we keep a single canonical chart.
-        let (chart_u, chart_ut) = oriented_orth_map_face2(&poly.h, fi, fj, true).expect("face chart");
+        let (chart_u, chart_ut) =
+            oriented_orth_map_face2(&poly.h, fi, fj, true).expect("face chart");
         let poly2 = face2_as_poly2_hrep(poly, fi, fj, true).expect("face poly2");
         let node = Ridge {
             facets: (FacetId(fi), FacetId(fj)),
@@ -145,7 +148,11 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
     // Helper closures
     let other_facet = |r: &Ridge, f: usize| -> usize {
         let (a, b) = (r.facets.0 .0, r.facets.1 .0);
-        if a == f { b } else { a }
+        if a == f {
+            b
+        } else {
+            a
+        }
     };
     let hs = &poly.h;
 
@@ -180,10 +187,7 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                 // a_pos · y <= b_Hj - eps (we use a tiny slack for strictness).
                 let a_pos = node_i.chart_ut.transpose() * hs[h_idx_j].n;
                 let c_pos = hs[h_idx_j].c - cfg.eps_feas;
-                dom.insert_halfspace(Hs2::new(
-                    Vector2::new(a_pos[0], a_pos[1]),
-                    c_pos,
-                ));
+                dom.insert_halfspace(Hs2::new(Vector2::new(a_pos[0], a_pos[1]), c_pos));
                 // τ_j <= τ_k inequalities for all k with d_k>0 (still inside facet f).
                 for &rk in ridges_in_f {
                     let h_idx_k = other_facet(&ridges[rk.0], f);
@@ -211,10 +215,12 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                 let ut_i = node_i.chart_ut;
                 let u_vec = u_j * v;
                 let r_row = hs[h_idx_j].n.transpose() * ut_i; // 1x2
-                // M = U_j U_i^T - (u_vec * r_row)/d_j  (rank‑1 outer product)
+                                                              // M = U_j U_i^T - (u_vec * r_row)/d_j  (rank‑1 outer product)
                 let u_outer = Matrix2::new(
-                    u_vec[(0, 0)] * r_row[(0, 0)], u_vec[(0, 0)] * r_row[(0, 1)],
-                    u_vec[(1, 0)] * r_row[(0, 0)], u_vec[(1, 0)] * r_row[(0, 1)],
+                    u_vec[(0, 0)] * r_row[(0, 0)],
+                    u_vec[(0, 0)] * r_row[(0, 1)],
+                    u_vec[(1, 0)] * r_row[(0, 0)],
+                    u_vec[(1, 0)] * r_row[(0, 1)],
                 ) * (1.0 / d_j);
                 let m = (u_j * ut_i) - u_outer;
                 let t = Vector2::new(
@@ -231,12 +237,15 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                     b: (bf / (2.0 * d_j)) * hs[h_idx_j].c,
                 };
                 // Image polygon to help downstream sanity checks/visuals.
-                let img = dom.push_forward(&map_ij).unwrap_or_else(|| Poly2::default());
+                let img = dom
+                    .push_forward(&map_ij)
+                    .unwrap_or_else(|| Poly2::default());
                 // Per-edge lower bound of A_inc over dom by checking HPI vertices.
                 let lb = match dom.halfspace_intersection() {
-                    HalfspaceIntersection::Bounded(verts) => {
-                        verts.into_iter().map(|z| action_inc.eval(z)).fold(f64::INFINITY, f64::min)
-                    }
+                    HalfspaceIntersection::Bounded(verts) => verts
+                        .into_iter()
+                        .map(|z| action_inc.eval(z))
+                        .fold(f64::INFINITY, f64::min),
                     _ => f64::NEG_INFINITY, // unbounded; treat as very small to explore late
                 };
                 let eidx = edges.len();
@@ -351,7 +360,14 @@ pub fn dfs_solve_with_fp(
         };
         let mut stack: Vec<RidgeId> = vec![start];
         dfs_recur_fp(
-            graph, cfg, scfg, &mut best, &mut best_cycle, &mut best_z, state0, &mut stack,
+            graph,
+            cfg,
+            scfg,
+            &mut best,
+            &mut best_cycle,
+            &mut best_z,
+            state0,
+            &mut stack,
         );
     }
     if best.is_finite() {
@@ -390,19 +406,34 @@ fn dfs_recur_fp(
         if c_dom.halfspace_intersection_eps(cfg.eps_feas).is_empty() {
             continue;
         }
-        let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) { p } else { continue };
+        let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) {
+            p
+        } else {
+            continue;
+        };
         let rho1 = state.rho + e.rotation_inc;
         if scfg.use_rotation_prune && rho1 > scfg.rotation_budget {
             continue;
         }
-        let a_pull = if let Some(a1) = state.action.compose_with_inv_affine2(&e.map_ij) { a1 } else { continue };
-        let a_edge = if let Some(a2) = e.action_inc.compose_with_inv_affine2(&e.map_ij) { a2 } else { continue };
+        let a_pull = if let Some(a1) = state.action.compose_with_inv_affine2(&e.map_ij) {
+            a1
+        } else {
+            continue;
+        };
+        let a_edge = if let Some(a2) = e.action_inc.compose_with_inv_affine2(&e.map_ij) {
+            a2
+        } else {
+            continue;
+        };
         let a1 = a_pull.add(&a_edge);
         let c2 = c1.with_cut(a1.to_cut(*best));
         if c2.halfspace_intersection_eps(cfg.eps_feas).is_empty() {
             continue;
         }
-        let phi1 = Aff2 { m: e.map_ij.m * state.phi_start_to_current.m, t: e.map_ij.m * state.phi_start_to_current.t + e.map_ij.t };
+        let phi1 = Aff2 {
+            m: e.map_ij.m * state.phi_start_to_current.m,
+            t: e.map_ij.m * state.phi_start_to_current.t + e.map_ij.t,
+        };
         let mut next_seen = state.facets_seen.clone();
         next_seen[e.facet.0] = true;
         let next = State {
@@ -416,7 +447,12 @@ fn dfs_recur_fp(
         };
         stack.push(e.to);
         if e.to == state.start {
-            if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(next.phi_start_to_current, &next.candidate, &next.action, cfg) {
+            if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(
+                next.phi_start_to_current,
+                &next.candidate,
+                &next.action,
+                cfg,
+            ) {
                 if a_val < *best {
                     *best = a_val;
                     *best_cycle = stack.clone();
@@ -467,7 +503,11 @@ fn dfs_recur(
             continue;
         }
         // Push forward.
-        let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) { p } else { continue };
+        let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) {
+            p
+        } else {
+            continue;
+        };
         // Rotation prune (optional).
         let rho1 = state.rho + e.rotation_inc;
         if scfg.use_rotation_prune && rho1 > scfg.rotation_budget {
@@ -511,7 +551,12 @@ fn dfs_recur(
         // Close cycle
         if e.to == state.start {
             // Fixed‑point on start chart; candidate already in start chart coordinates.
-            if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(next.phi_start_to_current, &next.candidate, &next.action, cfg) {
+            if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(
+                next.phi_start_to_current,
+                &next.candidate,
+                &next.action,
+                cfg,
+            ) {
                 if a_val < *best {
                     *best = a_val;
                     *best_cycle = stack.clone();
@@ -562,17 +607,13 @@ mod tests {
             .map(|(i, _)| RidgeId(i))
             .collect();
         assert!(ridges_in_f0.len() >= 2);
-        let out_any: usize = ridges_in_f0
-            .iter()
-            .map(|rid| g.adj[rid.0].len())
-            .sum();
+        let out_any: usize = ridges_in_f0.iter().map(|rid| g.adj[rid.0].len()).sum();
         assert!(out_any > 0);
         // Check that at least one edge has non-empty dom and img.
-        let has_valid = g
-            .edges
-            .iter()
-            .any(|e| !e.dom_in.halfspace_intersection_eps(1e-9).is_empty()
-                && !e.img_out.halfspace_intersection_eps(1e-9).is_empty());
+        let has_valid = g.edges.iter().any(|e| {
+            !e.dom_in.halfspace_intersection_eps(1e-9).is_empty()
+                && !e.img_out.halfspace_intersection_eps(1e-9).is_empty()
+        });
         assert!(has_valid);
     }
 
@@ -592,23 +633,56 @@ mod tests {
         // Dummy charts (only used to satisfy struct fields; identity everywhere).
         let u = Matrix2x4::zeros();
         let ut = Matrix4x2::zeros();
-        let r0 = Ridge { facets: (FacetId(0), FacetId(1)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut };
-        let r1 = Ridge { facets: (FacetId(1), FacetId(2)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut };
+        let r0 = Ridge {
+            facets: (FacetId(0), FacetId(1)),
+            poly: poly_unit.clone(),
+            chart_u: u,
+            chart_ut: ut,
+        };
+        let r1 = Ridge {
+            facets: (FacetId(1), FacetId(2)),
+            poly: poly_unit.clone(),
+            chart_u: u,
+            chart_ut: ut,
+        };
         let ridges = vec![r0, r1];
-        let id = Aff2 { m: Matrix2::identity(), t: Vector2::new(0.0, 0.0) };
-        let zero = Aff1 { a: Vector2::new(0.0, 0.0), b: 0.0 };
+        let id = Aff2 {
+            m: Matrix2::identity(),
+            t: Vector2::new(0.0, 0.0),
+        };
+        let zero = Aff1 {
+            a: Vector2::new(0.0, 0.0),
+            b: 0.0,
+        };
         let e01 = EdgeData {
-            from: RidgeId(0), to: RidgeId(1), facet: FacetId(10),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: id, action_inc: zero, rotation_inc: 0.0, lb_action: 0.0,
+            from: RidgeId(0),
+            to: RidgeId(1),
+            facet: FacetId(10),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: id,
+            action_inc: zero,
+            rotation_inc: 0.0,
+            lb_action: 0.0,
         };
         let e10 = EdgeData {
-            from: RidgeId(1), to: RidgeId(0), facet: FacetId(11),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: id, action_inc: zero, rotation_inc: 0.0, lb_action: 0.0,
+            from: RidgeId(1),
+            to: RidgeId(0),
+            facet: FacetId(11),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: id,
+            action_inc: zero,
+            rotation_inc: 0.0,
+            lb_action: 0.0,
         };
         let edges = vec![e01, e10];
-        let g = Graph { ridges, edges, adj: vec![vec![0], vec![1]], num_facets: 12 };
+        let g = Graph {
+            ridges,
+            edges,
+            adj: vec![vec![0], vec![1]],
+            num_facets: 12,
+        };
         let res = dfs_solve(&g, GeomCfg::default(), SearchCfg::default());
         assert!(res.is_some());
         let (best, cyc) = res.unwrap();
@@ -632,39 +706,86 @@ mod tests {
         let u = Matrix2x4::zeros();
         let ut = Matrix4x2::zeros();
         let ridges = vec![
-            Ridge { facets: (FacetId(0), FacetId(1)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut },
-            Ridge { facets: (FacetId(1), FacetId(2)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut },
-            Ridge { facets: (FacetId(2), FacetId(0)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut },
+            Ridge {
+                facets: (FacetId(0), FacetId(1)),
+                poly: poly_unit.clone(),
+                chart_u: u,
+                chart_ut: ut,
+            },
+            Ridge {
+                facets: (FacetId(1), FacetId(2)),
+                poly: poly_unit.clone(),
+                chart_u: u,
+                chart_ut: ut,
+            },
+            Ridge {
+                facets: (FacetId(2), FacetId(0)),
+                poly: poly_unit.clone(),
+                chart_u: u,
+                chart_ut: ut,
+            },
         ];
         // Rotation by θ = 0.8π -> rho = 0.8 per edge.
         let theta = 0.8 * std::f64::consts::PI;
         let rot = Matrix2::new(theta.cos(), -theta.sin(), theta.sin(), theta.cos());
-        let psi_rot = Aff2 { m: rot, t: Vector2::new(0.0, 0.0) };
+        let psi_rot = Aff2 {
+            m: rot,
+            t: Vector2::new(0.0, 0.0),
+        };
         // zero action
-        let zero = Aff1 { a: Vector2::new(0.0, 0.0), b: 0.0 };
+        let zero = Aff1 {
+            a: Vector2::new(0.0, 0.0),
+            b: 0.0,
+        };
         let e01 = EdgeData {
-            from: RidgeId(0), to: RidgeId(1), facet: FacetId(10),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: psi_rot, action_inc: zero, rotation_inc: rotation_angle(&psi_rot).unwrap(), lb_action: 0.0,
+            from: RidgeId(0),
+            to: RidgeId(1),
+            facet: FacetId(10),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: psi_rot,
+            action_inc: zero,
+            rotation_inc: rotation_angle(&psi_rot).unwrap(),
+            lb_action: 0.0,
         };
         let e12 = EdgeData {
-            from: RidgeId(1), to: RidgeId(2), facet: FacetId(11),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: psi_rot, action_inc: zero, rotation_inc: rotation_angle(&psi_rot).unwrap(), lb_action: 0.0,
+            from: RidgeId(1),
+            to: RidgeId(2),
+            facet: FacetId(11),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: psi_rot,
+            action_inc: zero,
+            rotation_inc: rotation_angle(&psi_rot).unwrap(),
+            lb_action: 0.0,
         };
         let e20 = EdgeData {
-            from: RidgeId(2), to: RidgeId(0), facet: FacetId(12),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: psi_rot, action_inc: zero, rotation_inc: rotation_angle(&psi_rot).unwrap(), lb_action: 0.0,
+            from: RidgeId(2),
+            to: RidgeId(0),
+            facet: FacetId(12),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: psi_rot,
+            action_inc: zero,
+            rotation_inc: rotation_angle(&psi_rot).unwrap(),
+            lb_action: 0.0,
         };
         let edges = vec![e01, e12, e20];
         let adj = vec![vec![0usize], vec![1usize], vec![2usize]];
-        let g = Graph { ridges, edges, adj, num_facets: 16 };
+        let g = Graph {
+            ridges,
+            edges,
+            adj,
+            num_facets: 16,
+        };
         // Default config has rotation pruning enabled: expect None.
         let res_pruned = dfs_solve(&g, GeomCfg::default(), SearchCfg::default());
         assert!(res_pruned.is_none());
         // Disable rotation pruning: expect a valid zero‑action cycle.
-        let cfg_off = SearchCfg { use_rotation_prune: false, rotation_budget: 2.0 };
+        let cfg_off = SearchCfg {
+            use_rotation_prune: false,
+            rotation_budget: 2.0,
+        };
         let res_ok = dfs_solve(&g, GeomCfg::default(), cfg_off);
         assert!(res_ok.is_some());
         let (best, _cyc) = res_ok.unwrap();
@@ -686,24 +807,57 @@ mod tests {
         let u = Matrix2x4::zeros();
         let ut = Matrix4x2::zeros();
         let ridges = vec![
-            Ridge { facets: (FacetId(0), FacetId(1)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut },
-            Ridge { facets: (FacetId(1), FacetId(2)), poly: poly_unit.clone(), chart_u: u, chart_ut: ut },
+            Ridge {
+                facets: (FacetId(0), FacetId(1)),
+                poly: poly_unit.clone(),
+                chart_u: u,
+                chart_ut: ut,
+            },
+            Ridge {
+                facets: (FacetId(1), FacetId(2)),
+                poly: poly_unit.clone(),
+                chart_u: u,
+                chart_ut: ut,
+            },
         ];
-        let id = Aff2 { m: Matrix2::identity(), t: Vector2::new(0.0, 0.0) };
-        let zero = Aff1 { a: Vector2::new(0.0, 0.0), b: 0.0 };
+        let id = Aff2 {
+            m: Matrix2::identity(),
+            t: Vector2::new(0.0, 0.0),
+        };
+        let zero = Aff1 {
+            a: Vector2::new(0.0, 0.0),
+            b: 0.0,
+        };
         let e01 = EdgeData {
-            from: RidgeId(0), to: RidgeId(1), facet: FacetId(10),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: id, action_inc: zero, rotation_inc: 0.0, lb_action: 0.0,
+            from: RidgeId(0),
+            to: RidgeId(1),
+            facet: FacetId(10),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: id,
+            action_inc: zero,
+            rotation_inc: 0.0,
+            lb_action: 0.0,
         };
         let e10 = EdgeData {
-            from: RidgeId(1), to: RidgeId(0), facet: FacetId(11),
-            dom_in: poly_unit.clone(), img_out: poly_unit.clone(),
-            map_ij: id, action_inc: zero, rotation_inc: 0.0, lb_action: 0.0,
+            from: RidgeId(1),
+            to: RidgeId(0),
+            facet: FacetId(11),
+            dom_in: poly_unit.clone(),
+            img_out: poly_unit.clone(),
+            map_ij: id,
+            action_inc: zero,
+            rotation_inc: 0.0,
+            lb_action: 0.0,
         };
         let edges = vec![e01, e10];
         let adj = vec![vec![0usize], vec![1usize]];
-        let g = Graph { ridges, edges, adj, num_facets: 16 };
+        let g = Graph {
+            ridges,
+            edges,
+            adj,
+            num_facets: 16,
+        };
         let res = dfs_solve_with_fp(&g, GeomCfg::default(), SearchCfg::default());
         assert!(res.is_some());
         let (best, _cycle, z) = res.unwrap();

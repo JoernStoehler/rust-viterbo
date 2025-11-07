@@ -199,6 +199,16 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Escalate when: specs underspecified, solver/library choice blocks progress, runtime exceeds budget, or scope bloat requires a sub‑ticket.
 - How: pause work, leave a concise summary + options.
 
+## Git History Cleanup (Quick Guide)
+- Schedule downtime: pause all VK attempts/worktrees besides your own and get the owner’s explicit go-ahead before rewriting history.
+- Capture the baseline (`git rev-parse main`, `git count-objects -vH`, `git lfs ls-files | wc -l`) for provenance.
+- Work in a mirror clone: `git clone --mirror /workspaces/rust-viterbo /tmp/history-cleanup.git && cd /tmp/history-cleanup.git`.
+- Remove bench build artifacts by running\
+  `git filter-repo --force --invert-paths --path data/bench/release --path data/bench/release/ --path data/bench/tmp --path data/bench/tmp/ --path data/bench/.rustc_info.json --path data/target --path data/target/ --message-callback 'return message + b"\n[chore] Drop legacy bench artifacts (Ticket <uuid>)\n"'`
+- Verify before publishing: `git rev-list --objects --all | grep data/bench/release` (should be empty), `git fsck --full`, `git lfs fetch --all`, `git lfs fsck`.
+- Push the result to a staging branch (e.g., `main-clean`) in `/workspaces/rust-viterbo`, have the owner force-push to GitHub and reset + rehydrate LFS (`git lfs pull --include "data/**" --exclude ""`) followed by the two quick loops (`bash scripts/python-lint-type-test.sh`, `bash scripts/rust-lint-test.sh`).
+- Record what you did (hashes + commands) in the ticket; no extra files need to be committed for the rewrite itself.
+
 ## Design Principles
 - High performance: use Rust for hotspots; profile first.
 - Fast development cycles: use Python for orchestration; isolate experiments for parallel development; tiny test configs for fast feedback.
