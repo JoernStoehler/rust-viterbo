@@ -32,6 +32,10 @@ Purpose: a self‑contained, advisor‑friendly reference list with direct PDF l
 
 ## Algorithms, Computation, and Limits (Polytopes, EHZ)
 
+- Haim‑Kislev (2017). On the symplectic size of convex polytopes.
+  - PDF: https://arxiv.org/pdf/1712.03494
+  - Takeaways: Proves a “simple loop” theorem: there exists an action‑minimizing closed characteristic on a convex polytope that visits the interior of each facet at most once; yields an explicit variational/combinatorial formula for c_EHZ with constraints over facet normals.
+
 - Chaidez, Hutchings (2020/21). Computing Reeb dynamics on 4D convex polytopes.
   - PDF: https://arxiv.org/pdf/2008.10111
   - Takeaways: Combinatorial algorithm for closed Reeb orbits on polytope boundaries; practical for 4D EHZ‑related computations and validation.

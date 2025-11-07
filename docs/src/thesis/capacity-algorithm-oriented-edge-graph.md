@@ -1,124 +1,318 @@
 <!-- Author: Codex & Jörn -->
 
-TODO: replace this file with actual content.
+<!-- Ticket: Please add the VK ticket UUID here once available. -->
 
-We want to implement the following algorithm to compute the EHZ capacity for a convex star-shaped non-degenerate polytope $K \subset \mathbb{R}^{4}$.
+<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md -->
 
-Input:
-- The extreme points of $K$.
-- The half-spaces defining $K$.
+# Oriented-Edge Graph Algorithm for c_EHZ in R^4
 
-Output:
-- The EHZ capacity of $K$.
-- A minimum action closed characteristic on $\partial K$, which is a piecewise linear curve with specified vertices on the 2-faces of $K$ and implied segments on the 3-faces of $K$.
+<!-- Why: This document specifies a high-level, implementation-ready algorithm to compute the Ekeland–Hofer–Zehnder (EHZ) capacity of a convex, star-shaped, non-degenerate polytope in R^4 by reducing the search for action-minimizing Reeb orbits to a directed cycle search on a 2-face graph with polyhedral feasibility checks. We progressively disclose formal definitions, maps, and constraints, then the search strategy and implementation notes. -->
 
-Algorithm:
-**Phase 1: Pre-processing**
-1. Build the 3-face graph of $K$.
-   - Nodes correspond to 3-faces of $K$.
-   - Edges correspond to two 3-faces sharing a common 2-face.
-   - Orientation of edges is determined by which direction the two Reeb flows of the two 3-faces point towards the common 2-face. Due to convexity, there is always one 3-face that flows into the other across the common 2-face.
-2. Build the 2-face graph of $K$.
-   - Nodes correspond to 2-faces of $K$.
-   - Edges correspond to two 2-faces that are adjacent to a common 3-face, with orientation determined by the Reeb flow direction on the common 3-face. At most one 2-face has a point that flows into the other across the common 3-face. If no flow occurs between the two 2-faces, we don't have an edge between them.
-3. Attach data to the 2-face graph of $K$.
-   - For each 2-face $i$, pick a projection onto $\mathbb{R}^2$. The image $A_i$ is a convex $2d$ polytope. We identify the 2-face with this polytope from now on, in an abuse of notation.
-   - For each edge $i \to j$ with 3-face $F$ in between, compute the permissible subset $P_{i j} \subset A_i$ of points that the Reeb flow on $F$ carries into $A_j$, when we project the start and end point into $\mathbb{R}^2$ of course. We know that $P_{i j}$ is again a convex $2d$ polytope, and non-empty because the edge exists. Other points on $A_i \setminus P_{i j}$ flow into some other 2-face that exits the 3-face $F$.
-   - We store the affine map $\psi: P_{i j} \to A_j$ that describes the Reeb flow on $F$.
-   - We store the affine map $A_{\mathrm{inc}}: P_{i j} \to \mathbb{R}$ that describes the action increment when flowing from $A_i$ to $A_j$ along $F$.
-   - We store the affine map $\rho_{\mathrm{inc}}: P_{i j} \to \mathbb{R}$ that describes the rotation increment when flowing from $A_i$ to $A_j$ along $F$. Here we define the rotation as $$ TODO $$
-**Phase 2: Search for minimum action closed characteristics**
-1. Every closed characteristic maps to a cycle in the 2-face graph of $K$. We can thus enumerate all graph cycles, check if any closed characteristic corresponds to the graph cycle, and what the minimum action of such a closed characteristic is. We then return the minimum over all graph cycles.
-2. In order to be smarter about the enumeration, we skip graph cycles that cannot correspond to the minimum action closed characteristic. For this, we use the following observations, given some path $1, 2, \dots, k$ in the 2-face graph.
-   - We can compute (iteratively even) the set of candidate starting points $C_{1, \dots, k} \subset A_1$. A point $p$ is a candidate if 
-   a) its flow trajectory stays permissible: $$\psi_{1 \dots m}(p) \in A_m$$ for all $m = 1, \dots, k$, where $\psi_{1 \dots m}$ is the composition of all flow maps along the path from face $1$ to face $m$.
-   b) its summed action increments stay below the current best upper bound on the minimal action: $$A_{\mathrm{inc}, 1 \dots m}(p) \leq A_{\mathrm{best}}$$ for all $m = 1, \dots, k$, where $A_{\mathrm{inc}, 1 \dots m} = A_{\mathrm{inc}, 1 \dots m-1} + A_{\mathrm{inc}, m-1, m} \circ \psi_{1 \dots m-1}$ is the accumulated action increment along the path from face $1$ to face $m$.
-   c) its summed rotation increments stay below the upper bound $2$: $$\rho_{\mathrm{inc}, 1 \dots m}(p) \leq 2$$ for all $m = 1, \dots, k$, where $\rho_{\mathrm{inc}, 1 \dots m} = \rho_{\mathrm{inc}, 1 \dots m-1} + \rho_{\mathrm{inc}, m-1, m} \circ \psi_{1 \dots m-1}$ is the accumulated rotation increment along the path from face $1$ to face $m$.
-   - Note here that the candidate set $C_{1, \dots, k}$ is again a convex $2d$ polytope, or empty.
-   - If $C_{1, \dots, k}$ is empty, we can skip all graph cycles containing this path, since they don't permit any closed characteristic that also stays below the known smallest action and the rotation upper bound.
-3. If we reach a graph cycle $1, 2, \dots, k, 1$, which has non-empty candidate set $C_{1, \dots, k, 1}$, we only have to check if any of the trajectories is closed. We look at the fixed points of the affine map $\psi_{1, \dots, k, 1}: \mathbb{R}^2 \to \mathbb{R}^2$. If no fixed point exists, or no fixed point lies in $C_{1, \dots, k, 1}$, we can skip this graph cycle. Otherwise, we pick the fixed point with minimum action, and use it as our new best candidate. By definition of $C_*$ we already know the action is below our current best upper bound, and the rotation is below $2$, and the trajectory is permissible. By fixed point property, the trajectory is closed.
-4. It's useful to find a best candidate with low action, ideally even the true minimum action, early in the algorithm, so that we can skip more graph cycles later on. For this we should use these heuristics:
-   - Short graph cycles may have lower action than long graph cycles
-   - We can get a minimum action increment (that may be 0) from $A_{\mathrm{inc}, i j}$ on $P_{i j}$ for each edge $i \to j$. This gives us a non-negatively weighted directed graph, where the total weight of a cycle is a lower bound on the action of any closed characteristic mapping to this cycle. This is again a heuristic to prioritize graph cycles that may have lower action.
-   - Similarly we can avoid exceeding the rotation budget by prioritizing low rotation increment edges.
-5. The final algorithm looks like this:
-   - Initialize the graph and its node and edge data
-   - Initialize heuristics to find good candidates earlier
-   - Initialize the upper bound $A_{\mathrm{best}}$ from some Viterbo-like theorem (iirc. sqrt(vol * 8) or something?)
-   - Enumerate graph cycles:
-     - We can use an outer loop over starting nodes, where later iterations then ban already considered starting nodes to avoid double work
-     - We can incrementally build paths using DFS, and prioritize which edge to explore next using the heuristics
-       - if an edge leads back to the start, check it first
-       - greedily order edges by their minimum action increment and rotation increment
-     - We discard any DFS branch if its path has empty candidate set
-   - When reaching a closed graph cycle, solve the fixed point problem and update best candidate if the fixed point lies in the candidate set
-6. Open Questions:
-   - it may be useful to precompute $C_{i j k}$ edge-pairs, in particular if many are empty. This may speed up the DFS pruning, since it's a quick rejection check by doing a lookup based on the end of the path $\dots i j k$ rather than doing an ad-hoc recomputation whenever (i j k) pops up.
+<!-- Scope: High-level algorithm and the precise per-edge maps and constraints we need. Low-level performance choices are collected at the end. Mathematical background, including precise definitions of action, Reeb dynamics, and rotation/CZ index, is in the EHZ capacity document. -->
 
-Remark: ah wait, i think the rotation increment is actually just a number we can read off $\psi_{i j}$. Oops. Yeah, this simplifies things for rotation a bit!
+## Goal
+- Input:
+  - Half-space description of a convex, star-shaped, non-degenerate polytope $K \subset \mathbb{R}^4$: $K=\{x\in \mathbb{R}^4:\langle n_f,x\rangle\le b_f\ \forall f\in \mathcal{F}_3\}$, where each facet (3-face) $f$ has outward unit normal $n_f$ and support constant $b_f>0$.
+  - Optionally, vertices for convenience and validation.
+- Output:
+  - The EHZ capacity $c_{\mathrm{EHZ}}(K)$.
+  - An action-minimizing closed characteristic $\gamma\subset\partial K$ represented combinatorially by a directed cycle of 2-faces and a fixed point in the induced affine map on the start 2-face, together with an explicit piecewise-linear lift to $\partial K$.
 
-Implementation Details:
-- We want to implement the algorithm in Rust, and as very clear & documented code, with debug instrumentation, and production performance.
-- The main steps I think are
-  - The 2-face graph
-  - Optional: precompute bools $\emptyset = C_{i j k}$ for all edge pairs (i j k)
-  - The enumeration of paths, using an outer loop over starting nodes, restricting to ignore already considered starting nodes, and picking using heuristics which edge to explore next in a DFS manner.
-  - For each path, store data, and then compute on path extension the new data. reject based on the data.
-  - concrete data structure suggestion:
-    - path list of 2-face indices
-    - subset of all 3-faces that any 2-face in the path flows into or out of
-    - candidate set as a convex 2d polytope in half-space representation
-    - accumulated rotation as number
-    - accumulated action as an affine map (matrix 2x1, vector 1)
-    - accumulated flow map as an affine map (matrix 2x2, vector 2)
-  - if the candidate set is empty, reject
-  - wrt 3-face constraint: the next edge must either flow into a 3-face not in the set yet, or flow into the 3-face that flows into the start 2-face, in which case the edge after that must close the loop i.e. go back to the start 2-face.
-  - The update of the data structure on appending an edge k -> k+1 is:
-    -  accumulate rotation $\rho_{1 \dots k+1} = \rho_{k, k+1} + \rho_{1 \dots k}$; reject if $>2$
-    -  accumulate flow map $\psi_{1 \dots k+1} = \psi_{k, k+1} \circ \psi_{1 \dots k}$
-    -  accumulate action $A_{1 \dots k+1} = A_{1 \dots k} + A_{\mathrm{inc}, k, k+1} \circ \psi_{1 \dots k}$
-    -  intersect $C_{1, \dots, k+1}^* = C_{1, \dots, k} \cap \psi_{1 \dots k}^{-1}(P_{k, k+1})$; reject if empty
-    -  intersect $C_{1, \dots, k+1} = C_{1, \dots, k+1}^* \cap \{z: \, A_{1, \dots, k+1}(z) \leq A_{\mathrm{best}}\}$; reject if empty
-    -  update 3-face set
-    -  update the path list
-    -  indicate to force closure if the end 2-face flows into a 3-face that flows into the start 2-face
-  - after the closed loop is calculated and not rejected:
-    - solve the fixed point problem $\psi_{1, \dots, k, 1}(z) = z$
-    - check if the fixed point lies in $C_{1, \dots, k, 1}$
-    - if no, reject
-    - if yes, store the new best candidate with action $A_{1, \dots, k, 1}(z)$
-  - Final output is the best candidate found after the DFS enumeration is complete.
-- For convex 2d polytopes, we can use half-space representation for intersections, for checking if a point lies in them, for representing a $A \leq A_{\mathrm{best}}$ constraint, and for checking emptiness (using a 2d LP solver). The pre-image under an affine map of a half-space representation is again a half-space representation, so all operations we need are supported.
-- Unsure if pruning the half-space representation is useful or too costly.
-- We use immutable data structures. The path may be stored by the enumeration algorithm and not be considered part of the data structure. The forced closure may also be done by the enumeration algorithm, not the extension step.
-- We use our own nalgebra-based data structures, since we want control over how we represent affine maps (2x2 matrix + 2x1 vector) and half-spaces etc.
-- At the end, the algorithm converts the stared fixpoint on the stored start 2-face into a piecewise linear closed characteristic on $\partial K$ by following the flow maps along the path and converting from $2d$ to $4d$ coordinates using the stored projections.
-- We want to have extensive unit tests for all subcomponents.
-- In debug, we do indexing checks, sanity checks, assertions, logging, etc.
-- In production we optimize for speed, allow the CPU pipeline to work well, etc.
-- We want to have benchmark data for typical polytopes we want to compute the EHZ capacity for, to see how well the implementation performs.
-- We want to have profiling data to see where the bottlenecks are.
-- We want in an even slower debug mode to get instrumentation data on how many paths are pruned etc. This helps us together with profiling data to decide where to optimize.
+<!-- Comment: “non-degenerate” here is the generic position assumption we actually use algorithmically: no Reeb direction is parallel to a ridge; no two exit times tie on a positive-measure set; fixed points do not lie on candidate-set boundaries. Precise statements in Assumptions. -->
 
-- It's okay to assume genericity of the polytope, concretely this implies that our fixed points never lie exactly on the boundary of the candidate set, and that there is a unique minimum cycle. Ofc numerical rounding can be a problem here, but I guess it'll be fine in practice bc we do not just guarantee genericness, but can even wiggle vertices a bit if needed. Potentially the way to go here is to have a warning mode, where we allow closed characteristics that go outside the candidate set by a small epsilon, to catch the minimum cycle if it ends up doing that due to rounding errors.
-- Open Question: it may be true that we can just generally allow fixed points outside the candidate set, or even omit tracking the permissibility and only track rotation and action cutoffs. This would be implied by some theorem ala "the only fake characteristics (bc they don't actually lie on $\partial K$) that the algorithm then iterates over all have above-minimum action anyway, and will be discarded". This would simplify the algorithm, allow us to find fake-candidates with high action earlier, that still provide a true upper bound on the minimum action, resolves some trouble with numerical rounding errors, but on the other hand omits the pruning power of permissibility checks. Not sure if this is beneficial for performance, in addition to not being sure if it even is correct as an  algorithm.
-- Potential Optimization: a quick check before computing permissibility whether the edge pair $k-1, k, k+1$ has empty $C_{i j k}$, to reject paths earlier. This boolean matrix may be precomputed in phase 1.
+## Setting and Assumptions
+- Space and forms:
+  - Standard symplectic form $\omega_0$ and Liouville form $\lambda_0$ on $\mathbb{R}^4$.
+  - Fix the standard complex structure $J$ so that $\omega_0(u,v)=\langle Ju, v\rangle$ and $J^\top J=I$, $J^\top=-J$.
+- Symplectic polytope hypothesis:
+  - No 2-face is Lagrangian: for every 2-face $F$, the restriction $\omega_0|_{TF}\ne 0$. This matches the “symplectic polytope” condition in the Chaidez–Hutchings framework and ensures well-posed combinatorial Reeb dynamics across ridges.
+- Facets and Reeb directions:
+  - For each facet $f\in \mathcal{F}_3$, with plane $H_f=\{x:\langle n_f,x\rangle=b_f\}$, trajectories of the Reeb flow on $H_f\cap\partial K$ are straight segments parallel to $v_f:=J n_f$ (speed may vary; directions are constant).
+  - We only need directions to get exit points; actions are integrals of $\lambda_0$ along these straight segments.
+- Genericity/non-degeneracy assumptions (used for correctness and robust numerics):
+  1) For each facet $f$, and each ridge $r\subset f$ with co-facet $g\ne f$, we have $\langle v_f, n_g\rangle\ne 0$.  
+  2) For a fixed $f$, in the region where a particular co-facet $g$ is the first one hit along $v_f$, that co-facet is uniquely first (no ties on a set of positive measure).  
+  3) Action-minimizing cycles do not involve segments on 1-faces (rotation blow-up); crossings of 2-faces occur at single points.  
+  <!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#setting -->
+  <!-- Comment: (1)-(3) match the “generic” case we intend to handle first; degenerate tie-breaking and 1-face handling can be added later. -->
+  <!-- Comment: The non-Lagrangian 2-face hypothesis lines up with our ridge-crossing model and with CH’s notion of symplectic polytopes. -->
 
-There are other algorithm ideas, such as caching subpaths of interest beyond length 2, but that seems less promising and more costly. So we won't go there likely, and be satisfied with what above algorithm does instead.
+## Face Graphs
+- 3-face digraph:
+  - Nodes: facets $f\in \mathcal{F}_3$.
+  - Oriented edges $f\xrightarrow{r} f'$ whenever facets $f\ne f'$ share a ridge $r$ and the direction $v_f$ points from a neighborhood of $r$ in $f$ into the interior of $f'$ across $r$ (equivalently: the first exit from $f$ along $v_f$ near points on $r$ is $f'$).
+  - This orientation is well-defined by convexity and the genericity assumptions.
+- 2-face digraph (the main search graph):
+  - Nodes: ridges $i\in \mathcal{F}_2$. Each ridge $i$ is the intersection of two distinct facets $f(i)$ and $g(i)$.
+  - Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.
+  - Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.
+  <!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
 
+## Notation Recap
+- Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.
+- Facets: for each $F\in\mathcal{F}_3$, outward unit normal $n_F$ and support $b_F>0$, plane $H_F=\{x:\langle n_F,x\rangle=b_F\}$, Reeb direction $v_F:=J n_F$.
+- Ridges: $i\in\mathcal{F}_2$ with affine plane $R_i\subset H_F$. Charts $\pi_i:R_i\to\mathbb{R}^2$ define $A_i:=\pi_i(i)$.
+- Per-edge quantities along $i\xrightarrow{F}j$:
+  - Exit time $\tau_{ij}(x)$; affine on regions of constant first exit.
+  - Affine map $\psi_{ij}:\operatorname{dom}\psi_{ij}\to A_j$, where $\operatorname{dom}\psi_{ij}\subset A_i$ and $\operatorname{im}\psi_{ij}\subset A_j$ are convex polygons.
+  - Action increment $A_{ij}(x)=\tfrac{b_F}{2}\,\tau_{ij}(x)$ (affine on $\operatorname{dom}\psi_{ij}$).
+  - Rotation increment $\rho_{ij}\ge 0$ (we use polar angle of $D\psi_{ij}$; see Rotation).
+<!-- review: feel free to delete after review if redundant with later sections. -->
 
-TODO: Idea after writing all the above: we should probably not do pullbacks, but pushforwards for lower compute cost (sorry if premature optimization). I.e. the state after exploring a path $1, \dots, k$ is a set $C \subset A_k$ of points where the backwards trajectory came from the path $1, \dots, k$ and is admissible, low in action-so-far, low in rotation-so-far. On $C$, due to their shared combinatorics, all trajectories/points have an affine action $A: C \to \mathbb{R}$ and a constant rotation $\rho \in \mathbb{R}$. For the final fixed-point search we also store the accumulated $\psi_{1, \dots, k}$. When extending the path by an edge $k \to k+1$, we then do:
-- accumulate rotation $\rho_{1 \dots k+1} = \rho_{k, k+1} + \rho_{1 \dots k}$; reject if $>2$
-- accumulate action $A_{1, \dots, k+1} = A_{1, \dots, k} \circ \psi_{k, k+1}^{-1} + A_{k, k+1} \circ \psi_{k, k+1}^{-1}$
-- compute the image $C^1$ of $C$ under the flow map $\psi_{k, k+1}$
-- cut $C^2 = C^1 \cap \{z: A_{1, \dots, k+1}(z) \leq A_{\mathrm{best}}\}$; reject if empty
-- cut $C_{1, \dots, k+1} = C^2 \cap A_{k+1}$; reject if empty
-- update the path list
-- indicate to force closure if the end 2-face flows into a 3-face that flows into the start 2-face
-At the end, when we have a closed loop, we do
-- solve the fixed point problem $\psi_{1, \dots, k, 1}(z) = z$
-- check if the fixed point lies in $C_{1, \dots, k, 1} \subset A_1$
-- if no, reject
-- if yes, store the new best candidate with action $A_{1, \dots, k, 1}(z)$
+## Algorithm Summary (push-forward only)
+- Maintain, at the current ridge, a candidate polygon $C\subset A_{i_k}$, an affine action $A:C\to\mathbb{R}$, a scalar rotation $\rho$, and an optional composed map $\Psi$ to the start chart.
+- To extend along an edge $i_k\xrightarrow{F} i_{k+1}$:
+  - Gate at $i_k$: intersect $C$ with $\operatorname{dom}\psi_{i_ki_{k+1}}\subset A_{i_k}$ (points that flow first to $i_{k+1}$ across $F$).
+  - Push-forward candidates: $C'=\psi_{i_ki_{k+1}}\!\bigl(C\cap \operatorname{dom}\psi_{i_ki_{k+1}}\bigr)\subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$.
+  - Update action $A'$ via composition with $\psi^{-1}$ and add the per-edge increment; prune by $A'(z)\le A_{\mathrm{best}}$; update $\rho'=\rho+\rho_{i_ki_{k+1}}\le 2$.
+  - Repeat; on returning to the start ridge, solve the fixed-point equation $\Psi(z)=z$ within $C$ and update the incumbent.
+- Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2017).
 
-We basically now only have push-forwards under the maps $\psi_{i j}$, where we can precompute operations, or even intermediate variables such as store $A_{i j} \circ \psi_{i j}^{-1}$ instead of $A_{i j}$ itself. Basically, all our variables ought to be more like "if you are a point at j, and your trajectory came from i, then here's your accumulated action/rotation/map/etc." This also makes it easier to think, since the data attached to $j$ is now in $j$'s coordinate system. And the extension with $i \to j$ just converts all that data from $j$ to $i$'s coordinate system via push-forwards. This seems cleaner.
+## Per-edge Maps and Polyhedral Domains
+Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathcal{F}_3$, $i,j\subset F$. Let $G(j,F)$ denote the co-facet that, together with $F$, defines $j$.
+
+- Exit-time formula on $F$:
+  - For $x\in H_F$ near $i$, the first time the straight line $x + t\,v_F$ hits the plane $H_{G(j,F)}$ is
+    $$\tau_{ij}(x)\;=\;\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{\langle n_{G(j,F)}, v_F\rangle},\quad \text{with }\ \tau_{ij}(x)>0.$$
+  - The condition that $j$ is indeed first exit among all co-facets $k\subset F$ is
+    $$\tau_{ij}(x)\le \tau_{ik}(x)\quad\text{for all admissible }k,$$
+    where “admissible” means $\langle n_k,v_F\rangle>0$ (the ray intersects $H_k$ forward in time) and $x+t\,v_F$ stays in $F$ for $t\in[0,\tau_{ik}(x)]$.
+    These inequalities are linear in $x$ after multiplying by the (fixed) denominators’ signs.
+  - Explicit half-space description of the domain $\operatorname{dom}\psi_{ij}$:
+    - Let $\mathcal{K}_F$ be the set of co-facets $k$ of $F$ with $\langle n_k,v_F\rangle\ne 0$. Define $\sigma_k:=\operatorname{sign}\langle n_k,v_F\rangle$.
+    - For $x\in H_F$, the comparison $\tau_{ij}(x)\le \tau_{ik}(x)$ is equivalent to
+      $$
+      \sigma_k\bigl(b_{G(j,F)}-\langle n_{G(j,F)},x\rangle\bigr)\,\langle n_k,v_F\rangle
+      \;\le\;
+      \sigma_k\bigl(b_k-\langle n_k,x\rangle\bigr)\,\langle n_{G(j,F)},v_F\rangle.
+      $$
+    - Combine these with $x\in i$ and $\tau_{ij}(x)>0$ (a single linear inequality after sign normalization). Projecting by $\pi_i$ yields $\operatorname{dom}\psi_{ij}\subset A_i$ as a convex polygon in half-space form.
+- Domains and images:
+  - Domain (in $A_i$): $\operatorname{dom}\psi_{ij}\subset A_i$ consists of ridge points that flow first to ridge $j$ across facet $F$ (convex polygon).
+  - Image (in $A_j$): $\operatorname{im}\psi_{ij}=\psi_{ij}(\operatorname{dom}\psi_{ij})\subset A_j$ (convex polygon).
+- Exit point and affine map:
+  - Exit point in $F$: $x' = x + \tau_{ij}(x)\, v_F$, affine in $x$ on the region where $j$ is first exit.
+  - Let $R_i$ and $R_j$ be the affine 2-planes containing ridges $i$ and $j$. Choose fixed linear charts (projections) $\pi_i:R_i\to \mathbb{R}^2$ and $\pi_j:R_j\to \mathbb{R}^2$ for every ridge; identify $A_i:=\pi_i(i)\subset\mathbb{R}^2$.
+  - Define the per-edge affine map
+    $$\psi_{ij}:\ \operatorname{dom}\psi_{ij}\ \to\ A_j,\qquad \psi_{ij}(\pi_i(x))\;=\;\pi_j\bigl(x+\tau_{ij}(x)\,v_F\bigr),$$
+    with $\operatorname{dom}\psi_{ij}\subset A_i$ as above. By convexity and genericity, $\operatorname{dom}\psi_{ij}$ is a convex polygon (possibly empty), $\psi_{ij}$ is affine on it, and $\operatorname{im}\psi_{ij}$ is convex in $A_j$.
+  <!-- Comment: We explicitly avoid parameterization of the Reeb vector field. Straight-line geometry suffices to locate exits and compute actions. -->
+<!-- review: confirm chart orientation convention below works for rotation sign consistency. -->
+
+## Action Increment per Edge (explicit affine form)
+For $x\in i$ that flows to $j$ across facet $F$, the action increment along the segment is
+$$
+A_{ij}(x)\;=\;\int_0^{\tau_{ij}(x)} \lambda_0\bigl(\dot \gamma(t)\bigr)\,dt
+\quad\text{with}\ \gamma(t)=x+t\,v_F.
+$$
+Using $\lambda_0(\dot\gamma)=\tfrac{1}{2}\langle J\gamma,\dot\gamma\rangle$ and $Jv_F=J(Jn_F)=-n_F$, we obtain the identity
+$$
+A_{ij}(x)\;=\;\frac{1}{2}\,\langle x, n_F\rangle\ \tau_{ij}(x)\ =\ \frac{b_F}{2}\ \tau_{ij}(x),
+$$
+since $\langle x,n_F\rangle=b_F$ on the facet plane $H_F$. Therefore $A_{ij}$ is affine in $x$ on $\operatorname{dom}\psi_{ij}$ (because $\tau_{ij}$ is affine there).
+In ridge coordinates, we treat $A_{ij}$ as an affine functional on $\operatorname{dom}\psi_{ij}\subset A_i$.
+<!-- Comment: This formula is independent of the speed choice for the Reeb flow; only directions matter. -->
+
+### Orientation and Chart Conventions
+- For each ridge $i$, choose an orthonormal basis $(e_1,e_2)$ of $R_i$ so that the restriction $\omega_0|_{R_i}$ corresponds to the positive area form $dx\wedge dy$ under $\pi_i(e_1)=e_x$, $\pi_i(e_2)=e_y$.
+- This fixes the sign of rotation angles extracted from $D\psi_{ij}$ unambiguously across ridges.
+<!-- review: confirm this convention matches your preferred trivialization style. -->
+
+## Rotation Bookkeeping (to confirm)
+We accumulate a scalar “rotation” $\rho$ along a path to prune searches. In $2n=4$, the action-minimizing orbit has Conley–Zehnder index $3$ and “rotation” in $(1,2)$.
+We need a per-edge constant increment $\rho_{ij}\ge 0$.
+
+<!-- TODO(Jörn): Choose one of the following equivalent-looking normalizations for ρ. -->
+<!-- Option A (Maslov-type angle at ridges): define ρ_ij as the oriented angle (in units of π) between the projections of v_F into the 2D tangent planes of i and j, measured in the fixed charts π_i, π_j; ρ_ij is then a constant per edge. Sum along a cycle gives ρ(γ). -->
+<!-- Option B (linearized map): define ρ_ij := θ(dψ_ij), where θ is a continuous lifting of the argument of Sp(2) to ℝ/ℤ, normalized so that a full positive rotation in the plane contributes 1. This also yields a constant per edge. -->
+<!-- Comment: Both options give a per-edge constant independent of the start point on P_ij and agree with the “Remark” that ρ_inc is read off ψ_ij. Please confirm which normalization we adopt and where we pin ρ∈(1,2) for index 3. -->
+<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#rotation-and-cz-index -->
+
+We will proceed with a constant per-edge increment $\rho_{ij}$ and enforce partial sums $\le 2$ during the search to prune branches.
+
+### Implementation choice (initial)
+- We implement Option B in a chart-dependent way using the polar rotation angle of the Jacobian $D\psi_{ij}\in \mathbb{R}^{2\times 2}$:
+  - Compute the polar decomposition $D\psi_{ij}=Q_{ij} S_{ij}$, with $Q_{ij}\in SO(2)$ and $S_{ij}$ symmetric positive-definite.
+  - Set $\rho_{ij} := \tfrac{1}{\pi}\,\mathrm{arg}(Q_{ij}) \in [0,1]$ (units of “half-turns”, so one full turn contributes 2).
+  - This is constant per edge and trivial to compute once $\psi_{ij}$ is built.
+- Safety: rotation pruning is optional. For full correctness we can set the budget to $+\infty$ (disable pruning), and enable it once we finalize the formal link to CZ index in the background doc.
+<!-- review: confirm Option B + “half-turn” units align with CZ index 3 ⇒ ρ∈(1,2). -->
+
+## Search Over Directed Cycles (push-forward variant)
+We now describe the core enumeration and pruning in the 2-face digraph using push-forwards (no pull-backs of polytopes).
+
+Notation for a path $p=(i_1\xrightarrow{} i_2\xrightarrow{}\cdots\xrightarrow{} i_k)$:
+- Candidate set (current ridge coordinates): $C_p\subset A_{i_k}$, a convex polygon.
+- Accumulated action (affine functional on $A_{i_k}$): $A_p(z)$.
+- Accumulated rotation (scalar): $\rho_p$.
+- Accumulated map to the start chart: $\Psi_p := \psi_{i_1i_2}\circ\cdots\circ \psi_{i_{k-1}i_k}$ when needed to close a cycle.
+
+Initialization at a start ridge $i_1$:
+- $C_{(i_1)} := A_{i_1}$,
+- $A_{(i_1)}(z) := 0$,
+- $\rho_{(i_1)} := 0$,
+- $\Psi_{(i_1)} := \mathrm{Id}$.
+
+Path extension by an edge $i_k \xrightarrow{} i_{k+1}$:
+1) Push-forward candidates: $C' := \psi_{i_ki_{k+1}}( C_p \cap \operatorname{dom}\psi_{i_ki_{k+1}} ) \subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$. Reject if empty.  
+2) Update action: $A'(z) := A_p\bigl(\psi_{i_ki_{k+1}}^{-1}(z)\bigr) + A_{i_ki_{k+1}}\bigl(\psi_{i_ki_{k+1}}^{-1}(z)\bigr)$ on $C'$.  
+3) Prune by action budget: intersect $C' \leftarrow C' \cap \{z:\ A'(z)\le A_{\mathrm{best}}\}$. Reject if empty.  
+4) Update rotation: $\rho' := \rho_p + \rho_{i_ki_{k+1}}$. Reject if $\rho'>2$.  
+5) Update map: $\Psi' := \Psi_p\circ \psi_{i_ki_{k+1}}$ if we plan to close at $i_1$ soon; otherwise we can maintain only the last few factors and recompute on demand.  
+6) Continue DFS with the new state $(C',A',\rho',\Psi')$.
+
+Closing a cycle at $i_1$:
+- When $i_{k+1}=i_1$, solve the fixed-point problem $\Psi_p(z)=z$ in $A_{i_1}$; keep any fixed point $z_\star\in C_p$; set $A_\star:=A_p(z_\star)$; if $A_\star<A_{\mathrm{best}}$, update the incumbent $(A_{\mathrm{best}}, \text{cycle}, z_\star)$.
+- If no eligible fixed point exists in $C_p$, discard the cycle.
+
+Heuristics and ordering:
+- Prefer edges with small lower bounds on $A_{ij}$ (minimize the affine functional on $\operatorname{dom}\psi_{ij}$ via a tiny LP); break ties by smaller $\rho_{ij}$.
+- Prefer short cycles first; try immediate back-edges that close at the start ridge early.
+- Maintain a visited set of start ridges to avoid duplicate work; optionally restrict to simple cycles unless we decide otherwise (see Open Questions).
+
+### Fixed-point solver (deterministic and robust)
+- Write $\Psi_p(z)=Mz+t$ in the start chart. Solve $(I-M)z=t$:
+  - If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.
+  - If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.
+- Tolerances: treat $|\det(I-M)|<\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.
+
+### Fixed-point solver (deterministic and robust)
+- Write $\Psi_p(z)=Mz+t$ in the start chart. Solve $(I-M)z=t$:
+  - If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.
+  - If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.
+- Tolerances: treat $|\det(I-M)|<\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.
+<!-- review: choose defaults for ε_det, ε_feas, ε_τ; I propose 1e-12 abs with scaled relative terms. -->
+
+## Choosing Budgets and Bounds
+- Upper bound $A_{\mathrm{best}}$:
+  - Practical: use that $K\subset B_R$ implies $c_{\mathrm{EHZ}}(K)\le c_{\mathrm{EHZ}}(B_R)=\pi R^2$. Compute $R$ from vertices or support data for a quick initial bound.
+  - Tighter: use known $c_{\mathrm{EHZ}}^2 \le C\,\mathrm{vol}(K)$ bounds in $\mathbb{R}^4$ once we finalize citations.  
+  <!-- TODO: Fill exact constants and references in the EHZ background doc and cite here. -->
+- Lower bound for progress reporting: $c_{\mathrm{EHZ}}(K)\ge \pi r^2$ if $B_r\subset K$ (inradius).
+<!-- review: confirm default A_best choice (πR^2) until we pin the best constant C. -->
+
+## Correctness Sketch (informal)
+1) Every closed characteristic in the generic polytope case intersects ridges at isolated points and travels linearly on facets parallel to $v_f$.  
+2) Such a trajectory maps to a directed cycle in the 2-face digraph; the per-edge maps and domains capture exactly the “first exit” geometry.  
+3) The action along a cycle equals the sum of per-edge increments evaluated at the unique fixed point $z_\star$ of the composed affine map in the start chart.  
+4) Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points.  
+5) The push-forward pruning is sound: removing paths with empty candidate sets or with $A>A_{\mathrm{best}}$ or $\rho>2$ cannot delete the true minimizer.  
+<!-- Comment: We will formalize this and connect to CZ index in the EHZ background document. -->
+
+## Complexity and Practical Pruning
+- Number of ridges and edges is polynomial in the input size, but cycle enumeration is exponential in worst case; pruning is essential.
+- Fast rejections:
+  - Precompute emptiness table for two-step patterns $(i\to j\to k)$ by checking whether $\psi_{ij}(\operatorname{dom}\psi_{ij})$ lies entirely outside $\operatorname{dom}\psi_{jk}$ (LP feasibility).  
+  - Cache affine maps and half-space transforms to avoid recomputation.
+  - Early action lower bounds from per-edge minima give a Dijkstra-like ordering over partial paths.
+  - No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem, there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2-face), which sharply reduces the search. <!-- Reference: Haim-Kislev (2017), EHZ-polytopes.tex, Theorem simple_loop_theorem; see docs/src/thesis/bibliography.md. -->
+
+## Tie-breaking (deterministic and performant)
+When exit times to multiple co-facets are equal within tolerance, we need a deterministic choice that does not affect results but impacts performance.
+- Options:
+  - Lexicographic: choose the co-facet with smallest global index among the minimizers. Deterministic, O(1) overhead after scanning candidates.
+  - Numeric ε‑slack: add a tiny $\varepsilon$ to denominators or RHS to break ties consistently (scale by facet norms to be dimensionless).
+  - Seeded randomized: break ties using a seeded RNG per facet, fixed across runs for reproducibility.
+- Implementation choice: Lexicographic with a symmetric tolerance window $|\tau_{ij}-\tau_{ik}|\le \varepsilon_\tau$. We set $\varepsilon_\tau = \varepsilon_{\mathrm{rel}}\cdot \max(1, \min(\tau_{ij},\tau_{ik})) + \varepsilon_{\mathrm{abs}}$ with small defaults (documented in code). <!-- Comment: deterministic, cheap, reproducible. -->
+
+## Implementation Plan (Rust, with PyO3 bindings later)
+- Geometry kernels (nalgebra):
+  - Types for affine maps on $\mathbb{R}^2$ (`Mat2`, `Vec2`, offset), half-space representations in 2D, and simple 2D LP feasibility (or call out to a tiny solver).
+  - Builders for domains $\operatorname{dom}\psi_{ij}$ from facet normals $(n_f,b_f)$ via the exit-time inequalities.
+- Graphs:
+  - Build 2-face digraph with per-edge data: $\operatorname{dom}\psi_{ij}$, $\psi_{ij}$, $\operatorname{im}\psi_{ij}$, $A_{ij}$, $\rho_{ij}$ (constant).
+  - Optional: boolean table for $(i,j,k)$ emptiness.
+- Search:
+  - DFS with incumbent bound, candidate-set push-forward, action/rotation pruning, and fixed-point solve on closure.
+  - Deterministic ordering for reproducibility; debug counters for pruned branches, visited edges, cycle lengths, etc.
+- Output:
+  - Best cycle, fixed point $z_\star$, action $A_\star$; lifted 4D polygonal curve via stored charts; provenance sidecar.
+
+## Type Coverage and Assumptions
+- We target Type 1 combinatorial orbits (segments inside facets; crossings at ridges) under the symplectic‑polytope assumption (no Lagrangian 2-faces). This aligns with the CH framework and the “simple loop” theorem in Haim–Kislev ensuring a minimizer visits each facet at most once.  
+<!-- Docs: thesis/bibliography.md entries “Chaidez–Hutchings 2020/21” and “Haim‑Kislev 2017”. -->
+<!-- review: if we must handle Lagrangian 2-faces in the future, we will extend the search to Type 2 trajectories and disable the rotation bound locally. -->
+
+## Pseudocode (Rust‑ish)
+```
+struct RidgeId(u32);
+struct FacetId(u32);
+
+struct Aff2 { m: Mat2, t: Vec2 }  // z ↦ m*z + t
+struct Aff1 { a: Vec2, b: f64 }   // z ↦ a·z + b
+
+struct EdgeData {
+    from: RidgeId,
+    to: RidgeId,
+    facet: FacetId,
+    psi: Aff2,         // ψ_ij
+    A_inc: Aff1,       // A_ij on domain
+    rho_inc: f64,      // ρ_ij
+    dom_i: Poly2,      // dom ψ_ij ⊂ A_i
+    img_j: Poly2,      // im ψ_ij ⊂ A_j
+}
+
+struct State {
+    ridges: Vec<RidgeId>,  // path
+    facets_seen: BitSet,    // for no-revisit pruning
+    C: Poly2,               // candidate polygon in A_{last}
+    A: Aff1,                // accumulated action on A_{last}
+    rho: f64,               // accumulated rotation
+    Psi: Aff2,              // composed map to the start chart
+}
+
+fn extend(state: &State, e: &EdgeData, A_best: f64) -> Option<State> {
+    if state.facets_seen.contains(e.facet) { return None; }
+    let C_dom = intersect_poly(&state.C, &e.dom_i)?;
+    let C1 = aff_image(&e.psi, &C_dom);
+    let rho1 = state.rho + e.rho_inc;
+    if rho1 > 2.0 { return None; }
+    let A1 = compose_aff1(&state.A, &e.psi.inv()) + compose_aff1(&e.A_inc, &e.psi.inv());
+    let C2 = intersect_halfspace(&C1, A1, A_best)?;  // { z : A1(z) ≤ A_best }
+    Some(State {
+        ridges: push(state.ridges, e.to),
+        facets_seen: add(state.facets_seen, e.facet),
+        C: C2, A: A1, rho: rho1,
+        Psi: compose_aff2(&state.Psi, &e.psi),
+    })
+}
+```
+
+## Open Questions and Decisions Needed
+1) Rotation normalization: pick Option A or B above and define the exact units so that index $3$ corresponds to $\rho\in(1,2)$.  
+   <!-- ACTION: please confirm the preferred definition. -->
+2) Simple cycles only: Haim–Kislev (2017) proves a “simple loop” theorem implying one can choose a minimizer that visits the interior of each facet at most once; we will enforce “no facet repeats” in the search.  
+   <!-- ACTION: confirm this scope matches our targeted class (symplectic polytopes; non-Lagrangian 2-faces). We will note and handle the Lagrangian-face caveat separately if needed. -->
+3) Handling ties/degeneracy: do we introduce a small symbolic perturbation (lexicographic) or numeric $\varepsilon$-slack?  
+4) Initial bound $A_{\mathrm{best}}$: use bounding ball vs. a tighter volumetric bound; cite constants.  
+5) Numeric robustness: adopt an “epsilon-violation warning mode” that allows a tiny slack around $C_p$ to survive rounding, as suggested.
+
+## Experiments To Validate Design
+- Sanity cases:
+  - Polydisks and ellipsoids approximated by tight polytopes; check that results converge to the known $c_{\mathrm{EHZ}}$.  
+  - Boxes and cross-polytopes in canonical positions; compare against literature/known inequalities for capacities and systolic ratio.
+- Ablations:
+  - With/without $(i,j,k)$ precomputation; effect on pruning rates.  
+  - Pull-back vs. push-forward candidate updates; wall time and numerical stability.
+- Scaling:
+  - Random convex 4D polytopes with controlled facet counts; report cycles visited, pruned branches, and time-to-incumbent.
+
+## Notes on Previous Draft
+<!-- Comment: We have replaced the earlier mixed pull-back description with a single push-forward formulation (mutable in coordinates of the current ridge). This reduces repeated inverse-map applications and matches the “read ρ from ψ_ij” observation. -->
+<!-- Comment: We made action increment explicit via A_ij(x) = (b_F/2)*τ_ij(x). This is affine on regions of constant first-exit, giving simple LPs for minima and feasibility. -->
+<!-- Comment: Rotation is left as a one-number-per-edge choice; once fixed, we can implement it as a pure function of local facet/ridge frames. -->
+
+## Code Links
+- Rust workspace entry: `Cargo.toml`
+- Native library (algorithms): `crates/viterbo`
+- Python bindings (optional): `crates/viterbo-py`
+- Orchestrator/pipelines: `src/viterbo/`
+- Reproduction script: `scripts/reproduce.sh`
+
+## Reviewer Checklist (delete after use)
+- Assumptions match our intended class (non-Lagrangian 2-faces)?  
+- Rotation: Option B normalization and units OK?  
+- Numerical tolerances (ε_det, ε_feas, ε_τ) defaults acceptable?  
+- Default A_best strategy OK until volume-based constant is cited?  
+- “Simple loop” pruning enabled by default (per HK 2017)?  
+- Chart orientation convention acceptable for cross-ridge rotation sign?  
