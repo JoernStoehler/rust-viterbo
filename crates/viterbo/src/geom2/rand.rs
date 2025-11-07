@@ -1,9 +1,7 @@
 //! Random convex polygons in 2D (radial jitter + replay tokens).
 //!
 //! Purpose
-//! - Provide a small, deterministic sampler for convex polygons used by the 2D
-//!   Mahler-product experiments. The generator is parameterizable, reproducible,
-//!   and returns strict H-rep (`Poly2`), ready for push-forwards and HPI.
+//! - Provide a small, deterministic sampler for convex polygons used by the 2D Mahler-product experiments. The generator is parameterizable, reproducible, and returns strict H-rep (`Poly2`), ready for push-forwards and HPI.
 //!
 //! Model
 //! - Start from `n` equally spaced angles on [0, 2π), add bounded angular and
@@ -80,7 +78,7 @@ pub struct ReplayToken {
 }
 impl ReplayToken {
     #[inline]
-    fn to_std_rng(&self) -> StdRng {
+    fn to_std_rng(self) -> StdRng {
         // SplitMix64-style mixing, cheap and stable.
         fn mix(mut x: u64) -> u64 {
             x ^= x >> 30;
@@ -97,8 +95,7 @@ impl ReplayToken {
 /// Draw a random convex polygon (strict H-rep) via radial jitter + convex hull.
 ///
 /// Notes
-/// - The polygon is near the origin before recentering, but origin containment is
-///   only guaranteed if you subsequently call `recenter_rescale`.
+/// - The polygon is near the origin before recentering, but origin containment is only guaranteed if you subsequently call `recenter_rescale`.
 pub fn draw_polygon_radial(cfg: RadialCfg, tok: ReplayToken) -> Option<Poly2> {
     let mut rng = tok.to_std_rng();
     let n = cfg.vertex_count.sample(&mut rng).max(3);
@@ -191,6 +188,7 @@ pub fn recenter_rescale(poly: &Poly2, bounds: Bounds2) -> Option<(Poly2, f64, f6
 ///
 /// Preconditions
 /// - `n_i` are unit normals (as in `Poly2`), `c_i > 0` for origin containment.
+///
 /// Construction
 /// - Vertices of K° are `{ n_i / c_i }`. We compute the hull and return H-rep.
 pub fn polar(poly: &Poly2) -> Option<Poly2> {

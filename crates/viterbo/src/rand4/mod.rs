@@ -67,6 +67,11 @@ pub struct PolytopeSample4<P, R> {
     pub replay: R,
 }
 
+/// Shorthand for the common generator result type.
+pub type NextMaybeSample<P, R> = Result<Option<PolytopeSample4<P, R>>, GeneratorError>;
+/// Shorthand for regeneration result.
+pub type RegenResult = Result<Poly4, GeneratorError>;
+
 /// Common trait for reproducible polytope sources.
 pub trait PolytopeGenerator4 {
     type Params: Clone;
@@ -74,11 +79,9 @@ pub trait PolytopeGenerator4 {
 
     fn params(&self) -> &Self::Params;
 
-    fn generate_next(
-        &mut self,
-    ) -> Result<Option<PolytopeSample4<Self::Params, Self::Replay>>, GeneratorError>;
+    fn generate_next(&mut self) -> NextMaybeSample<Self::Params, Self::Replay>;
 
-    fn regenerate(&self, replay: &Self::Replay) -> Result<Poly4, GeneratorError>;
+    fn regenerate(&self, replay: &Self::Replay) -> RegenResult;
 }
 
 /// Parameters for centrally symmetric random halfspaces.
@@ -163,9 +166,7 @@ impl PolytopeGenerator4 for SymmetricHalfspaceGenerator {
         &self.params
     }
 
-    fn generate_next(
-        &mut self,
-    ) -> Result<Option<PolytopeSample4<Self::Params, Self::Replay>>, GeneratorError> {
+    fn generate_next(&mut self) -> NextMaybeSample<Self::Params, Self::Replay> {
         let sample_seed = self.master_rng.next_u64();
         let poly = Self::generate_single(&self.params, sample_seed)?;
         Ok(Some(PolytopeSample4 {
@@ -175,7 +176,7 @@ impl PolytopeGenerator4 for SymmetricHalfspaceGenerator {
         }))
     }
 
-    fn regenerate(&self, replay: &Self::Replay) -> Result<Poly4, GeneratorError> {
+    fn regenerate(&self, replay: &Self::Replay) -> RegenResult {
         Self::generate_single(&self.params, replay.seed)
     }
 }
@@ -278,9 +279,7 @@ impl PolytopeGenerator4 for MahlerProductGenerator {
         &self.params
     }
 
-    fn generate_next(
-        &mut self,
-    ) -> Result<Option<PolytopeSample4<Self::Params, Self::Replay>>, GeneratorError> {
+    fn generate_next(&mut self) -> NextMaybeSample<Self::Params, Self::Replay> {
         let attempts = self.params.max_attempts.max(1) as usize;
         for _ in 0..attempts {
             let token = Poly2ReplayToken {
@@ -305,7 +304,7 @@ impl PolytopeGenerator4 for MahlerProductGenerator {
         ))
     }
 
-    fn regenerate(&self, replay: &Self::Replay) -> Result<Poly4, GeneratorError> {
+    fn regenerate(&self, replay: &Self::Replay) -> RegenResult {
         Self::sample_with_token(&self.params, replay.polygon)
     }
 }
@@ -501,9 +500,7 @@ impl PolytopeGenerator4 for RegularProductEnumerator {
         &self.params
     }
 
-    fn generate_next(
-        &mut self,
-    ) -> Result<Option<PolytopeSample4<Self::Params, Self::Replay>>, GeneratorError> {
+    fn generate_next(&mut self) -> NextMaybeSample<Self::Params, Self::Replay> {
         if let Some(limit) = self.params.max_pairs {
             if self.yielded >= limit {
                 return Ok(None);
@@ -526,7 +523,7 @@ impl PolytopeGenerator4 for RegularProductEnumerator {
         }))
     }
 
-    fn regenerate(&self, replay: &Self::Replay) -> Result<Poly4, GeneratorError> {
+    fn regenerate(&self, replay: &Self::Replay) -> RegenResult {
         self.build_poly(replay)
     }
 }

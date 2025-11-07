@@ -13,9 +13,7 @@
 //!   facilitate cross‑checking and future extensions.
 //!
 //! References
-//! - TH: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md
-//!   (Sections “Face Graphs”, “Per‑edge maps ψ_ij, τ‑inequalities, A_ij”,
-//!    “Search and Pruning (push‑forward)”, and the fixed‑point closure.)
+//! - TH: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md (sections “Face Graphs”, “Per‑edge maps ψ_ij, τ‑inequalities, A_ij”, “Search and Pruning (push‑forward)”, and the fixed‑point closure.)
 //! - Code cross‑refs: `geom2::{Poly2,Hs2,Aff2,Aff1,GeomCfg,rotation_angle,fixed_point_in_poly}`,
 //!   `geom4::{Poly4,enumerate_faces_from_h,face2_as_poly2_hrep,oriented_orth_map_face2,reeb_on_facets}`.
 //!
@@ -175,7 +173,6 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                 let node_j = &ridges[rj.0];
                 // Identify the cofacets H_i and H_j (the facet in the pair not equal to f).
                 let h_idx_j = other_facet(node_j, f);
-                let h_idx_i = other_facet(node_i, f);
                 // Only edges whose forward denominator is positive are admissible.
                 let d_j = hs[h_idx_j].n.dot(&v);
                 if d_j <= cfg.eps_tau {
@@ -237,9 +234,7 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                     b: (bf / (2.0 * d_j)) * hs[h_idx_j].c,
                 };
                 // Image polygon to help downstream sanity checks/visuals.
-                let img = dom
-                    .push_forward(&map_ij)
-                    .unwrap_or_else(|| Poly2::default());
+                let img = dom.push_forward(&map_ij).unwrap_or_default();
                 // Per-edge lower bound of A_inc over dom by checking HPI vertices.
                 let lb = match dom.halfspace_intersection() {
                     HalfspaceIntersection::Bounded(verts) => verts
@@ -285,43 +280,7 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
 ///
 /// Returns the best action value found (if any) and the ridge cycle (by ids).
 pub fn dfs_solve(graph: &Graph, cfg: GeomCfg, scfg: SearchCfg) -> Option<(f64, Vec<RidgeId>)> {
-    let mut best: f64 = f64::INFINITY;
-    let mut best_cycle: Vec<RidgeId> = Vec::new();
-
-    let n = graph.ridges.len();
-    for s in 0..n {
-        let start = RidgeId(s);
-        let state0 = State {
-            start,
-            cur: start,
-            facets_seen: vec![false; graph.num_facets],
-            candidate: graph.ridges[s].poly.clone(),
-            action: Aff1 {
-                a: Vector2::new(0.0, 0.0),
-                b: 0.0,
-            },
-            rho: 0.0,
-            phi_start_to_current: Aff2 {
-                m: Matrix2::identity(),
-                t: Vector2::new(0.0, 0.0),
-            },
-        };
-        let mut stack: Vec<RidgeId> = vec![start];
-        dfs_recur(
-            graph,
-            cfg,
-            scfg,
-            &mut best,
-            &mut best_cycle,
-            state0,
-            &mut stack,
-        );
-    }
-    if best.is_finite() {
-        Some((best, best_cycle))
-    } else {
-        None
-    }
+    DfsRunner::new(graph, cfg, scfg).solve()
 }
 
 /// Convenience: build graph and solve with default tolerances and pruning.
@@ -336,133 +295,267 @@ pub fn dfs_solve_with_fp(
     cfg: GeomCfg,
     scfg: SearchCfg,
 ) -> Option<(f64, Vec<RidgeId>, Vector2<f64>)> {
-    let mut best: f64 = f64::INFINITY;
-    let mut best_cycle: Vec<RidgeId> = Vec::new();
-    let mut best_z: Option<Vector2<f64>> = None;
-
-    let n = graph.ridges.len();
-    for s in 0..n {
-        let start = RidgeId(s);
-        let state0 = State {
-            start,
-            cur: start,
-            facets_seen: vec![false; graph.num_facets],
-            candidate: graph.ridges[s].poly.clone(),
-            action: Aff1 {
-                a: Vector2::new(0.0, 0.0),
-                b: 0.0,
-            },
-            rho: 0.0,
-            phi_start_to_current: Aff2 {
-                m: Matrix2::identity(),
-                t: Vector2::new(0.0, 0.0),
-            },
-        };
-        let mut stack: Vec<RidgeId> = vec![start];
-        dfs_recur_fp(
-            graph,
-            cfg,
-            scfg,
-            &mut best,
-            &mut best_cycle,
-            &mut best_z,
-            state0,
-            &mut stack,
-        );
-    }
-    if best.is_finite() {
-        Some((best, best_cycle, best_z.unwrap()))
-    } else {
-        None
-    }
+    DfsRunner::new(graph, cfg, scfg).solve_with_fp()
 }
 
-fn dfs_recur_fp(
-    g: &Graph,
+/// DFS runner carrying shared context and accumulators.
+struct DfsRunner<'a> {
+    g: &'a Graph,
     cfg: GeomCfg,
     scfg: SearchCfg,
-    best: &mut f64,
-    best_cycle: &mut Vec<RidgeId>,
-    best_z: &mut Option<Vector2<f64>>,
-    state: State,
-    stack: &mut Vec<RidgeId>,
-) {
-    if let HalfspaceIntersection::Bounded(verts) = state.candidate.halfspace_intersection() {
-        let cur_lb = verts
-            .into_iter()
-            .map(|z| state.action.eval(z))
-            .fold(f64::INFINITY, f64::min);
-        if cur_lb >= *best - 1e-12 {
-            return;
+    best: f64,
+    best_cycle: Vec<RidgeId>,
+    best_z: Option<Vector2<f64>>,
+    stack: Vec<RidgeId>,
+}
+
+impl<'a> DfsRunner<'a> {
+    fn new(g: &'a Graph, cfg: GeomCfg, scfg: SearchCfg) -> Self {
+        Self {
+            g,
+            cfg,
+            scfg,
+            best: f64::INFINITY,
+            best_cycle: Vec::new(),
+            best_z: None,
+            stack: Vec::new(),
         }
     }
-    let out_edges = &g.adj[state.cur.0];
-    for &eidx in out_edges {
-        let e = &g.edges[eidx];
-        if state.facets_seen[e.facet.0] {
-            continue;
+
+    fn solve(&mut self) -> Option<(f64, Vec<RidgeId>)> {
+        let n = self.g.ridges.len();
+        for s in 0..n {
+            let start = RidgeId(s);
+            let state0 = State {
+                start,
+                cur: start,
+                facets_seen: vec![false; self.g.num_facets],
+                candidate: self.g.ridges[s].poly.clone(),
+                action: Aff1 {
+                    a: Vector2::new(0.0, 0.0),
+                    b: 0.0,
+                },
+                rho: 0.0,
+                phi_start_to_current: Aff2 {
+                    m: Matrix2::identity(),
+                    t: Vector2::new(0.0, 0.0),
+                },
+            };
+            self.stack.push(start);
+            self.recur(state0);
+            self.stack.clear();
         }
-        let c_dom = state.candidate.intersect(&e.dom_in);
-        if c_dom.halfspace_intersection_eps(cfg.eps_feas).is_empty() {
-            continue;
-        }
-        let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) {
-            p
+        if self.best.is_finite() {
+            Some((self.best, self.best_cycle.clone()))
         } else {
-            continue;
-        };
-        let rho1 = state.rho + e.rotation_inc;
-        if scfg.use_rotation_prune && rho1 > scfg.rotation_budget {
-            continue;
+            None
         }
-        let a_pull = if let Some(a1) = state.action.compose_with_inv_affine2(&e.map_ij) {
-            a1
-        } else {
-            continue;
-        };
-        let a_edge = if let Some(a2) = e.action_inc.compose_with_inv_affine2(&e.map_ij) {
-            a2
-        } else {
-            continue;
-        };
-        let a1 = a_pull.add(&a_edge);
-        let c2 = c1.with_cut(a1.to_cut(*best));
-        if c2.halfspace_intersection_eps(cfg.eps_feas).is_empty() {
-            continue;
+    }
+
+    fn solve_with_fp(&mut self) -> Option<(f64, Vec<RidgeId>, Vector2<f64>)> {
+        let n = self.g.ridges.len();
+        for s in 0..n {
+            let start = RidgeId(s);
+            let state0 = State {
+                start,
+                cur: start,
+                facets_seen: vec![false; self.g.num_facets],
+                candidate: self.g.ridges[s].poly.clone(),
+                action: Aff1 {
+                    a: Vector2::new(0.0, 0.0),
+                    b: 0.0,
+                },
+                rho: 0.0,
+                phi_start_to_current: Aff2 {
+                    m: Matrix2::identity(),
+                    t: Vector2::new(0.0, 0.0),
+                },
+            };
+            self.stack.push(start);
+            self.recur_fp(state0);
+            self.stack.clear();
         }
-        let phi1 = Aff2 {
-            m: e.map_ij.m * state.phi_start_to_current.m,
-            t: e.map_ij.m * state.phi_start_to_current.t + e.map_ij.t,
-        };
-        let mut next_seen = state.facets_seen.clone();
-        next_seen[e.facet.0] = true;
-        let next = State {
-            start: state.start,
-            cur: e.to,
-            facets_seen: next_seen,
-            candidate: c2,
-            action: a1,
-            rho: rho1,
-            phi_start_to_current: phi1,
-        };
-        stack.push(e.to);
-        if e.to == state.start {
-            if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(
-                next.phi_start_to_current,
-                &next.candidate,
-                &next.action,
-                cfg,
-            ) {
-                if a_val < *best {
-                    *best = a_val;
-                    *best_cycle = stack.clone();
-                    *best_z = Some(z_star);
-                }
+        if self.best.is_finite() {
+            Some((self.best, self.best_cycle.clone(), self.best_z.unwrap()))
+        } else {
+            None
+        }
+    }
+
+    fn recur_fp(&mut self, state: State) {
+        if let HalfspaceIntersection::Bounded(verts) = state.candidate.halfspace_intersection() {
+            let cur_lb = verts
+                .into_iter()
+                .map(|z| state.action.eval(z))
+                .fold(f64::INFINITY, f64::min);
+            if cur_lb >= self.best - 1e-12 {
+                return;
             }
-        } else {
-            dfs_recur_fp(g, cfg, scfg, best, best_cycle, best_z, next, stack);
         }
-        stack.pop();
+        let out_edges = &self.g.adj[state.cur.0];
+        for &eidx in out_edges {
+            let e = &self.g.edges[eidx];
+            if state.facets_seen[e.facet.0] {
+                continue;
+            }
+            let c_dom = state.candidate.intersect(&e.dom_in);
+            if c_dom
+                .halfspace_intersection_eps(self.cfg.eps_feas)
+                .is_empty()
+            {
+                continue;
+            }
+            let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) {
+                p
+            } else {
+                continue;
+            };
+            let rho1 = state.rho + e.rotation_inc;
+            if self.scfg.use_rotation_prune && rho1 > self.scfg.rotation_budget {
+                continue;
+            }
+            let a_pull = if let Some(a1) = state.action.compose_with_inv_affine2(&e.map_ij) {
+                a1
+            } else {
+                continue;
+            };
+            let a_edge = if let Some(a2) = e.action_inc.compose_with_inv_affine2(&e.map_ij) {
+                a2
+            } else {
+                continue;
+            };
+            let a1 = a_pull.add(&a_edge);
+            let c2 = c1.with_cut(a1.to_cut(self.best));
+            if c2.halfspace_intersection_eps(self.cfg.eps_feas).is_empty() {
+                continue;
+            }
+            let phi1 = Aff2 {
+                m: e.map_ij.m * state.phi_start_to_current.m,
+                t: e.map_ij.m * state.phi_start_to_current.t + e.map_ij.t,
+            };
+            let mut next_seen = state.facets_seen.clone();
+            next_seen[e.facet.0] = true;
+            let next = State {
+                start: state.start,
+                cur: e.to,
+                facets_seen: next_seen,
+                candidate: c2,
+                action: a1,
+                rho: rho1,
+                phi_start_to_current: phi1,
+            };
+            self.stack.push(e.to);
+            if e.to == state.start {
+                if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(
+                    next.phi_start_to_current,
+                    &next.candidate,
+                    &next.action,
+                    self.cfg,
+                ) {
+                    if a_val < self.best {
+                        self.best = a_val;
+                        self.best_cycle = self.stack.clone();
+                        self.best_z = Some(z_star);
+                    }
+                }
+            } else {
+                self.recur_fp(next);
+            }
+            self.stack.pop();
+        }
+    }
+
+    fn recur(&mut self, state: State) {
+        // Action lower bound on current candidate set: quick prune using polygon vertices.
+        if let HalfspaceIntersection::Bounded(verts) = state.candidate.halfspace_intersection() {
+            let cur_lb = verts
+                .into_iter()
+                .map(|z| state.action.eval(z))
+                .fold(f64::INFINITY, f64::min);
+            if cur_lb >= self.best - 1e-12 {
+                return;
+            }
+        }
+        let out_edges = &self.g.adj[state.cur.0];
+        for &eidx in out_edges {
+            let e = &self.g.edges[eidx];
+            // No‑revisit pruning by facets (HK simple-loop): do not repeat the traversed facet.
+            if state.facets_seen[e.facet.0] {
+                continue;
+            }
+            // Intersect candidate with dom_i.
+            let c_dom = state.candidate.intersect(&e.dom_in);
+            if c_dom
+                .halfspace_intersection_eps(self.cfg.eps_feas)
+                .is_empty()
+            {
+                continue;
+            }
+            // Push forward.
+            let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) {
+                p
+            } else {
+                continue;
+            };
+            // Rotation prune (optional).
+            let rho1 = state.rho + e.rotation_inc;
+            if self.scfg.use_rotation_prune && rho1 > self.scfg.rotation_budget {
+                continue;
+            }
+            // Update action as A' = A∘ψ^{-1} + A_inc∘ψ^{-1}.
+            let a_pull = if let Some(a1) = state.action.compose_with_inv_affine2(&e.map_ij) {
+                a1
+            } else {
+                continue;
+            };
+            let a_edge = if let Some(a2) = e.action_inc.compose_with_inv_affine2(&e.map_ij) {
+                a2
+            } else {
+                continue;
+            };
+            let a1 = a_pull.add(&a_edge);
+            // Cut by incumbent bound.
+            let c2 = c1.with_cut(a1.to_cut(self.best));
+            if c2.halfspace_intersection_eps(self.cfg.eps_feas).is_empty() {
+                continue;
+            }
+            // Compose forward mapping (start -> new current).
+            let phi1 = Aff2 {
+                m: e.map_ij.m * state.phi_start_to_current.m,
+                t: e.map_ij.m * state.phi_start_to_current.t + e.map_ij.t,
+            };
+            // Advance.
+            let mut next_seen = state.facets_seen.clone();
+            next_seen[e.facet.0] = true;
+            let next = State {
+                start: state.start,
+                cur: e.to,
+                facets_seen: next_seen,
+                candidate: c2,
+                action: a1,
+                rho: rho1,
+                phi_start_to_current: phi1,
+            };
+            self.stack.push(e.to);
+            // Close cycle
+            if e.to == state.start {
+                // Fixed‑point on start chart; candidate already in start chart coordinates.
+                if let Some((_, a_val)) = crate::geom2::fixed_point_in_poly(
+                    next.phi_start_to_current,
+                    &next.candidate,
+                    &next.action,
+                    self.cfg,
+                ) {
+                    if a_val < self.best {
+                        self.best = a_val;
+                        self.best_cycle = self.stack.clone();
+                    }
+                }
+            } else {
+                self.recur(next);
+            }
+            self.stack.pop();
+        }
     }
 }
 
@@ -471,103 +564,7 @@ pub fn solve_with_defaults_fp(poly: &mut Poly4) -> Option<(f64, Vec<RidgeId>, Ve
     let g = build_graph(poly, GeomCfg::default());
     dfs_solve_with_fp(&g, GeomCfg::default(), SearchCfg::default())
 }
-fn dfs_recur(
-    g: &Graph,
-    cfg: GeomCfg,
-    scfg: SearchCfg,
-    best: &mut f64,
-    best_cycle: &mut Vec<RidgeId>,
-    state: State,
-    stack: &mut Vec<RidgeId>,
-) {
-    // Action lower bound on current candidate set: quick prune using polygon vertices.
-    if let HalfspaceIntersection::Bounded(verts) = state.candidate.halfspace_intersection() {
-        let cur_lb = verts
-            .into_iter()
-            .map(|z| state.action.eval(z))
-            .fold(f64::INFINITY, f64::min);
-        if cur_lb >= *best - 1e-12 {
-            return;
-        }
-    }
-    let out_edges = &g.adj[state.cur.0];
-    for &eidx in out_edges {
-        let e = &g.edges[eidx];
-        // No‑revisit pruning by facets (HK simple-loop): do not repeat the traversed facet.
-        if state.facets_seen[e.facet.0] {
-            continue;
-        }
-        // Intersect candidate with dom_i.
-        let c_dom = state.candidate.intersect(&e.dom_in);
-        if c_dom.halfspace_intersection_eps(cfg.eps_feas).is_empty() {
-            continue;
-        }
-        // Push forward.
-        let c1 = if let Some(p) = c_dom.push_forward(&e.map_ij) {
-            p
-        } else {
-            continue;
-        };
-        // Rotation prune (optional).
-        let rho1 = state.rho + e.rotation_inc;
-        if scfg.use_rotation_prune && rho1 > scfg.rotation_budget {
-            continue;
-        }
-        // Update action as A' = A∘ψ^{-1} + A_inc∘ψ^{-1}.
-        let a_pull = if let Some(a1) = state.action.compose_with_inv_affine2(&e.map_ij) {
-            a1
-        } else {
-            continue;
-        };
-        let a_edge = if let Some(a2) = e.action_inc.compose_with_inv_affine2(&e.map_ij) {
-            a2
-        } else {
-            continue;
-        };
-        let a1 = a_pull.add(&a_edge);
-        // Cut by incumbent bound.
-        let c2 = c1.with_cut(a1.to_cut(*best));
-        if c2.halfspace_intersection_eps(cfg.eps_feas).is_empty() {
-            continue;
-        }
-        // Compose forward mapping (start -> new current).
-        let phi1 = Aff2 {
-            m: e.map_ij.m * state.phi_start_to_current.m,
-            t: e.map_ij.m * state.phi_start_to_current.t + e.map_ij.t,
-        };
-        // Advance.
-        let mut next_seen = state.facets_seen.clone();
-        next_seen[e.facet.0] = true;
-        let next = State {
-            start: state.start,
-            cur: e.to,
-            facets_seen: next_seen,
-            candidate: c2,
-            action: a1,
-            rho: rho1,
-            phi_start_to_current: phi1,
-        };
-        stack.push(e.to);
-        // Close cycle
-        if e.to == state.start {
-            // Fixed‑point on start chart; candidate already in start chart coordinates.
-            if let Some((z_star, a_val)) = crate::geom2::fixed_point_in_poly(
-                next.phi_start_to_current,
-                &next.candidate,
-                &next.action,
-                cfg,
-            ) {
-                if a_val < *best {
-                    *best = a_val;
-                    *best_cycle = stack.clone();
-                }
-            }
-        } else {
-            dfs_recur(g, cfg, scfg, best, best_cycle, next, stack);
-        }
-        stack.pop();
-    }
-}
+// legacy free function removed in favor of DfsRunner
 
 #[cfg(test)]
 mod tests {
