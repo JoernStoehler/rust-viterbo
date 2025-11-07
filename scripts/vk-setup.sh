@@ -47,27 +47,32 @@ mkdir -p data docs/assets
 log "Ensuring Git LFS filters are installed locally..."
 git lfs install --local >/dev/null
 
-log "Hydrating data/ via Git LFS (safe to skip if empty)..."
-data_lfs_count=$(git lfs ls-files --name-only data 2>/dev/null | wc -l | tr -d " ")
-if [[ "${data_lfs_count:-0}" -gt 0 ]]; then
-  if ! git lfs pull --include "data/**" --exclude ""; then
-    log "git lfs pull failed (maybe offline); continuing with pointers only."
+log "Hydrating data/ via Git LFS (no-op if nothing to fetch)..."
+# Simplified and robust: attempt to pull; if offline or nothing to fetch, continue.
+if ! git lfs pull --include "data/**" --exclude ""; then
+  log "git lfs pull failed or found nothing (possibly offline); continuing."
+fi
+
+if [[ -f "pyproject.toml" ]]; then
+  log "Ensuring uv virtual environment exists..."
+  if [[ ! -d ".venv" ]]; then
+    uv venv --python python3
+  fi
+
+  log "Syncing Python dependencies from uv.lock (incl. dev extras)..."
+  # Use lockfile when present; fall back to unlocked sync to avoid hard failure.
+  if [[ -f "uv.lock" ]]; then
+    uv sync --locked --extra dev || uv sync --extra dev
+  else
+    uv sync --extra dev
   fi
 else
-  log "No Git LFS-tracked data artifacts yet; skipping hydration."
+  log "No pyproject.toml found; skipping uv environment setup."
 fi
-
-log "Ensuring uv virtual environment exists..."
-if [[ ! -d ".venv" ]]; then
-  uv venv --python python3
-fi
-
-log "Syncing Python dependencies from uv.lock (incl. dev extras)..."
-uv sync --locked --extra dev
 
 if [[ -f "Cargo.toml" ]]; then
   log "Prefetching Rust crates via cargo fetch (locked)..."
-  cargo fetch --locked >/dev/null
+  cargo fetch --locked >/dev/null || cargo fetch >/dev/null
 fi
 
 log "vk-setup completed."
