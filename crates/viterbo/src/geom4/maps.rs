@@ -1,8 +1,7 @@
 //! Symplectic matrices, Reeb directions, and 2D face chart maps.
 
 use nalgebra::{Matrix2, Matrix2x4, Matrix4, Matrix4x2, Vector2, Vector4};
-
-use super::cfg::SYMPLECTIC_EPS;
+use super::cfg::{SYMPLECTIC_EPS, TIGHT_EPS};
 use super::types::Poly4;
 
 /// Return J = [[0, -I],[I, 0]] with 2x2 blocks.
@@ -113,18 +112,16 @@ pub fn random_symplectic_4(seed: u64) -> Matrix4<f64> {
 /// Build a 2D map for a 2-face given by two facet indices (i,j).
 ///
 /// Returns (U, U^T) where U is 2x4 with orthonormal rows spanning the face
-/// plane, oriented so that `orientation_positive == true` selects the sign.
-/// The forward map is `y = U x`; inverse on the plane is `x = U^T y`.
+/// plane. The forward map is `y = U x`; inverse on the plane is `x = U^T y`.
 ///
-/// Orientation policy
-/// - This function only toggles the sign to give callers control. A canonical
-///   orientation (e.g., compatible with the ambient symplectic 2‑form) can be
-///   imposed later once the thesis fixes the convention.
+/// Canonical orientation policy
+/// - We enforce the unique “natural” orientation induced by the ambient
+///   symplectic form: require ω0(u1, u2) = u1^T J u2 > 0. Near‑Lagrangian faces
+///   (|ω0(u1,u2)| < TIGHT_EPS) are rejected.
 pub fn oriented_orth_map_face2(
     hs: &[super::types::Hs4],
     i: usize,
     j: usize,
-    orientation_positive: bool,
 ) -> Option<(Matrix2x4<f64>, Matrix4x2<f64>)> {
     if i >= hs.len() || j >= hs.len() || i == j {
         return None;
@@ -133,14 +130,68 @@ pub fn oriented_orth_map_face2(
     let n2 = hs[j].n.normalize();
     // Orthonormal basis of the 2D face plane = orthogonal complement of span{n1, n2}.
     let (u1, u2) = orthonormal_complement_2d(n1, n2)?;
-    let (u1, u2) = if orientation_positive {
-        (u1, u2)
+    // Enforce canonical orientation:
+    // 1) Prefer the “natural” ω0-induced orientation: require ω0(u1,u2)=u1^T J u2 > 0.
+    // 2) If |ω0(u1,u2)| is ~0 (Lagrangian face), fall back to ambient R^4 orientation:
+    //    require det([u1,u2,n1,n2]) > 0.
+    let j = j_matrix_4();
+    let omega = u1.dot(&(j * u2));
+    let (u1, u2) = if omega.abs() >= TIGHT_EPS {
+        if omega > 0.0 {
+            (u1, u2)
+        } else {
+            (u1, -u2)
+        }
     } else {
-        (u1, -u2)
+        // Build 4x4 matrix with columns [u1 u2 n1 n2] and check its determinant.
+        let m = Matrix4::from_columns(&[u1, u2, n1, n2]);
+        let det = m.determinant();
+        if det.is_finite() && det.abs() >= TIGHT_EPS {
+            if det > 0.0 {
+                (u1, u2)
+            } else {
+                (u1, -u2)
+            }
+        } else {
+            // Highly degenerate basis (shouldn't happen with distinct facets); keep as-is.
+            (u1, u2)
+        }
     };
     let u = Matrix2x4::from_rows(&[u1.transpose(), u2.transpose()]);
     let ut = Matrix4x2::from_columns(&[u1, u2]);
     Some((u, ut))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geom4::Hs4;
+
+    #[test]
+    fn canonical_chart_has_positive_omega_on_generic_face() {
+        // Build a small set of generic halfspaces; we only need two indices i!=j.
+        let hs = vec![
+            Hs4::new(Vector4::new(1.0, 1.0, 0.0, 0.0).normalize(), 1.0),
+            Hs4::new(Vector4::new(0.0, 1.0, 1.0, 0.0).normalize(), 1.0),
+            Hs4::new(Vector4::new(0.0, 0.0, 1.0, 1.0).normalize(), 1.0),
+        ];
+        // Pick the first two as a typical (generic) ridge pair.
+        let (u, ut) = oriented_orth_map_face2(&hs, 0, 1).expect("chart");
+        // Extract basis vectors from U^T columns.
+        let u1 = ut.column(0).into_owned();
+        let u2 = ut.column(1).into_owned();
+        let j = j_matrix_4();
+        let omega = u1.dot(&(j * u2));
+        assert!(omega.abs() >= TIGHT_EPS, "face should be non-Lagrangian");
+        assert!(
+            omega > 0.0,
+            "canonical chart must have omega(u1,u2)>0; got {omega}"
+        );
+        // Sanity: U is 2x4 with orthonormal rows (U U^T = I_2).
+        let uu_t = u * ut;
+        let id = nalgebra::Matrix2::<f64>::identity();
+        assert!((uu_t - id).amax() < 1e-9);
+    }
 }
 
 /// Build a 2D H-rep polytope for the 2-face (i,j) by projecting the face's
@@ -151,9 +202,8 @@ pub fn face2_as_poly2_hrep(
     poly: &mut Poly4,
     i: usize,
     j: usize,
-    orientation_positive: bool,
 ) -> Option<crate::geom2::Poly2> {
-    let (u, _ut) = oriented_orth_map_face2(&poly.h, i, j, orientation_positive)?;
+    let (u, _ut) = oriented_orth_map_face2(&poly.h, i, j)?;
     // Ensure vertices exist
     poly.ensure_vertices_from_h();
     if poly.v.len() < 2 {

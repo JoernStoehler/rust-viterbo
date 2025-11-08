@@ -20,10 +20,9 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
     let mut by_facet: Vec<Vec<RidgeId>> = vec![Vec::new(); num_facets];
     for (ridx, f2) in faces2.iter().enumerate() {
         let (fi, fj) = f2.facets;
-        // Orientation choice: positive; we keep a single canonical chart.
-        let (chart_u, chart_ut) =
-            oriented_orth_map_face2(&poly.h, fi, fj, true).expect("face chart");
-        let poly2 = face2_as_poly2_hrep(poly, fi, fj, true).expect("face poly2");
+        // Canonical chart (ω0-induced orientation).
+        let (chart_u, chart_ut) = oriented_orth_map_face2(&poly.h, fi, fj).expect("face chart");
+        let poly2 = face2_as_poly2_hrep(poly, fi, fj).expect("face poly2");
         let node = Ridge {
             facets: (FacetId(fi), FacetId(fj)),
             poly: poly2,
@@ -121,6 +120,10 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                 );
                 let map_ij = Aff2 { m, t };
                 let rotation_inc = rotation_angle(&map_ij).unwrap_or(0.0);
+                debug_assert!(
+                    rotation_inc.is_finite() && rotation_inc >= 0.0 && rotation_inc <= 1.0,
+                    "rotation_inc must be in [0,1]"
+                );
                 // A_ij(y) = (b_F/(2 d_j)) b_Hj - (b_F/(2 d_j)) (n_Hj·U_i^T) y
                 let bf = hs[f].c;
                 let a_vec = ut_i.transpose() * hs[h_idx_j].n;

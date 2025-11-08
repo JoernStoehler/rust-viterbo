@@ -141,3 +141,8 @@ pub fn minkowski_billiard_capacity(k: &StrictPoly2, t: &StrictPoly2) -> Result<C
 2. Numerical stability when \(K\) or \(T\) is nearly smooth: do we need extended precision, or is 64-bit floating-point enough when combined with renormalization?
 3. How aggressively should we prune facet triples? Interleaving normals is sufficient but not necessary; we may add a mixed-volume bound once we profile real data.
 4. Should we cache the certificates for reuse across nearby parameter sweeps (important when scanning rotations)? This impacts memory budgeting in `scripts/reproduce.sh`.
+
+## Clarifications (unstable, unsorted)
+<!-- Purpose: park quick notes about code/spec divergences or open questions so agents can proceed without blocking on full edits. Treat entries as provisional; once stabilized, fold them into the main text and remove from the list. -->
+- Cross-checking with oriented-edge: when a billiard certificate is ambiguous due to degeneracy (parallel supports with ties), we temporarily fall back to the oriented-edge solver and annotate the run; this keeps pipelines moving without committing to tie-breaking here.
+- Units and normalization: verify the exact constant between Minkowski length and action used in code when both factors are polytopes; once fixed, add a short lemma here and remove this note.

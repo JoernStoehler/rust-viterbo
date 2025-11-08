@@ -19,9 +19,8 @@ pub use crate::geom2::rand::{
 };
 // 4D polytopes
 pub use crate::geom4::{
-    enumerate_faces_from_h, face2_as_poly2_hrep, is_symplectic, j_matrix_4,
-    oriented_orth_map_face2, reeb_on_facets, volume4, volume_from_halfspaces, Face1, Face2, Face3,
-    Hs4, Poly4, VolumeError,
+    enumerate_faces_from_h, face2_as_poly2_hrep, is_symplectic, j_matrix_4, oriented_orth_map_face2,
+    reeb_on_facets, volume4, volume_from_halfspaces, Face1, Face2, Face3, Hs4, Poly4, VolumeError,
 };
 // Oriented-edge algorithm
 pub use crate::oriented_edge::{

@@ -7,7 +7,7 @@
 #   safe -t 120 -- bash scripts/rust-test.sh [-p viterbo] [-- <extra cargo args>]
 # Examples:
 #   safe -t 120 -- bash scripts/rust-test.sh
-#   safe -t 180 -- bash scripts/rust-test.sh -p viterbo -- -q
+#   safe -t 180 -- bash scripts/rust-test.sh -p viterbo
 set -euo pipefail
 
 if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
@@ -19,6 +19,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # Default Cargo target dir for tests unless the caller overrides.
+# Hygiene: keep caches OUT of the repo. Use a global temp dir by default; do not
+# set CARGO_TARGET_DIR anywhere under data/ (e.g., data/target_seq*). See AGENTS.md.
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/var/tmp/vk-target}"
 mkdir -p "$CARGO_TARGET_DIR"
 

@@ -1,3 +1,4 @@
+
 <!--
 Ticket: <add once assigned>
 Why: Specify an implementer‑ready LP/QP pathway for computing/estimating c_EHZ of 4D convex polytopes from facet data. Complements the oriented‑edge graph search and the Minkowski billiard chapter.
@@ -164,3 +165,4 @@ Sanity set.
 
 [^Irie19]: Irie, K. Symplectic homology of fiberwise convex sets and loop spaces. arXiv:1907.09749. Establishes equality of symplectic homology and EHZ capacities for convex bodies, background for variational formulas.
 
+ 512b964 (Done. Canonical 2‑face orientation is now enforced everywhere; the knob is gone.)

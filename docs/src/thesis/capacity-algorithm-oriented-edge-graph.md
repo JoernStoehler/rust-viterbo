@@ -47,7 +47,7 @@
   - Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.
   - Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.
   <!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
-  - Orientation convention (decision): for every ridge i, fix the chart π_i to have positive orientation. This pins the sign of rotation angles extracted from Dψ_ij consistently across ridges.
+  - Orientation convention (decision): for every ridge $i$, fix the chart $U_i$ to be the canonical one induced by $\omega_0$ (choose an orthonormal basis $(u_1,u_2)$ of the face plane with $\omega_0(u_1,u_2)>0$). This pins the sign of rotation angles extracted from $D\psi_{ij}$.
 
 ## Notation Recap
 - Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.
@@ -144,34 +144,8 @@ In ridge coordinates, we treat $A_{ij}$ as an affine functional on $\operatornam
 - This fixes the sign of rotation angles extracted from $D\psi_{ij}$ unambiguously across ridges.
 <!-- review: confirm this convention matches your preferred trivialization style. -->
 
-## Rotation Bookkeeping (to confirm)
-We accumulate a scalar “rotation” $\rho$ along a path to prune searches. In $2n=4$, the action-minimizing orbit has Conley–Zehnder index $3$ and “rotation” in $(1,2)$.
-We need a per-edge constant increment $\rho_{ij}\ge 0$.
-
-<!-- TODO(Jörn): Choose one of the following equivalent-looking normalizations for ρ. -->
-<!-- Option A (Maslov-type angle at ridges): define ρ_ij as the oriented angle (in units of π) between the projections of v_F into the 2D tangent planes of i and j, measured in the fixed charts π_i, π_j; ρ_ij is then a constant per edge. Sum along a cycle gives ρ(γ). -->
-<!-- Option B (linearized map): define ρ_ij := θ(dψ_ij), where θ is a continuous lifting of the argument of Sp(2) to ℝ/ℤ, normalized so that a full positive rotation in the plane contributes 1. This also yields a constant per edge. -->
-<!-- Comment: Both options give a per-edge constant independent of the start point on P_ij and agree with the “Remark” that ρ_inc is read off ψ_ij. Please confirm which normalization we adopt and where we pin ρ∈(1,2) for index 3. -->
-<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#rotation-and-cz-index -->
-
-We will proceed with a constant per-edge increment $\rho_{ij}$ and enforce partial sums $\le 2$ during the search to prune branches.
-
-### Implementation choice (initial)
-- We implement Option B in a chart-dependent way using the polar rotation angle of the Jacobian $D\psi_{ij}\in \mathbb{R}^{2\times 2}$:
-  - Compute the polar decomposition $D\psi_{ij}=Q_{ij} S_{ij}$, with $Q_{ij}\in SO(2)$ and $S_{ij}$ symmetric positive-definite.
-  - Set $\rho_{ij} := \tfrac{1}{\pi}\,\mathrm{arg}(Q_{ij}) \in [0,1]$ (units of “half-turns”, so one full turn contributes 2).
-  - This is constant per edge and trivial to compute once $\psi_{ij}$ is built.
-- Rotation pruning policy: enforced in production with the theory‑fixed 4D threshold (prune as soon as $\rho>2$). The on/off switch is retained only for benchmarks/ablations to measure impact.
-<!-- review: confirm Option B + “half-turn” units align with CZ index 3 ⇒ ρ∈(1,2). -->
-
-### Decisions (2025‑11‑07)
-- Ridge chart orientation: fix all ridge charts to positive orientation for consistent rotation signs across edges.
-- Rotation normalization: adopt Option B (polar rotation of $D\\psi_{ij}$) with $\\rho_{ij}\\in[0,1]$.
-- Rotation pruning: enforced in production; theory fixes the 4D index‑3 threshold — prune as soon as $\\rho>2$. The on/off switch is kept only for benchmarks/ablations to measure impact.
-
-### Determinism Note
-- Because $\\rho_{ij}$ is obtained from the polar factor of $D\\psi_{ij}$ (via SVD), small numerical differences (compiler flags, CPU features like FMA, BLAS/SIMD choices) can change pruning decisions when a branch is near the $\\rho=2$ threshold. In practice this may alter the DFS node/edge counts visited, even though the minimum cycle and action remain the same (action/primal feasibility ultimately certify the result). We accept this variability and do not aim for cross‑toolchain identical traversal statistics.
-
+## Rotation normalization and cutoff
+(See the dedicated section below for the precise definition and guards; this subsection is intentionally concise.)
 ## Search Over Directed Cycles (push-forward variant)
 We now describe the core enumeration and pruning in the 2-face digraph using push-forwards (no pull-backs of polytopes).
 
@@ -243,6 +217,27 @@ Symbol map (fixed‑point and tolerances)
 4) Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points.  
 5) The push-forward pruning is sound: removing paths with empty candidate sets or with $A>A_{\mathrm{best}}$ or $\rho>2$ cannot delete the true minimizer.  
 <!-- Comment: We will formalize this and connect to CZ index in the EHZ background document. -->
+
+### Orientation lemma (canonical charts)
+Lemma. Let $i\subset F$ and $j\subset G$ be ridges such that $\omega_0|_{Ti}\ne 0$ and $\omega_0|_{Tj}\ne 0$. With our canonical 2‑face charts $U_i,U_j$ (orthonormal bases oriented by $\omega_0(u_1,u_2)>0$), the Reeb first‑hit map $\psi_{ij}:U_i(i)\to U_j(j)$ is orientation‑preserving: $\det D\psi_{ij}>0$ wherever defined.
+
+Proof (sketch). On each facet $F$, $\alpha:=\lambda_0|_F$ is a contact form and $R$ the Reeb vector field satisfies $\mathcal{L}_R\alpha=i_R d\alpha+d(\alpha(R))=0$, so the Reeb flow preserves both $\alpha$ and $d\alpha$.[^PreserveAlpha] A local surface of section $D\subset F$ transverse to $R$ inherits the positive area form $d\alpha|_D$; the Poincaré first‑hit map preserves $d\alpha|_D$ and hence orientation on $D$.[^ReturnArea] In our chart $U_i$, $d\alpha|_{Ti}=\omega_0|_{Ti}$ is $c\,dy_1\wedge dy_2$ with $c>0$ by construction; therefore $\det D\psi_{ij}>0$ in $y$‑coordinates. The same holds at $j$, so $\psi_{ij}$ preserves the canonical $\mathbb{R}^2$ orientation.
+
+Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a transverse section and no return map is available. Our genericity excludes this case and matches the combinatorial Reeb model on 4D polytopes.[^CH]
+
+### Rotation normalization and cutoff
+- Data: For an oriented edge $i\to j$ inside facet $F$, the affine transition on ridge charts is $y_j = M_{ij}\,y_i + t_{ij}$ (Section “Per‑edge maps”). In canonical charts, $M_{ij}\in \mathrm{GL}^+(2)$ is orientation‑preserving and area‑preserving up to rounding.
+- Definition (principal angle). Write the polar decomposition $M_{ij}=R_{ij}S_{ij}$ with $R_{ij}\in \mathrm{SO}(2)$ and $S_{ij}\succ 0$. Define
+  \[
+    \operatorname{rot}(M_{ij}) := \arg(R_{ij}) \in [0,\pi],\qquad
+    \rho_{ij} := \frac{\operatorname{rot}(M_{ij})}{\pi}\in[0,1].
+  \]
+  Numerically we compute $R_{ij}$ via SVD (or a symmetric polar factor) and take $\operatorname{rot}(M_{ij})=\operatorname{atan2}((R_{ij})_{12},(R_{ij})_{11})$; we assert $\det(R_{ij})>0$ (otherwise the edge is invalid in our model).
+- Alternatives.
+  - Trace formula for orthogonal matrices: if $M_{ij}$ were itself orthogonal then $\operatorname{rot}=\arccos(\tfrac12\operatorname{tr}(M_{ij}))$. In general $M_{ij}$ is not orthogonal, so we apply the trace to $R_{ij}$, not to $M_{ij}$: $\operatorname{rot}=\arccos(\tfrac12\operatorname{tr}(R_{ij}))$. We prefer the polar/SVD route for robustness.
+  - Eigen‑angle (elliptic check): in exact arithmetic for $M\in \mathrm{SL}(2,\mathbb{R})$ elliptic, $|\operatorname{tr}M|<2$ and the eigenvalues are $e^{\pm i\theta}$ with $\theta\in(0,\pi)$, but extracting $\theta$ reliably still benefits from the polar route in floating point.
+- Guards and tolerances. We clamp arguments to $[-1,1]$, assert $\det M_{ij}>0$ and $|\det M_{ij}-1|$ is small, and treat $|\operatorname{tr}(R_{ij})|\approx 2$ as a degeneracy. With generic non‑Lagrangian ridges and canonical charts, $0<\rho_{ij}<1$ holds in practice.
+- Cutoff (pruning). We accumulate $\rho$ along partial paths and prune when $\rho$ exceeds a configurable budget (default $\rho_{\max}=2$). This is a safe heuristic: increasing $\rho_{\max}$ never removes minimizers, while too‑small values may over‑prune; we choose a conservative default and log edges near degeneracy.
 
 ## Complexity and Practical Pruning
 - Number of ridges and edges is polynomial in the input size, but cycle enumeration is exponential in worst case; pruning is essential.
@@ -361,3 +356,12 @@ fn extend(state: &State, e: &EdgeData, A_best: f64) -> Option<State> {
 - Default A_best strategy OK until volume-based constant is cited?  
 - “Simple loop” pruning enabled by default (per HK 2017)?  
 - Chart orientation convention acceptable for cross-ridge rotation sign?  
+
+## Clarifications (unstable, unsorted)
+<!-- Purpose: park quick notes about code/spec divergences or open questions so agents can proceed without blocking on full edits. Treat entries as provisional; once stabilized, fold them into the main text and remove from this list. -->
+- 1-faces not needed: under the stated genericity assumptions, minimizing cycles do not traverse 1-faces; the algorithm uses flow on facets and crossings at ridges only. The helper `geom4::reeb_on_edges_stub()` remains intentionally unimplemented.
+- Orientation convention: we adopt the unique “natural” convention induced by the ambient symplectic form (require the chart orientation to agree with ω₀|_{face}). The implementation enforces this choice; no runtime toggle exists.
+
+[^PreserveAlpha]: Standard fact in contact dynamics: for a contact form α with Reeb vector field R_α, the flow φ_t satisfies φ_t^*α=α and φ_t^*dα=dα since 𝓛_{R_α}α=i_{R_α}dα+d(α(R_α))=0.
+[^ReturnArea]: Poincaré first‑return maps of Reeb flows on 3‑dimensional contact manifolds are area‑preserving with respect to dα on any transverse surface of section; see e.g. Albers–Geiges–Zehmisch (2018).
+[^CH]: Chaidez–Hutchings (2021): “Computing Reeb dynamics on four‑dimensional convex polytopes”, J. Comput. Dyn. 8(4):403–445; arXiv:2008.10111.

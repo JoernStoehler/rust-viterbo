@@ -78,6 +78,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test), then `bash scripts/rust-fmt.sh`, `bash scripts/rust-test.sh`, and `bash scripts/rust-clippy.sh` before running selective smoke/e2e tests.
   - Rust build cache strategy: sccache is enabled (`RUSTC_WRAPPER=sccache`) and all Rust builds default to a shared absolute target dir `CARGO_TARGET_DIR=/var/tmp/vk-target` to maximize cross‑worktree cache hits for third‑party crates. Occasional “blocking waiting for file lock” is expected and safe; locks are kernel‑released on process exit/crash, and `scripts/safe.sh` timeouts ensure cleanup.
   - Native extension: build/refresh via `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`. CI also builds natively to catch drift early. We do not publish to PyPI; packaging-for-distribution assumptions do not apply in this repo.
+  - PyO3 best practices: prefer modern signatures in `#[pymodule]` (`fn m(_py: Python, m: &Bound<'_, PyModule>)`) and avoid deprecated GIL ref shims. Do not add tests that assert the native `.so` stamp matches HEAD; rely on runtime symbol errors to signal rebuild needs. The abi3 module (`src/viterbo/viterbo_native*.so`) and a `.run.json` stamp are versioned to keep the repo self-contained for agents.
 
 ## Safe Wrapper (timeouts & cleanup)
 - Purpose: apply explicit timeouts at the top level and clean up entire process groups if a command hangs or runs longer than intended.
@@ -133,7 +134,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Brief lock waits during overlapping builds are normal (“blocking waiting for file lock”). Locks are freed on process exit/crash or by `safe.sh` timeouts.
   - Cleanup when needed: `safe -t 60 -- cargo clean` (or remove `/var/tmp/vk-target` during downtime only).
 - Get feedback fast after working on code:
-  - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
+  - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh` (format/lint/type are intentionally non-fatal via `|| true` so you see all issues in one run; tests remain strict)
   - `safe --timeout 10 -- bash scripts/rust-fmt.sh`
   - `safe --timeout 120 -- bash scripts/rust-test.sh`
   - `safe --timeout 120 -- bash scripts/rust-clippy.sh`
@@ -170,6 +171,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Keep stages composable; reuse helpers; do not over‑abstract (YAGNI, KISS).
 - Provide tiny test config variants for fast dev cycles (≤10s); Use E2E tests to assert on the outputs of the test configs.
 - Rust kernels do not write provenance; Python orchestrator owns it.
+ - Cargo build caches: never place caches under `data/`. Test wrappers/devcontainer default `CARGO_TARGET_DIR` to `/var/tmp/vk-target` to keep the repo clean; benches use the workspace `target/`. Do NOT create new cache directories under `data/` (e.g. `data/target_seq*`). If you need isolation, use separate worktrees or the default workspace `target/`.
 
 ## Seeding and Determinism (situational)
 - Put a top‑level `"seed"` in JSON configs.
@@ -202,6 +204,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Write in a clear, unambiguous, specific, actionable, explicit style with low cognitive overhead, so that development agents can read text and get to work quickly without needing to think through ambiguities or infer implications that weren't spelled out.
 - Use KaTeX-safe math only (no `\\operatorname`).
 - Create small tables/figures/interactive plots for inclusion in the mdBook site via `docs/assets/`.
+ - Algorithm pages include a terminal section titled “Clarifications (unstable, unsorted)” to park quick notes about code/spec divergences and open questions. Entries are intentionally ephemeral; once stabilized, fold them into the main text and remove from the list.
 
 ### Thesis Writing Conventions (mdBook)
 - Section layout (keep it brief and consistent):

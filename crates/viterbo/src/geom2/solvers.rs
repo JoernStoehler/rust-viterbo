@@ -10,16 +10,33 @@ use nalgebra::{Matrix2, Vector2, SVD};
 
 use super::{ordered::HalfspaceIntersection, ordered::Poly2, types::Aff1, types::GeomCfg, Aff2};
 
-/// Rotation via polar factor (Option B): returns angle/π in [0,1] or None if orientation-reversing.
+/// Rotation via polar factor (principal angle): returns angle/π in [0,1],
+/// or None if orientation-reversing.
+///
+/// Definition (principal angle normalization)
+/// - Let M be the 2×2 linear part of the affine map. Compute the polar
+///   decomposition M = R S with R ∈ SO(2), S ≻ 0. Define rot(M) := arg(R) ∈ [0, π].
+/// - We return ρ := rot(M)/π ∈ [0, 1].
+/// - For generic (non‑degenerate) edges in our ω₀‑canonical charts, 0 < ρ < 1.
+///   The only way to get ρ=0 is a true (or numerically near) identity step.
 pub fn rotation_angle(f: &Aff2) -> Option<f64> {
     let svd = SVD::new(f.m, true, true);
     let u = svd.u?;
     let vt = svd.v_t?;
     let q = u * vt;
-    if q.determinant() < 0.0 {
+    let det_q = q.determinant();
+    debug_assert!(
+        (det_q - 1.0).abs() < 1e-8 || (det_q - (-1.0)).abs() < 1e-8,
+        "polar orthogonal factor must have determinant ±1"
+    );
+    if det_q < 0.0 {
         return None;
     }
     let theta = q[(1, 0)].atan2(q[(0, 0)]);
+    debug_assert!(
+        theta >= -std::f64::consts::PI && theta <= std::f64::consts::PI,
+        "principal angle out of range"
+    );
     let rho = theta.abs() / std::f64::consts::PI;
     Some(rho.min(1.0))
 }

@@ -8,6 +8,7 @@
 
 use nalgebra::{Vector2, Vector4};
 use pyo3::prelude::*;
+use pyo3::types::PyModule;
 use viterbo::geom4::{volume4, Hs4, Poly4};
 
 /// Compute signed area of the parallelogram spanned by a and b.
@@ -33,7 +34,7 @@ fn polygon_sampler_todo() -> PyResult<()> {
 fn polygon_polar_todo() -> PyResult<()> {
     Err(pyo3::exceptions::PyNotImplementedError::new_err(
         "TODO: Bindings for viterbo.geom2.rand.polar are deferred.",
-    ))
+    )) 
 }
 
 /// Compute the 4D volume of a convex polytope from its half-spaces.
@@ -57,7 +58,7 @@ fn poly4_volume_from_halfspaces(hs: Vec<((f64, f64, f64, f64), f64)>) -> PyResul
 }
 
 #[pymodule]
-fn viterbo_native(_py: Python, m: &PyModule) -> PyResult<()> {
+fn viterbo_native(_py: Python, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parallelogram_area, m)?)?;
     m.add_function(wrap_pyfunction!(polygon_sampler_todo, m)?)?;
     m.add_function(wrap_pyfunction!(polygon_polar_todo, m)?)?;

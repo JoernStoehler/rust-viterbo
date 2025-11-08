@@ -59,7 +59,6 @@ pub(crate) fn quantize5(n: Vector4<f64>, c: f64, tol: f64) -> (i64, i64, i64, i6
     let s = 1.0 / tol;
     (x, y, z, w, (c * s).round() as i64)
 }
-
 #[cfg(test)]
 mod tests {
     use super::combinations;
