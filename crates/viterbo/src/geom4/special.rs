@@ -18,15 +18,16 @@ use super::types::{Hs4, Poly4};
 
 /// Axis-aligned hypercube [-a,a]^4.
 pub fn hypercube(a: f64) -> Poly4 {
-    let mut hs = Vec::with_capacity(8);
-    hs.push(Hs4::new(Vector4::new(1.0, 0.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(-1.0, 0.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, 1.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, -1.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, 1.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, -1.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, 0.0, 1.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, 0.0, -1.0), a));
+    let hs = vec![
+        Hs4::new(Vector4::new(1.0, 0.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(-1.0, 0.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, 1.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, -1.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, 0.0, 1.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, 0.0, -1.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, 0.0, 0.0, 1.0), a),
+        Hs4::new(Vector4::new(0.0, 0.0, 0.0, -1.0), a),
+    ];
     Poly4::from_h(hs)
 }
 
@@ -55,6 +56,7 @@ pub fn cross_polytope_l1(r: f64) -> Poly4 {
 /// - v2 = v1 + b e2
 /// - v3 = v2 + c e3
 /// - v4 = v3 + d e4
+///
 /// Then translate by the centroid so that 0 lies in the interior.
 pub fn orthogonal_simplex(a: f64, b: f64, c: f64, d: f64) -> Poly4 {
     let v0 = Vector4::new(0.0, 0.0, 0.0, 0.0);

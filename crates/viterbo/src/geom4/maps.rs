@@ -200,38 +200,6 @@ pub fn oriented_orth_map_face2(
     Some((u, ut))
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::geom4::Hs4;
-
-    #[test]
-    fn canonical_chart_has_positive_omega_on_generic_face() {
-        // Build a small set of generic halfspaces; we only need two indices i!=j.
-        let hs = vec![
-            Hs4::new(Vector4::new(1.0, 1.0, 0.0, 0.0).normalize(), 1.0),
-            Hs4::new(Vector4::new(0.0, 1.0, 1.0, 0.0).normalize(), 1.0),
-            Hs4::new(Vector4::new(0.0, 0.0, 1.0, 1.0).normalize(), 1.0),
-        ];
-        // Pick the first two as a typical (generic) ridge pair.
-        let (u, ut) = oriented_orth_map_face2(&hs, 0, 1).expect("chart");
-        // Extract basis vectors from U^T columns.
-        let u1 = ut.column(0).into_owned();
-        let u2 = ut.column(1).into_owned();
-        let j = j_matrix_4();
-        let omega = u1.dot(&(j * u2));
-        assert!(omega.abs() >= TIGHT_EPS, "face should be non-Lagrangian");
-        assert!(
-            omega > 0.0,
-            "canonical chart must have omega(u1,u2)>0; got {omega}"
-        );
-        // Sanity: U is 2x4 with orthonormal rows (U U^T = I_2).
-        let uu_t = u * ut;
-        let id = nalgebra::Matrix2::<f64>::identity();
-        assert!((uu_t - id).amax() < 1e-9);
-    }
-}
-
 /// Build a 2D H-rep polytope for the 2-face (i,j) by projecting the face's
 /// vertices with `y = U x` and taking their convex hull in 2D.
 ///
@@ -273,4 +241,36 @@ fn orthonormal_complement_2d(
     w -= u1 * w.dot(&u1);
     let u2 = w / w.norm();
     Some((u1, u2))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geom4::Hs4;
+
+    #[test]
+    fn canonical_chart_has_positive_omega_on_generic_face() {
+        // Build a small set of generic halfspaces; we only need two indices i!=j.
+        let hs = vec![
+            Hs4::new(Vector4::new(1.0, 1.0, 0.0, 0.0).normalize(), 1.0),
+            Hs4::new(Vector4::new(0.0, 1.0, 1.0, 0.0).normalize(), 1.0),
+            Hs4::new(Vector4::new(0.0, 0.0, 1.0, 1.0).normalize(), 1.0),
+        ];
+        // Pick the first two as a typical (generic) ridge pair.
+        let (u, ut) = oriented_orth_map_face2(&hs, 0, 1).expect("chart");
+        // Extract basis vectors from U^T columns.
+        let u1 = ut.column(0).into_owned();
+        let u2 = ut.column(1).into_owned();
+        let j = j_matrix_4();
+        let omega = u1.dot(&(j * u2));
+        assert!(omega.abs() >= TIGHT_EPS, "face should be non-Lagrangian");
+        assert!(
+            omega > 0.0,
+            "canonical chart must have omega(u1,u2)>0; got {omega}"
+        );
+        // Sanity: U is 2x4 with orthonormal rows (U U^T = I_2).
+        let uu_t = u * ut;
+        let id = nalgebra::Matrix2::<f64>::identity();
+        assert!((uu_t - id).amax() < 1e-9);
+    }
 }

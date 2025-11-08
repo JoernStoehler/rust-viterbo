@@ -121,7 +121,7 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                 let map_ij = Aff2 { m, t };
                 let rotation_inc = rotation_angle(&map_ij).unwrap_or(0.0);
                 debug_assert!(
-                    rotation_inc.is_finite() && rotation_inc >= 0.0 && rotation_inc <= 1.0,
+                    rotation_inc.is_finite() && (0.0..=1.0).contains(&rotation_inc),
                     "rotation_inc must be in [0,1]"
                 );
                 // A_ij(y) = (b_F/(2 d_j)) b_Hj - (b_F/(2 d_j)) (n_Hj·U_i^T) y

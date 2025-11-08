@@ -34,7 +34,7 @@ pub fn rotation_angle(f: &Aff2) -> Option<f64> {
     }
     let theta = q[(1, 0)].atan2(q[(0, 0)]);
     debug_assert!(
-        theta >= -std::f64::consts::PI && theta <= std::f64::consts::PI,
+        (-std::f64::consts::PI..=std::f64::consts::PI).contains(&theta),
         "principal angle out of range"
     );
     let rho = theta.abs() / std::f64::consts::PI;

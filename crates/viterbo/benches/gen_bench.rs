@@ -1,15 +1,19 @@
 //! Criterion microbenches for 2D/4D generators and hot-path combinators.
 //!
 //! - 2D: radial sampler, recenter/rescale, polar.
-//! - 4D: random vertices (5–25), random faces (5–10), symmetric halfspaces,
-//!       Mahler next/regen, regular product enum.
+//! - 4D: random vertices (5–25),
+//!   random faces (5–10),
+//!   symmetric halfspaces,
+//!   Mahler next/regen,
+//!   regular product enum.
+//!
 //! Results live under `target/criterion`. Use `scripts/rust-bench.sh` to sync curated
 //! JSON into `data/bench/criterion` (Git LFS) when needed.
 //!
 //! Ticket: 8ed3-2d-4d-generators
 
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
-use nalgebra::{Matrix4, Vector2};
+use nalgebra::Matrix4;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use viterbo::geom2::rand::{
     draw_polygon_radial, polar as polar2, recenter_rescale, Bounds2, RadialCfg, ReplayToken,

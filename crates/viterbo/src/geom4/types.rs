@@ -88,7 +88,7 @@ fn canonicalize_h_strict(hs: Vec<Hs4>) -> Vec<Hs4> {
     }
     let pruned: Vec<Hs4> = tmp
         .into_iter()
-        .zip(keep.into_iter())
+        .zip(keep)
         .filter_map(|(h, k)| if k { Some(h) } else { None })
         .collect();
     pruned

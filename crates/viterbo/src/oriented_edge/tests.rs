@@ -296,17 +296,18 @@ fn cycle_closure_unique_fixed_point_on_tiny_graph() {
 fn product_of_two_squares(a: f64, b: f64) -> crate::geom4::Poly4 {
     use crate::geom4::Hs4;
     use nalgebra::Vector4;
-    let mut hs = Vec::new();
-    // K in (x1,x2): |x1|<=a, |x2|<=a
-    hs.push(Hs4::new(Vector4::new(1.0, 0.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(-1.0, 0.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, 1.0, 0.0, 0.0), a));
-    hs.push(Hs4::new(Vector4::new(0.0, -1.0, 0.0, 0.0), a));
-    // L in (y1,y2): |y1|<=b, |y2|<=b
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, 1.0, 0.0), b));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, -1.0, 0.0), b));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, 0.0, 1.0), b));
-    hs.push(Hs4::new(Vector4::new(0.0, 0.0, 0.0, -1.0), b));
+    let hs = vec![
+        // K in (x1,x2): |x1|<=a, |x2|<=a
+        Hs4::new(Vector4::new(1.0, 0.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(-1.0, 0.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, 1.0, 0.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, -1.0, 0.0, 0.0), a),
+        // L in (y1,y2): |y1|<=b, |y2|<=b
+        Hs4::new(Vector4::new(0.0, 0.0, 1.0, 0.0), b),
+        Hs4::new(Vector4::new(0.0, 0.0, -1.0, 0.0), b),
+        Hs4::new(Vector4::new(0.0, 0.0, 0.0, 1.0), b),
+        Hs4::new(Vector4::new(0.0, 0.0, 0.0, -1.0), b),
+    ];
     crate::geom4::Poly4::from_h(hs)
 }
 
@@ -406,7 +407,7 @@ fn cross_polytope_and_simplex_smoke_capacities() {
     let mut cp = cross_polytope_l1(1.0);
     assert!(cp.check_canonical().is_ok());
     let g1 = build_graph(&mut cp, cfg);
-    let (c_cp, _) = dfs_solve(&g1, cfg, SearchCfg::default()).expect("capacity cross polytope");
+    let (c_cp, _) = dfs_solve(&g1, cfg, scfg).expect("capacity cross polytope");
     assert!(c_cp.is_finite() && c_cp > 0.0);
     // Note: orthogonal_simplex is available in geom4::special; wiring it into oriented‑edge
     // is deferred until we settle H-rep conversion details for degenerate facets.
