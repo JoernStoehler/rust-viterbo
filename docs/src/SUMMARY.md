@@ -4,6 +4,7 @@
 - [Thesis Overview](thesis/overview.md)
 - [EHZ Capacity](thesis/Ekeland-Hofer-Zehnder-Capacity.md)
 - [Oriented-Edge Graph Algorithm](thesis/capacity-algorithm-oriented-edge-graph.md)
+- [LP/QP Programs for c_EHZ](thesis/capacity-algorithm-linear-program.md)
 - [Meta](meta/overview.md)
   - [Benchmarks → Docs](meta/benchmarks.md)
 - [2D Polytopes (H-rep)](thesis/geom2d_polytopes.md)
