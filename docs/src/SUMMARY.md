@@ -7,6 +7,7 @@
 - [LP/QP Programs for c_EHZ](thesis/capacity-algorithm-linear-program.md)
 - [Meta](meta/overview.md)
   - [Benchmarks → Docs](meta/benchmarks.md)
+  - [OE: Charts and Rotation](meta/oriented-edge-charts-and-rotation.md)
 - [2D Polytopes (H-rep)](thesis/geom2d_polytopes.md)
 - [4D Polytopes (H/V-rep)](thesis/geom4d_polytopes.md)
 - [4D Volume Algorithm](thesis/geom4d_volume.md)

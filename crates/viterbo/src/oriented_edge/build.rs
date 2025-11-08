@@ -119,6 +119,11 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                     u_vec[(1, 0)] * (hs[h_idx_j].c / d_j),
                 );
                 let map_ij = Aff2 { m, t };
+                // Orientation should be preserved between canonical ridge charts.
+                debug_assert!(
+                    map_ij.is_orientation_preserving(),
+                    "ψ_ij must be orientation-preserving between canonical charts (det>0)"
+                );
                 let rotation_inc = rotation_angle(&map_ij).unwrap_or(0.0);
                 debug_assert!(
                     rotation_inc.is_finite() && (0.0..=1.0).contains(&rotation_inc),

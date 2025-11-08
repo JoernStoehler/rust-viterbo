@@ -78,6 +78,22 @@ When \(\Sigma=\partial K\) is strictly convex and \(C^2\), the induced contact f
 
 We will rely on the lower bound “CZ\(\ge 3\)” property and, in non‑degenerate settings, on the fact that the minimizer has index \(3\), when pruning candidate orbits in our algorithms.
 
+## CZ Index and Rotation for 2D Return Maps {#cz-rotation}
+
+Setup. Let \((\Sigma,\alpha)\) be a contact hypersurface in \(\mathbb{R}^4\) with Reeb field \(R_\alpha\). Fix a local surface of section \(D\subset \Sigma\) transverse to \(R_\alpha\); the first‑return (first‑hit) map \(\Phi:D\to D\) preserves the area form \(d\alpha|_D\) and orientation. Along a closed orbit \(\gamma\) intersecting \(D\), the linearized return \(\mathrm{d}\Phi\) restricts to a path in \(\mathrm{Sp}(2)\) (after a choice of trivialization).
+
+Rotation number. In a 2D trivialization, write the linearized return along \(\gamma\) as a path \(\Psi(t)\in \mathrm{Sp}(2)\), \(t\in[0,T]\). Lifting to the universal cover of \(\mathrm{Sp}(2)\) defines a real rotation number \(\rho(\gamma)\in \mathbb{R}_{\ge 0}\). For generic (non‑degenerate) elliptic closures, the endpoint is conjugate to a rotation by angle \(\theta\in(0,2\pi)\), and \(\rho = \theta/\pi \in (0,2)\).
+
+Conley–Zehnder index in 2D. For such generic closures one has
+\[
+\mu_{\mathrm{CZ}}(\gamma) \;=\; \lceil \rho(\gamma)\rceil + \lfloor \rho(\gamma)\rfloor.
+\]
+In particular, an index‑\(3\) minimizer satisfies \(\rho(\gamma)\in(1,2)\).
+
+Canonical charts and positivity. In our polytope setting, we fix once per ridge a canonical 2D chart determined by an orthonormal basis \((u_1,u_2)\) with \(\omega_0(u_1,u_2)>0\). The per‑edge first‑hit maps between ridges are orientation‑preserving on admissible domains, so the per‑edge rotation increments are non‑negative and \(\rho\) accumulates additively along cycles.
+
+Numerics (implementation note). We read \(\rho\) from the orthogonal polar factor of the 2×2 linear part of the charted map (principal angle divided by \(\pi\)). This is invariant under uniform scalings of the chart and does not require the Euclidean chart to be \(d\alpha\)–unit‑normalized.
+
 ## Normalization, Systolic Ratio, and Current Status
 
 We use the normalization above, so for any convex \(K\subset\mathbb{R}^4\) we define the symplectic systolic ratio

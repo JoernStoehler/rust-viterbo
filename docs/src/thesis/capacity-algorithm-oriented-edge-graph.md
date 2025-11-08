@@ -47,7 +47,7 @@
   - Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.
   - Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.
   <!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
-  - Orientation convention (decision): for every ridge $i$, fix the chart $U_i$ to be the canonical one induced by $\omega_0$ (choose an orthonormal basis $(u_1,u_2)$ of the face plane with $\omega_0(u_1,u_2)>0$). This pins the sign of rotation angles extracted from $D\psi_{ij}$.
+  - Orientation convention (decision): for every ridge $i$, fix the chart $U_i$ to be the canonical one induced by $\omega_0$ (choose an orthonormal basis $(u_1,u_2)$ of the face plane with $\omega_0(u_1,u_2)>0$). Charts are fixed per ridge (independent of the incoming facet). This pins the sign of rotation angles extracted from $D\psi_{ij}$.
 
 ## Notation Recap
 - Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.
@@ -57,8 +57,7 @@
   - Exit time $\tau_{ij}(x)$; affine on regions of constant first exit.
   - Affine map $\psi_{ij}:\operatorname{dom}\psi_{ij}\to A_j$, where $\operatorname{dom}\psi_{ij}\subset A_i$ and $\operatorname{im}\psi_{ij}\subset A_j$ are convex polygons.
   - Action increment $A_{ij}(x)=\tfrac{b_F}{2}\,\tau_{ij}(x)$ (affine on $\operatorname{dom}\psi_{ij}$).
-  - Rotation increment $\rho_{ij}\ge 0$ (we use polar angle of $D\psi_{ij}$; see Rotation).
-<!-- review: feel free to delete after review if redundant with later sections. -->
+  - Rotation increment $\rho_{ij}\ge 0$ (polar angle of the linear part via the orthogonal polar factor; see “Rotation and CZ index”).
 
 ## Algorithm Summary (push-forward only)
 - Maintain, at the current ridge, a candidate polygon $C\subset A_{i_k}$, an affine action $A:C\to\mathbb{R}$, a scalar rotation $\rho$, and an optional composed map $\Psi$ to the start chart.
@@ -67,18 +66,17 @@
   - Push-forward candidates: $C'=\psi_{i_ki_{k+1}}\!\bigl(C\cap \operatorname{dom}\psi_{i_ki_{k+1}}\bigr)\subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$.
   - Update action $A'$ via composition with $\psi^{-1}$ and add the per-edge increment; prune by $A'(z)\le A_{\mathrm{best}}$; update $\rho'=\rho+\rho_{i_ki_{k+1}}\le 2$.
   - Repeat; on returning to the start ridge, solve the fixed-point equation $\Psi(z)=z$ within $C$ and update the incumbent.
-- Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2017).
+- Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2019).
 
 ## Per-edge Maps and Polyhedral Domains
-Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathcal{F}_3$, $i,j\subset F$. Let $G(j,F)$ denote the co-facet that, together with $F$, defines $j$.
+Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathcal{F}_3$, $i,j\subset F$. Let $G(j,F)$ denote the co‑facet: the unique facet $G\neq F$ such that $j=F\cap G$.
 
 - Exit-time formula on $F$:
   - For $x\in H_F$ near $i$, the first time the straight line $x + t\,v_F$ hits the plane $H_{G(j,F)}$ is
     $$\tau_{ij}(x)\;=\;\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{\langle n_{G(j,F)}, v_F\rangle},\quad \text{with }\ \tau_{ij}(x)>0.$$
   - The condition that $j$ is indeed first exit among all co-facets $k\subset F$ is
     $$\tau_{ij}(x)\le \tau_{ik}(x)\quad\text{for all admissible }k,$$
-    where “admissible” means $\langle n_k,v_F\rangle>0$ (the ray intersects $H_k$ forward in time) and $x+t\,v_F$ stays in $F$ for $t\in[0,\tau_{ik}(x)]$.
-    These inequalities are linear in $x$ after multiplying by the (fixed) denominators’ signs.
+    where “admissible” means $\langle n_k,v_F\rangle>0$ (the ray intersects $H_k$ forward in time). After sign normalization these comparisons are linear in $x$ and enforce that $x+t\,v_F$ remains in $F$ up to the first hit.
   - Explicit half-space description of the domain $\operatorname{dom}\psi_{ij}$:
     - Let $\mathcal{K}_F$ be the set of co-facets $k$ of $F$ with $\langle n_k,v_F\rangle\ne 0$. Define $\sigma_k:=\operatorname{sign}\langle n_k,v_F\rangle$.
     - For $x\in H_F$, the comparison $\tau_{ij}(x)\le \tau_{ik}(x)$ is equivalent to
@@ -98,8 +96,6 @@ Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathc
     $$\psi_{ij}:\ \operatorname{dom}\psi_{ij}\ \to\ A_j,\qquad \psi_{ij}(\pi_i(x))\;=\;\pi_j\bigl(x+\tau_{ij}(x)\,v_F\bigr),$$
     with $\operatorname{dom}\psi_{ij}\subset A_i$ as above. By convexity and genericity, $\operatorname{dom}\psi_{ij}$ is a convex polygon (possibly empty), $\psi_{ij}$ is affine on it, and $\operatorname{im}\psi_{ij}$ is convex in $A_j$.
   <!-- Comment: We explicitly avoid parameterization of the Reeb vector field. Straight-line geometry suffices to locate exits and compute actions. -->
-<!-- review: confirm chart orientation convention below works for rotation sign consistency. -->
-
 Symbol map (equations above)
 - $\psi_{ij}$: push‑forward map (code: `EdgeData.map_ij`).
 - $\operatorname{dom}\psi_{ij}\subset A_i$: domain polygon in ridge $i$ (code: `EdgeData.dom_in`).
@@ -110,7 +106,6 @@ Symbol map (equations above)
 - $U_i,U_j$: ridge charts (code: `Ridge.chart_u`; left‑inverse on the plane: `Ridge.chart_ut`).
 - $v_F=J n_F$: facet Reeb direction (code: `geom4::reeb_on_facets`).
 - $A_i$: ridge polygon in chart $i$ (code: `Ridge.poly`).
-<!-- note: reviewers — this symbol map keeps equations compact while aligning with code identifiers for agents. -->
 
 ### Worked Example (axis‑aligned facet in the 4D cube)
 Consider $K=[-1,1]^4$ in coordinates $(x_1,x_2,y_1,y_2)$ with the standard $J$ (so $v=J n$). Take the facet
@@ -123,7 +118,6 @@ $F=\{x_1=1\}$ with outward normal $n_F=e_{x_1}$ and $b_F=1$, hence $v_F=J n_F = 
 - Charts: the ridge planes $R_i=R_j=\{x_1=\pm 1,\ y_1=\mp 1\}$ are spanned by the $(x_2,y_2)$ axes, so we may take $\pi_i,\pi_j$ as identity on $(x_2,y_2)$. Thus $U_iU_j^\top=I$ and the push‑forward map $\psi_{ij}$ is the identity on $(x_2,y_2)$.
 - Rotation increment: $D\psi_{ij}=I_2 \Rightarrow \rho_{ij}=0$.
 - Action increment: $A_{ij}(x)=\tfrac{b_F}{2}\tau_{ij}(x)=\tfrac{1}{2}(1 - y_1)$, which is affine and, in the chart, constant with respect to $(x_2,y_2)$.
-<!-- note: reviewers — this concrete example shows the formulas reduce correctly to identity ψ and zero ρ in a simple axis‑aligned setting. -->
 
 ## Action Increment per Edge (explicit affine form)
 For $x\in i$ that flows to $j$ across facet $F$, the action increment along the segment is
@@ -139,13 +133,13 @@ since $\langle x,n_F\rangle=b_F$ on the facet plane $H_F$. Therefore $A_{ij}$ is
 In ridge coordinates, we treat $A_{ij}$ as an affine functional on $\operatorname{dom}\psi_{ij}\subset A_i$.
 <!-- Comment: This formula is independent of the speed choice for the Reeb flow; only directions matter. -->
 
-### Orientation and Chart Conventions
-- For each ridge $i$, choose an orthonormal basis $(e_1,e_2)$ of $R_i$ so that the restriction $\omega_0|_{R_i}$ corresponds to the positive area form $dx\wedge dy$ under $\pi_i(e_1)=e_x$, $\pi_i(e_2)=e_y$.
-- This fixes the sign of rotation angles extracted from $D\psi_{ij}$ unambiguously across ridges.
-<!-- review: confirm this convention matches your preferred trivialization style. -->
-
-## Rotation normalization and cutoff
-(See the dedicated section below for the precise definition and guards; this subsection is intentionally concise.)
+## Rotation and CZ index
+- See background: CZ Index and Rotation for 2D Return Maps (Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#cz-rotation).
+- Ridge charts. For each ridge $i$, we fix once and for all an orthonormal Euclidean basis $(u_1,u_2)$ of the ridge plane with the canonical symplectic orientation $\omega_0(u_1,u_2)>0$ (as implemented in code). Charts do not depend on which facet we arrive from.
+- Rotation per edge. For the affine map $y_j = M_{ij} y_i + t_{ij}$ on charts, define the rotation increment by the orthogonal polar factor: write $M_{ij}=R_{ij}S_{ij}$ with $R_{ij}\in \mathrm{SO}(2)$ and $S_{ij}\succ 0$, and set $\rho_{ij} := \operatorname{arg}(R_{ij})/\pi \in [0,1]$. This is invariant under uniform scalings of $M_{ij}$ and does not require $\det M_{ij}\approx 1$ in Euclidean charts.
+- Positivity of increments. In canonical charts the first‑hit map is orientation‑preserving on admissible domains, so $\rho_{ij}\ge 0$; we never subtract rotation along edges.
+- Area preservation. The first‑hit map between transverse sections preserves the $d\alpha$‑area on facets. Our Euclidean orthonormal charts may scale $d\alpha$ by a positive constant per ridge, so $\det M_{ij}$ need not be exactly $1$ in these coordinates; this does not affect $\rho_{ij}$ computed via the polar factor.
+- Accumulation and index. Along a closed cycle, let $\rho=\sum \rho_{ij}$. For generic (non‑degenerate) closures in 2D, the Conley–Zehnder index satisfies $\mu_{\mathrm{CZ}} = \lceil \rho\rceil + \lfloor \rho\rfloor$. In particular, an index‑$3$ minimizer has $\rho\in(1,2)$. We therefore prune whenever the accumulated $\rho$ exceeds $2$; this threshold is theory‑fixed (not tunable) and cannot be lowered without risking the loss of the true minimizer.
 ## Search Over Directed Cycles (push-forward variant)
 We now describe the core enumeration and pruning in the 2-face digraph using push-forwards (no pull-backs of polytopes).
 
@@ -183,7 +177,6 @@ Heuristics and ordering:
   - If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.
   - If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.
 - Tolerances: treat $|\det(I-M)|<\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.
-<!-- note: reviewers — we keep equations compact and map symbols to code below. -->
 
 Symbol map (fixed‑point and tolerances)
 - $M,t$: entries of the composed affine map $\Psi_p$ (code: `State.phi_start_to_current`).
@@ -197,22 +190,20 @@ Symbol map (fixed‑point and tolerances)
 
 - Implementation guardrails:
   - `fixed_point_in_poly` handles both branches and switches to a 1D LP when $(I-M)$ is nearly singular so that we never rely on unstable matrix inverses.
-  - `rotation_angle` returns `None` only for orientation-reversing maps; canonical chart construction rules those out, so failures signal numerical bugs instead of algorithmic cases.
+  - `rotation_angle` returns `None` only for orientation‑reversing maps; canonical chart construction rules those out, so failures signal numerical bugs instead of algorithmic cases.
 
 ## Choosing Budgets and Bounds
 - Upper bound $A_{\mathrm{best}}$:
   - Practical: use that $K\subset B_R$ implies $c_{\mathrm{EHZ}}(K)\le c_{\mathrm{EHZ}}(B_R)=\pi R^2$. Compute $R$ from vertices or support data for a quick initial bound.
   - Tighter: use the volume-capacity inequality documented in `Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#volume-upper-bounds` once we finalize the preferred constant $C_{\mathrm{vol}}$. Reference that doc (not this page) whenever we update $C_{\mathrm{vol}}$ so the inequality stays centralized.
 - Lower bound for progress reporting: $c_{\mathrm{EHZ}}(K)\ge \pi r^2$ if $B_r\subset K$ (inradius).
-<!-- review: confirm default A_best choice (πR^2) until we pin the best constant C. -->
 
 ## Correctness Sketch (informal)
 1) Every closed characteristic in the generic polytope case intersects ridges at isolated points and travels linearly on facets parallel to $v_f$.  
 2) Such a trajectory maps to a directed cycle in the 2-face digraph; the per-edge maps and domains capture exactly the “first exit” geometry.  
 3) The action along a cycle equals the sum of per-edge increments evaluated at the unique fixed point $z_\star$ of the composed affine map in the start chart.  
 4) Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points.  
-5) The push-forward pruning is sound: removing paths with empty candidate sets or with $A>A_{\mathrm{best}}$ or $\rho>2$ cannot delete the true minimizer.  
-<!-- Comment: We will formalize this and connect to CZ index in the EHZ background document. -->
+5) The push‑forward pruning is sound: removing paths with empty candidate sets, with $A>A_{\mathrm{best}}$, or with $\rho>2$ cannot delete the true minimizer (index‑3 implies $\rho\in(1,2)$).
 
 ### Orientation lemma (canonical charts)
 Lemma. Let $i\subset F$ and $j\subset G$ be ridges such that $\omega_0|_{Ti}\ne 0$ and $\omega_0|_{Tj}\ne 0$. With our canonical 2‑face charts $U_i,U_j$ (orthonormal bases oriented by $\omega_0(u_1,u_2)>0$), the Reeb first‑hit map $\psi_{ij}:U_i(i)\to U_j(j)$ is orientation‑preserving: $\det D\psi_{ij}>0$ wherever defined.
@@ -221,19 +212,10 @@ Proof (sketch). On each facet $F$, $\alpha:=\lambda_0|_F$ is a contact form and 
 
 Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a transverse section and no return map is available. Our genericity excludes this case and matches the combinatorial Reeb model on 4D polytopes.[^CH]
 
-### Rotation normalization and cutoff
-- Data: For an oriented edge $i\to j$ inside facet $F$, the affine transition on ridge charts is $y_j = M_{ij}\,y_i + t_{ij}$ (Section “Per‑edge maps”). In canonical charts, $M_{ij}\in \mathrm{GL}^+(2)$ is orientation‑preserving and area‑preserving up to rounding.
-- Definition (principal angle). Write the polar decomposition $M_{ij}=R_{ij}S_{ij}$ with $R_{ij}\in \mathrm{SO}(2)$ and $S_{ij}\succ 0$. Define
-  \[
-    \operatorname{rot}(M_{ij}) := \arg(R_{ij}) \in [0,\pi],\qquad
-    \rho_{ij} := \frac{\operatorname{rot}(M_{ij})}{\pi}\in[0,1].
-  \]
-  Numerically we compute $R_{ij}$ via SVD (or a symmetric polar factor) and take $\operatorname{rot}(M_{ij})=\operatorname{atan2}((R_{ij})_{12},(R_{ij})_{11})$; we assert $\det(R_{ij})>0$ (otherwise the edge is invalid in our model).
-- Alternatives.
-  - Trace formula for orthogonal matrices: if $M_{ij}$ were itself orthogonal then $\operatorname{rot}=\arccos(\tfrac12\operatorname{tr}(M_{ij}))$. In general $M_{ij}$ is not orthogonal, so we apply the trace to $R_{ij}$, not to $M_{ij}$: $\operatorname{rot}=\arccos(\tfrac12\operatorname{tr}(R_{ij}))$. We prefer the polar/SVD route for robustness.
-  - Eigen‑angle (elliptic check): in exact arithmetic for $M\in \mathrm{SL}(2,\mathbb{R})$ elliptic, $|\operatorname{tr}M|<2$ and the eigenvalues are $e^{\pm i\theta}$ with $\theta\in(0,\pi)$, but extracting $\theta$ reliably still benefits from the polar route in floating point.
-- Guards and tolerances. We clamp arguments to $[-1,1]$, assert $\det M_{ij}>0$ and $|\det M_{ij}-1|$ is small, and treat $|\operatorname{tr}(R_{ij})|\approx 2$ as a degeneracy. With generic non‑Lagrangian ridges and canonical charts, $0<\rho_{ij}<1$ holds in practice.
-- Cutoff (pruning). We accumulate $\rho$ along partial paths and prune when $\rho$ exceeds a configurable budget (default $\rho_{\max}=2$). This is a safe heuristic: increasing $\rho_{\max}$ never removes minimizers, while too‑small values may over‑prune; we choose a conservative default and log edges near degeneracy.
+### Rotation implementation details (guards)
+- Numerical extraction. Compute the orthogonal polar factor via SVD ($M=U\Sigma V^\top$, $R=UV^\top$) and set $\operatorname{rot}(M)=\operatorname{atan2}(R_{12},R_{11})\in[-\pi,\pi]$, $\rho=|\operatorname{rot}|/\pi\in[0,1]$. Reject orientation‑reversing cases.
+- Alternatives. Trace‑angle and eigen‑angle formulas are equivalent for orthogonal/elliptic cases but we prefer polar/SVD for robustness in floating point.
+- Guards and tolerances. Clamp trigonometric arguments to $[-1,1]$; treat $|\operatorname{tr}(R)|\approx 2$ as a near‑identity degeneracy. With non‑Lagrangian ridges and canonical charts, $0<\rho_{ij}<1$ holds in practice, with $\rho_{ij}=0$ only in genuine symmetries (e.g., axis‑aligned cube faces).
 
 ## Complexity and Practical Pruning
 - Number of ridges and edges is polynomial in the input size, but cycle enumeration is exponential in worst case; pruning is essential.
@@ -241,7 +223,7 @@ Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a t
   - Precompute emptiness table for two-step patterns $(i\to j\to k)$ by checking whether $\psi_{ij}(\operatorname{dom}\psi_{ij})$ lies entirely outside $\operatorname{dom}\psi_{jk}$ (LP feasibility).  
   - Cache affine maps and half-space transforms to avoid recomputation.
   - Early action lower bounds from per-edge minima give a Dijkstra-like ordering over partial paths.
-  - No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem, there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2-face), which sharply reduces the search. <!-- Reference: Haim-Kislev (2017), EHZ-polytopes.tex, Theorem simple_loop_theorem; see docs/src/thesis/bibliography.md. -->
+  - No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem (2019), there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2‑face), which sharply reduces the search.
 
 ## Tie-breaking (deterministic and performant)
 When exit times to multiple co-facets are equal within tolerance, we need a deterministic choice that does not affect results but impacts performance.
@@ -266,8 +248,7 @@ When exit times to multiple co-facets are equal within tolerance, we need a dete
 
 ## Type Coverage and Assumptions
 - We target Type 1 combinatorial orbits (segments inside facets; crossings at ridges) under the symplectic‑polytope assumption (no Lagrangian 2-faces). This aligns with the CH framework and the “simple loop” theorem in Haim–Kislev ensuring a minimizer visits each facet at most once.  
-<!-- Docs: thesis/bibliography.md entries “Chaidez–Hutchings 2020/21” and “Haim‑Kislev 2017”. -->
-<!-- review: if we must handle Lagrangian 2-faces in the future, we will extend the search to Type 2 trajectories and disable the rotation bound locally. -->
+<!-- Docs: thesis/bibliography.md entries “Chaidez–Hutchings 2020/21” and “Haim‑Kislev 2019”. -->
 
 ## Pseudocode (Rust‑ish)
 ```
@@ -314,14 +295,7 @@ fn extend(state: &State, e: &EdgeData, A_best: f64) -> Option<State> {
 }
 ```
 
-## Open Questions and Decisions Needed
-1) Rotation normalization: pick Option A or B above and define the exact units so that index $3$ corresponds to $\rho\in(1,2)$.  
-   <!-- ACTION: please confirm the preferred definition. -->
-2) Simple cycles only: Haim–Kislev (2017) proves a “simple loop” theorem implying one can choose a minimizer that visits the interior of each facet at most once; we will enforce “no facet repeats” in the search.  
-   <!-- ACTION: confirm this scope matches our targeted class (symplectic polytopes; non-Lagrangian 2-faces). We will note and handle the Lagrangian-face caveat separately if needed. -->
-3) Handling ties/degeneracy: do we introduce a small symbolic perturbation (lexicographic) or numeric $\varepsilon$-slack?  
-4) Initial bound $A_{\mathrm{best}}$: use bounding ball vs. a tighter volumetric bound; cite constants.  
-5) Numeric robustness: adopt an “epsilon-violation warning mode” that allows a tiny slack around $C_p$ to survive rounding, as suggested.
+<!-- removed “Open Questions …” section; resolved rotation choice and scope in main text -->
 
 ## Experiments To Validate Design
 - Sanity cases:
@@ -347,10 +321,10 @@ fn extend(state: &State, e: &EdgeData, A_best: f64) -> Option<State> {
 
 ## Reviewer Checklist (delete after use)
 - Assumptions match our intended class (non-Lagrangian 2-faces)?  
-- Rotation: Option B normalization and units OK?  
+- Rotation via polar factor and CZ relation stated?  
 - Numerical tolerances (ε_det, ε_feas, ε_τ) defaults acceptable?  
 - Default A_best strategy OK until volume-based constant is cited?  
-- “Simple loop” pruning enabled by default (per HK 2017)?  
+- “Simple loop” pruning enabled by default (per HK 2019)?  
 - Chart orientation convention acceptable for cross-ridge rotation sign?  
 
 ## Clarifications (unstable, unsorted)
