@@ -4,36 +4,30 @@ use nalgebra::Vector4;
 
 /// k-combinations of items (lexicographic).
 pub(crate) fn combinations<T: Copy>(items: &[T], k: usize) -> Vec<Vec<T>> {
-    let n = items.len();
-    if k > n || k == 0 {
+    fn helper<T: Copy>(
+        items: &[T],
+        start: usize,
+        k: usize,
+        current: &mut Vec<T>,
+        out: &mut Vec<Vec<T>>,
+    ) {
+        if k == 0 {
+            out.push(current.clone());
+            return;
+        }
+        for i in start..=items.len() - k {
+            current.push(items[i]);
+            helper(items, i + 1, k - 1, current, out);
+            current.pop();
+        }
+    }
+
+    if k == 0 || k > items.len() {
         return Vec::new();
     }
-    let mut idxs: Vec<usize> = (0..k).collect();
     let mut out = Vec::new();
-    loop {
-        out.push(idxs.iter().map(|&i| items[i]).collect());
-        // next combination
-        let mut i = k;
-        while i > 0 {
-            i -= 1;
-            if idxs[i] != i + n - k {
-                idxs[i] += 1;
-                for j in i + 1..k {
-                    idxs[j] = idxs[j - 1] + 1;
-                }
-                break;
-            }
-        }
-        if i == 0 && idxs[0] == n - k {
-            break;
-        }
-        if i == 0 && idxs[0] > n - k {
-            break;
-        }
-        if idxs[0] == n - k && idxs[k - 1] == n - 1 {
-            break;
-        }
-    }
+    let mut current = Vec::with_capacity(k);
+    helper(items, 0, k, &mut current, &mut out);
     out
 }
 
@@ -66,3 +60,15 @@ pub(crate) fn quantize5(n: Vector4<f64>, c: f64, tol: f64) -> (i64, i64, i64, i6
     (x, y, z, w, (c * s).round() as i64)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::combinations;
+
+    #[test]
+    fn combos_cover_pairs() {
+        let items = vec![0, 1, 2, 3];
+        let combos = combinations(&items, 2);
+        assert_eq!(combos.len(), 6);
+        assert!(combos.contains(&vec![2, 3]));
+    }
+}

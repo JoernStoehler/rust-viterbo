@@ -41,9 +41,17 @@ done
 # Run via nextest if available; fall back to cargo test.
 if command -v cargo-nextest >/dev/null 2>&1; then
   echo ">>> cargo nextest run (-p $PKG) ${EXTRA[*]:-}"
-  cargo nextest run -p "$PKG" -q "${EXTRA[@]:-}"
+  if [[ ${#EXTRA[@]} -gt 0 ]]; then
+    cargo nextest run -p "$PKG" -- "${EXTRA[@]}"
+  else
+    cargo nextest run -p "$PKG"
+  fi
 else
   echo ">>> cargo test (-p $PKG) ${EXTRA[*]:-}"
-  cargo test -p "$PKG" -q "${EXTRA[@]:-}"
+  if [[ ${#EXTRA[@]} -gt 0 ]]; then
+    cargo test -p "$PKG" -- "${EXTRA[@]}"
+  else
+    cargo test -p "$PKG"
+  fi
 fi
 echo "Rust tests completed."

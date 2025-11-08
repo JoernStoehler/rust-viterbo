@@ -2,7 +2,7 @@
 
 use nalgebra::{Matrix2x4, Matrix4, Matrix4x2, Vector2, Vector4};
 
-use super::cfg::{SYMPLECTIC_EPS};
+use super::cfg::SYMPLECTIC_EPS;
 use super::types::Poly4;
 
 /// Return J = [[0, -I],[I, 0]] with 2x2 blocks.
@@ -68,7 +68,11 @@ pub fn oriented_orth_map_face2(
     let n2 = hs[j].n.normalize();
     // Orthonormal basis of the 2D face plane = orthogonal complement of span{n1, n2}.
     let (u1, u2) = orthonormal_complement_2d(n1, n2)?;
-    let (u1, u2) = if orientation_positive { (u1, u2) } else { (u1, -u2) };
+    let (u1, u2) = if orientation_positive {
+        (u1, u2)
+    } else {
+        (u1, -u2)
+    };
     let u = Matrix2x4::from_rows(&[u1.transpose(), u2.transpose()]);
     let ut = Matrix4x2::from_columns(&[u1, u2]);
     Some((u, ut))
@@ -121,4 +125,3 @@ fn orthonormal_complement_2d(
     let u2 = w / w.norm();
     Some((u1, u2))
 }
-

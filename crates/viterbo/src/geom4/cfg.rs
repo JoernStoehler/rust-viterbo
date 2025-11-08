@@ -11,4 +11,3 @@ pub(crate) const FEAS_EPS: f64 = 1e-9;
 pub(crate) const TIGHT_EPS: f64 = 1e-7;
 /// Tolerance for symplectic check `M^T J M ≈ J` (max-abs metric).
 pub(crate) const SYMPLECTIC_EPS: f64 = 1e-8;
-

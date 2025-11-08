@@ -34,3 +34,17 @@ def test_native_stamp_matches_head():
         ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
     ).stdout.strip()
     assert data.get("git_commit") == head, "native .so is stale: stamp git_commit != HEAD"
+
+
+def test_volume4_binding_matches_hypercube():
+    from viterbo import _native
+
+    hs = []
+    for axis in range(4):
+        normal = [0.0, 0.0, 0.0, 0.0]
+        normal[axis] = 1.0
+        hs.append((tuple(normal), 1.0))
+        normal[axis] = -1.0
+        hs.append((tuple(normal), 1.0))
+    vol = getattr(_native, "poly4_volume_from_halfspaces")(hs)
+    assert abs(vol - 16.0) < 1e-9

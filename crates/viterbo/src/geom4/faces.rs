@@ -159,4 +159,3 @@ fn dedup_faces2(faces: &mut Vec<Face2>) {
             .all(|(x, y)| (*x - *y).norm() < FEAS_EPS)
     });
 }
-

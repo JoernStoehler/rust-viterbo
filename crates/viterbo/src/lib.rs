@@ -10,11 +10,11 @@
 //!   are encouraged when they improve quality and align with tickets/specs.
 //! - See AGENTS.md → “API Policy (Internal Only)”.
 
+pub mod api;
 pub mod geom2;
 pub mod geom4;
 pub mod oriented_edge;
 pub mod rand4;
-pub mod api;
 
 /// Library version string.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

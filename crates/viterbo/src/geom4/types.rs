@@ -136,4 +136,3 @@ impl Poly4 {
         Some(Self { h: out_h, v: out_v })
     }
 }
-
