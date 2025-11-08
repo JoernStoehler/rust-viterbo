@@ -6,6 +6,11 @@ set -euo pipefail
 # - Documents sensible per-stage timeouts by wrapping each stage in scripts/safe.sh.
 # Policy
 # - Can be run directly (preferred for humans). Wrapping the whole script in safe.sh is optional.
+# - This script is intentionally fail-fast. If any stage fails, the script must exit non‑zero.
+#   Do not add `|| true` here; use quick loops for advisory-only checks instead.
+# - Current status (2025-11-08): oriented‑edge Rust tests are failing in this worktree.
+#   This script is expected to fail at the Rust tests stage until the issue is fixed.
+#   Ticket: fbf9964f-31af-43bb-a9d4-a3f33c38ffbc
 # - Stage timeouts (tuned to catch mistakes yet allow expected runs):
 #   * uv venv: 300s
 #   * uv sync (locked): 300s

@@ -16,7 +16,7 @@
       "family_name": "sym_tiny",
       "vertex_count": 38,
       "halfspace_count": 12,
-      "volume": 11.375603707797572,
+      "volume": 11.37560370779757,
       "capacity_ehz": null,
       "systolic_ratio": null
     },
@@ -66,7 +66,7 @@
       "family_name": "mahler_probe",
       "vertex_count": 64,
       "halfspace_count": 16,
-      "volume": 9.195485215108055,
+      "volume": 9.195485215108059,
       "capacity_ehz": null,
       "systolic_ratio": null
     },

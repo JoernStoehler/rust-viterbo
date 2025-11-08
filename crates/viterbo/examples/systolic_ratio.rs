@@ -35,8 +35,8 @@ fn main() {
     );
 
     let cap_start = Instant::now();
-    let (capacity, cycle) = solve_with_defaults(&mut poly_for_capacity)
-        .expect("capacity solver should return a cycle");
+    let (capacity, cycle) =
+        solve_with_defaults(&mut poly_for_capacity).expect("capacity solver should return a cycle");
     let cap_elapsed = cap_start.elapsed().as_secs_f64() * 1e3;
 
     let mut poly_for_volume = base.clone();
