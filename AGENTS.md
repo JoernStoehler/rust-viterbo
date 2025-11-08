@@ -54,10 +54,8 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
     - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
     - `rust-bench.sh`: Criterion benches (regular preset; exports curated JSON into `data/bench/criterion`). Set `BENCH_RUN_POSTPROCESS=1` to chain the docs stage automatically.
     - `rust-bench-quick.sh`: Criterion quick preset for local iteration (reduced warm-up/measurement; does not export).
-    - Both Rust wrappers default `CARGO_TARGET_DIR` if not set:
-      - tests: `data/target/`
-      - benches: `target/` (rsynced into `data/bench/criterion` afterward)
-      - `data/target/` remains gitignored (even though the rest of `data/` is tracked via LFS) so transient Cargo outputs never pollute commits.
+    - Both Rust wrappers default `CARGO_TARGET_DIR` to the shared absolute cache `/var/tmp/vk-target`. Keep it there so every worktree reuses the same compiled deps; only override when debugging deeply isolated builds.
+    - Legacy cleanup: if a worktree sprouted `data/target*` directories, delete them and reset your env—those came from pointing `CARGO_TARGET_DIR` inside the repo.
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
     - `vk.sh`: Local VK web server for the human project owner.
     - `vk-setup.sh`: VK worktree setup hook.
@@ -171,7 +169,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Keep stages composable; reuse helpers; do not over‑abstract (YAGNI, KISS).
 - Provide tiny test config variants for fast dev cycles (≤10s); Use E2E tests to assert on the outputs of the test configs.
 - Rust kernels do not write provenance; Python orchestrator owns it.
- - Cargo build caches: never place caches under `data/`. Test wrappers/devcontainer default `CARGO_TARGET_DIR` to `/var/tmp/vk-target` to keep the repo clean; benches use the workspace `target/`. Do NOT create new cache directories under `data/` (e.g. `data/target_seq*`). If you need isolation, use separate worktrees or the default workspace `target/`.
+ - Cargo build caches: keep *all* builds on the shared absolute cache `/var/tmp/vk-target` (exported by the devcontainer and every wrapper) so worktrees reuse compiled deps. Never point `CARGO_TARGET_DIR` anywhere under `data/` or the repo; if you need isolation, create a different path under `/var/tmp` or use another worktree.
 
 ## Seeding and Determinism (situational)
 - Put a top‑level `"seed"` in JSON configs.

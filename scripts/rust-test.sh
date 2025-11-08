@@ -20,7 +20,7 @@ cd "$ROOT_DIR"
 
 # Default Cargo target dir for tests unless the caller overrides.
 # Hygiene: keep caches OUT of the repo. Use a global temp dir by default; do not
-# set CARGO_TARGET_DIR anywhere under data/ (e.g., data/target_seq*). See AGENTS.md.
+# Shared cache lives at /var/tmp/vk-target (see AGENTS.md). Do not point CARGO_TARGET_DIR inside the repo.
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/var/tmp/vk-target}"
 mkdir -p "$CARGO_TARGET_DIR"
 

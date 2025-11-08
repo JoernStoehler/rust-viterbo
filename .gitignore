@@ -3,15 +3,14 @@
 target/
 
 # Data artifacts live in Git LFS (see AGENTS.md)
-# Keep local build caches out of git even though they live under data/
+# Legacy guard: if someone recreates old caches under data/, keep them ignored until deleted
 data/target/
 data/bench/release/
 data/bench/tmp/
 data/bench/.rustc_info.json
 
-# Stray/legacy Cargo target caches (must stay untracked)
-data/target_seq*/
-data/target_seq*/**
+# Stray/legacy Cargo target caches (CARGO_TARGET_DIR must stay outside repo)
+data/target*/
 
 # mdBook build output (site is built by CI to gh-pages; sources live in docs/src)
 /docs/book/
