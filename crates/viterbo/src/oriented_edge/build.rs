@@ -124,12 +124,13 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                     rotation_inc.is_finite() && (0.0..=1.0).contains(&rotation_inc),
                     "rotation_inc must be in [0,1]"
                 );
-                // A_ij(y) = (b_F/(2 d_j)) b_Hj - (b_F/(2 d_j)) (n_Hj·U_i^T) y
+                // A_ij(y) = (b_F/d_j) b_Hj - (b_F/d_j) (n_Hj·U_i^T) y
                 let bf = hs[f].c;
                 let a_vec = ut_i.transpose() * hs[h_idx_j].n;
+                let scale = bf / d_j;
                 let action_inc = Aff1 {
-                    a: -a_vec * (bf / (2.0 * d_j)),
-                    b: (bf / (2.0 * d_j)) * hs[h_idx_j].c,
+                    a: -a_vec * scale,
+                    b: scale * hs[h_idx_j].c,
                 };
                 // Image polygon to help downstream sanity checks/visuals.
                 let img = dom.push_forward(&map_ij).unwrap_or_default();

@@ -296,15 +296,16 @@ fn cycle_closure_unique_fixed_point_on_tiny_graph() {
 fn product_of_two_squares(a: f64, b: f64) -> crate::geom4::Poly4 {
     use crate::geom4::Hs4;
     use nalgebra::Vector4;
+    // Coordinates are ordered as (x1, x2, y1, y2); K ⊂ (x1,y1), L ⊂ (x2,y2).
     let hs = vec![
-        // K in (x1,x2): |x1|<=a, |x2|<=a
+        // K in (x1,y1): |x1|<=a, |y1|<=a
         Hs4::new(Vector4::new(1.0, 0.0, 0.0, 0.0), a),
         Hs4::new(Vector4::new(-1.0, 0.0, 0.0, 0.0), a),
-        Hs4::new(Vector4::new(0.0, 1.0, 0.0, 0.0), a),
-        Hs4::new(Vector4::new(0.0, -1.0, 0.0, 0.0), a),
-        // L in (y1,y2): |y1|<=b, |y2|<=b
-        Hs4::new(Vector4::new(0.0, 0.0, 1.0, 0.0), b),
-        Hs4::new(Vector4::new(0.0, 0.0, -1.0, 0.0), b),
+        Hs4::new(Vector4::new(0.0, 0.0, 1.0, 0.0), a),
+        Hs4::new(Vector4::new(0.0, 0.0, -1.0, 0.0), a),
+        // L in (x2,y2): |x2|<=b, |y2|<=b
+        Hs4::new(Vector4::new(0.0, 1.0, 0.0, 0.0), b),
+        Hs4::new(Vector4::new(0.0, -1.0, 0.0, 0.0), b),
         Hs4::new(Vector4::new(0.0, 0.0, 0.0, 1.0), b),
         Hs4::new(Vector4::new(0.0, 0.0, 0.0, -1.0), b),
     ];

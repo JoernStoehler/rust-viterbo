@@ -407,23 +407,56 @@ impl SymmetricHalfspaceGenerator {
     ) -> Result<Poly4, GeneratorError> {
         params.validate()?;
         let mut rng = StdRng::seed_from_u64(seed);
-        let mut hs = Vec::with_capacity(params.directions * 2);
-        for _ in 0..params.directions {
-            let dir = sample_unit_vector(&mut rng);
-            let dir = match &params.anisotropy {
-                Some(mat) => {
-                    let transformed = mat * dir;
-                    normalize_vector(transformed).ok_or_else(|| {
-                        GeneratorError::degenerate("anisotropy map produced a zero direction")
-                    })?
-                }
-                None => dir,
-            };
-            let radius = sample_radius(&mut rng, params.radius_min, params.radius_max);
-            hs.push(Hs4::new(dir, radius));
-            hs.push(Hs4::new(-dir, radius));
+        const MAX_DIR_ATTEMPTS: u32 = 64;
+        const MAX_RESAMPLE_ATTEMPTS: usize = 12;
+        const COS_TOL: f64 = 1.0 - 1e-6; // reject directions closer than ≈1e-3 radians
+        for _ in 0..MAX_RESAMPLE_ATTEMPTS {
+            let mut hs = Vec::with_capacity(params.directions * 2);
+            let mut unique_dirs: Vec<Vector4<f64>> = Vec::with_capacity(params.directions);
+            for _ in 0..params.directions {
+                let dir = {
+                    let mut attempts = 0;
+                    loop {
+                        let raw = sample_unit_vector(&mut rng);
+                        let candidate = match &params.anisotropy {
+                            Some(mat) => {
+                                let transformed = mat * raw;
+                                normalize_vector(transformed).ok_or_else(|| {
+                                    GeneratorError::degenerate(
+                                        "anisotropy map produced a zero direction",
+                                    )
+                                })?
+                            }
+                            None => raw,
+                        };
+                        let too_close = unique_dirs
+                            .iter()
+                            .any(|n| n.dot(&candidate).abs() >= COS_TOL);
+                        if !too_close {
+                            break candidate;
+                        }
+                        attempts += 1;
+                        if attempts >= MAX_DIR_ATTEMPTS {
+                            return Err(GeneratorError::degenerate(
+                                "failed to draw distinct symmetric halfspace normals",
+                            ));
+                        }
+                    }
+                };
+                unique_dirs.push(dir);
+                let radius = sample_radius(&mut rng, params.radius_min, params.radius_max);
+                hs.push(Hs4::new(dir, radius));
+                hs.push(Hs4::new(-dir, radius));
+            }
+            let poly = Poly4::from_h(hs);
+            let h_len = poly.h.len();
+            if h_len >= 4 && h_len <= 2 * params.directions {
+                return Ok(poly);
+            }
         }
-        Ok(Poly4::from_h(hs))
+        Err(GeneratorError::degenerate(
+            "could not build bounded symmetric halfspace sample",
+        ))
     }
 }
 

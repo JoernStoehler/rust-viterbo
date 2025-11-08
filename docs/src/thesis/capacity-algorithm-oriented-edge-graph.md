@@ -195,18 +195,14 @@ Symbol map (fixed‑point and tolerances)
 - $\varepsilon_{\tau}$: tie‑breaking and admissibility slack (code: `GeomCfg.eps_tau`).
 <!-- note: agents — fixed_point_in_poly implements the 2D/1D branches with these exact eps values. -->
 
-### Fixed-point solver (deterministic and robust)
-- Write $\Psi_p(z)=Mz+t$ in the start chart. Solve $(I-M)z=t$:
-  - If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.
-  - If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.
-- Tolerances: treat $|\det(I-M)|<\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.
-<!-- review: choose defaults for ε_det, ε_feas, ε_τ; I propose 1e-12 abs with scaled relative terms. -->
+- Implementation guardrails:
+  - `fixed_point_in_poly` handles both branches and switches to a 1D LP when $(I-M)$ is nearly singular so that we never rely on unstable matrix inverses.
+  - `rotation_angle` returns `None` only for orientation-reversing maps; canonical chart construction rules those out, so failures signal numerical bugs instead of algorithmic cases.
 
 ## Choosing Budgets and Bounds
 - Upper bound $A_{\mathrm{best}}$:
   - Practical: use that $K\subset B_R$ implies $c_{\mathrm{EHZ}}(K)\le c_{\mathrm{EHZ}}(B_R)=\pi R^2$. Compute $R$ from vertices or support data for a quick initial bound.
-  - Tighter: use known $c_{\mathrm{EHZ}}^2 \le C\,\mathrm{vol}(K)$ bounds in $\mathbb{R}^4$ once we finalize citations.  
-  <!-- TODO: Fill exact constants and references in the EHZ background doc and cite here. -->
+  - Tighter: use the volume-capacity inequality documented in `Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#volume-upper-bounds` once we finalize the preferred constant $C_{\mathrm{vol}}$. Reference that doc (not this page) whenever we update $C_{\mathrm{vol}}$ so the inequality stays centralized.
 - Lower bound for progress reporting: $c_{\mathrm{EHZ}}(K)\ge \pi r^2$ if $B_r\subset K$ (inradius).
 <!-- review: confirm default A_best choice (πR^2) until we pin the best constant C. -->
 

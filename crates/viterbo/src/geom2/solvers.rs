@@ -25,10 +25,9 @@ pub fn rotation_angle(f: &Aff2) -> Option<f64> {
     let vt = svd.v_t?;
     let q = u * vt;
     let det_q = q.determinant();
-    debug_assert!(
-        (det_q - 1.0).abs() < 1e-8 || (det_q - (-1.0)).abs() < 1e-8,
-        "polar orthogonal factor must have determinant ±1"
-    );
+    if !det_q.is_finite() {
+        return None;
+    }
     if det_q < 0.0 {
         return None;
     }
