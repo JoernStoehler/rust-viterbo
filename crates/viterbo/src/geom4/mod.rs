@@ -18,10 +18,10 @@ pub(crate) mod cfg;
 mod convert;
 mod faces;
 mod maps;
+pub mod special;
 mod types;
 mod util;
 mod volume;
-pub mod special;
 
 pub use faces::{enumerate_faces_from_h, Face1, Face2, Face3};
 pub use maps::{

@@ -1,8 +1,8 @@
 //! Symplectic matrices, Reeb directions, and 2D face chart maps.
 
-use nalgebra::{Matrix2, Matrix2x4, Matrix4, Matrix4x2, Vector2, Vector4};
 use super::cfg::{SYMPLECTIC_EPS, TIGHT_EPS};
 use super::types::Poly4;
+use nalgebra::{Matrix2, Matrix2x4, Matrix4, Matrix4x2, Vector2, Vector4};
 
 /// Return J = [[0, -I],[I, 0]] with 2x2 blocks.
 ///
@@ -78,33 +78,71 @@ pub fn random_symplectic_4(seed: u64) -> Matrix4<f64> {
     };
     let a_inv_t = a.try_inverse().unwrap().transpose();
     let d = Matrix4::new(
-        a[(0, 0)], a[(0, 1)], 0.0, 0.0, //
-        a[(1, 0)], a[(1, 1)], 0.0, 0.0, //
-        0.0, 0.0, a_inv_t[(0, 0)], a_inv_t[(0, 1)], //
-        0.0, 0.0, a_inv_t[(1, 0)], a_inv_t[(1, 1)],
+        a[(0, 0)],
+        a[(0, 1)],
+        0.0,
+        0.0, //
+        a[(1, 0)],
+        a[(1, 1)],
+        0.0,
+        0.0, //
+        0.0,
+        0.0,
+        a_inv_t[(0, 0)],
+        a_inv_t[(0, 1)], //
+        0.0,
+        0.0,
+        a_inv_t[(1, 0)],
+        a_inv_t[(1, 1)],
     );
     // Symmetric B, C with small magnitude
-    let sym = |r: &mut StdRng, scale: f64| Matrix2::new(
-        r.gen_range(-scale..=scale),
-        r.gen_range(-scale..=scale),
-        0.0,
-        r.gen_range(-scale..=scale),
-    );
+    let sym = |r: &mut StdRng, scale: f64| {
+        Matrix2::new(
+            r.gen_range(-scale..=scale),
+            r.gen_range(-scale..=scale),
+            0.0,
+            r.gen_range(-scale..=scale),
+        )
+    };
     let mut b = sym(&mut rng, 0.5);
     b[(1, 0)] = b[(0, 1)];
     let mut c = sym(&mut rng, 0.5);
     c[(1, 0)] = c[(0, 1)];
     let s = Matrix4::new(
-        1.0, 0.0, b[(0, 0)], b[(0, 1)], //
-        0.0, 1.0, b[(1, 0)], b[(1, 1)], //
-        0.0, 0.0, 1.0, 0.0, //
-        0.0, 0.0, 0.0, 1.0,
+        1.0,
+        0.0,
+        b[(0, 0)],
+        b[(0, 1)], //
+        0.0,
+        1.0,
+        b[(1, 0)],
+        b[(1, 1)], //
+        0.0,
+        0.0,
+        1.0,
+        0.0, //
+        0.0,
+        0.0,
+        0.0,
+        1.0,
     );
     let t = Matrix4::new(
-        1.0, 0.0, 0.0, 0.0, //
-        0.0, 1.0, 0.0, 0.0, //
-        c[(0, 0)], c[(0, 1)], 1.0, 0.0, //
-        c[(1, 0)], c[(1, 1)], 0.0, 1.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0, //
+        0.0,
+        1.0,
+        0.0,
+        0.0, //
+        c[(0, 0)],
+        c[(0, 1)],
+        1.0,
+        0.0, //
+        c[(1, 0)],
+        c[(1, 1)],
+        0.0,
+        1.0,
     );
     d * s * t
 }
@@ -198,11 +236,7 @@ mod tests {
 /// vertices with `y = U x` and taking their convex hull in 2D.
 ///
 /// Returns `None` if too few projected vertices for a 2D hull.
-pub fn face2_as_poly2_hrep(
-    poly: &mut Poly4,
-    i: usize,
-    j: usize,
-) -> Option<crate::geom2::Poly2> {
+pub fn face2_as_poly2_hrep(poly: &mut Poly4, i: usize, j: usize) -> Option<crate::geom2::Poly2> {
     let (u, _ut) = oriented_orth_map_face2(&poly.h, i, j)?;
     // Ensure vertices exist
     poly.ensure_vertices_from_h();

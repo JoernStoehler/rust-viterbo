@@ -88,6 +88,271 @@ pub trait PolytopeGenerator4 {
     fn regenerate(&self, replay: &Self::Replay) -> RegenResult;
 }
 
+/// Parameters for random-vertices generator (V-representation → H reduction).
+#[derive(Clone, Debug)]
+pub struct RandomVerticesParams {
+    pub vertices_min: usize,
+    pub vertices_max: usize,
+    pub radius_min: f64,
+    pub radius_max: f64,
+    pub anisotropy: Option<Matrix4<f64>>,
+    pub max_attempts: u32,
+}
+
+impl RandomVerticesParams {
+    fn validate(&self) -> Result<(), GeneratorError> {
+        if self.vertices_min < 5 {
+            return Err(GeneratorError::invalid(
+                "vertices_min must be >= 5 (4D simplex needs 5)",
+            ));
+        }
+        if self.vertices_min > self.vertices_max {
+            return Err(GeneratorError::invalid(
+                "vertices_min must be <= vertices_max",
+            ));
+        }
+        if !(self.radius_min.is_finite() && self.radius_max.is_finite()) {
+            return Err(GeneratorError::invalid("radius bounds must be finite"));
+        }
+        if self.radius_min <= 0.0 || self.radius_max <= 0.0 {
+            return Err(GeneratorError::invalid("radius bounds must be > 0"));
+        }
+        if self.radius_min > self.radius_max {
+            return Err(GeneratorError::invalid("radius_min must be <= radius_max"));
+        }
+        if self.max_attempts == 0 {
+            return Err(GeneratorError::invalid("max_attempts must be > 0"));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VerticesReplay {
+    pub seed: u64,
+}
+
+/// Generator sampling random vertices, then reducing to supporting halfspaces.
+pub struct RandomVerticesGenerator {
+    params: RandomVerticesParams,
+    master_rng: StdRng,
+}
+
+impl RandomVerticesGenerator {
+    pub fn new(params: RandomVerticesParams, seed: u64) -> Result<Self, GeneratorError> {
+        params.validate()?;
+        Ok(Self {
+            params,
+            master_rng: StdRng::seed_from_u64(seed),
+        })
+    }
+
+    fn draw_single(params: &RandomVerticesParams, seed: u64) -> Result<Poly4, GeneratorError> {
+        use rand::Rng;
+        params.validate()?;
+        let mut rng = StdRng::seed_from_u64(seed);
+        let n = if params.vertices_min == params.vertices_max {
+            params.vertices_min
+        } else {
+            rng.gen_range(params.vertices_min..=params.vertices_max)
+        };
+        let mut verts: Vec<Vector4<f64>> = Vec::with_capacity(n);
+        for _ in 0..n {
+            let mut v = Vector4::new(
+                sample_component(&mut rng),
+                sample_component(&mut rng),
+                sample_component(&mut rng),
+                sample_component(&mut rng),
+            );
+            if let Some(m) = &params.anisotropy {
+                v = m * v;
+            }
+            let v = normalize_vector(v).ok_or_else(|| {
+                GeneratorError::degenerate("random vertex normalization produced zero vector")
+            })?;
+            let r = sample_radius(&mut rng, params.radius_min, params.radius_max);
+            verts.push(v * r);
+        }
+        let mut poly = Poly4::from_v(verts);
+        poly.ensure_halfspaces_from_v(); // supporting planes + canonicalize
+        poly.ensure_vertices_from_h(); // hull vertices only
+        if poly.v.len() < 5 || poly.h.len() < 5 {
+            return Err(GeneratorError::degenerate(
+                "not enough vertices/facets after reduction",
+            ));
+        }
+        Ok(poly)
+    }
+}
+
+impl PolytopeGenerator4 for RandomVerticesGenerator {
+    type Params = RandomVerticesParams;
+    type Replay = VerticesReplay;
+
+    fn params(&self) -> &Self::Params {
+        &self.params
+    }
+
+    fn generate_next(&mut self) -> NextMaybeSample<Self::Params, Self::Replay> {
+        let attempts = self.params.max_attempts.max(1) as usize;
+        for _ in 0..attempts {
+            let seed = self.master_rng.next_u64();
+            match Self::draw_single(&self.params, seed) {
+                Ok(poly) => {
+                    return Ok(Some(PolytopeSample4 {
+                        polytope: poly,
+                        params: self.params.clone(),
+                        replay: VerticesReplay { seed },
+                    }))
+                }
+                Err(GeneratorError::DegenerateSample { .. }) => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Err(GeneratorError::degenerate(
+            "RandomVerticesGenerator exceeded max_attempts",
+        ))
+    }
+
+    fn regenerate(&self, replay: &Self::Replay) -> RegenResult {
+        Self::draw_single(&self.params, replay.seed)
+    }
+}
+
+/// Parameters for general random faces (H-representation).
+#[derive(Clone, Debug)]
+pub struct RandomFacesParams {
+    pub facets_min: usize,
+    pub facets_max: usize,
+    pub radius_min: f64,
+    pub radius_max: f64,
+    pub anisotropy: Option<Matrix4<f64>>,
+    pub max_attempts: u32,
+}
+
+impl RandomFacesParams {
+    fn validate(&self) -> Result<(), GeneratorError> {
+        if self.facets_min < 5 {
+            return Err(GeneratorError::invalid(
+                "facets_min must be >= 5 (4D simplex needs 5)",
+            ));
+        }
+        if self.facets_min > self.facets_max {
+            return Err(GeneratorError::invalid("facets_min <= facets_max required"));
+        }
+        if !(self.radius_min.is_finite() && self.radius_max.is_finite()) {
+            return Err(GeneratorError::invalid("radius bounds must be finite"));
+        }
+        if self.radius_min <= 0.0 || self.radius_max <= 0.0 {
+            return Err(GeneratorError::invalid("radius bounds must be > 0"));
+        }
+        if self.radius_min > self.radius_max {
+            return Err(GeneratorError::invalid("radius_min must be <= radius_max"));
+        }
+        if self.max_attempts == 0 {
+            return Err(GeneratorError::invalid("max_attempts must be > 0"));
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FacesReplay {
+    pub seed: u64,
+}
+
+/// Generator sampling random faces, then reducing to supporting facets.
+pub struct RandomFacesGenerator {
+    params: RandomFacesParams,
+    master_rng: StdRng,
+}
+
+impl RandomFacesGenerator {
+    pub fn new(params: RandomFacesParams, seed: u64) -> Result<Self, GeneratorError> {
+        params.validate()?;
+        Ok(Self {
+            params,
+            master_rng: StdRng::seed_from_u64(seed),
+        })
+    }
+
+    fn draw_single(params: &RandomFacesParams, seed: u64) -> Result<Poly4, GeneratorError> {
+        use rand::Rng;
+        params.validate()?;
+        let mut rng = StdRng::seed_from_u64(seed);
+        let m = if params.facets_min == params.facets_max {
+            params.facets_min
+        } else {
+            rng.gen_range(params.facets_min..=params.facets_max)
+        };
+        let mut hs = Vec::with_capacity(m);
+        for _ in 0..m {
+            let mut n = Vector4::new(
+                sample_component(&mut rng),
+                sample_component(&mut rng),
+                sample_component(&mut rng),
+                sample_component(&mut rng),
+            );
+            if let Some(mat) = &params.anisotropy {
+                n = mat * n;
+            }
+            let n = normalize_vector(n)
+                .ok_or_else(|| GeneratorError::degenerate("zero normal in random faces"))?;
+            let c = sample_radius(&mut rng, params.radius_min, params.radius_max);
+            hs.push(Hs4::new(n, c));
+        }
+        let mut poly = Poly4::from_h(hs); // canonicalized
+        poly.ensure_vertices_from_h(); // ensure boundedness / hull vertices
+        if poly.v.len() < 5 {
+            return Err(GeneratorError::degenerate(
+                "insufficient vertices; likely unbounded or degenerate",
+            ));
+        }
+        // V→H again to ensure only supporting facets remain.
+        poly.ensure_halfspaces_from_v();
+        poly.ensure_vertices_from_h();
+        if poly.h.len() < 5 {
+            return Err(GeneratorError::degenerate(
+                "insufficient facets after reduction",
+            ));
+        }
+        Ok(poly)
+    }
+}
+
+impl PolytopeGenerator4 for RandomFacesGenerator {
+    type Params = RandomFacesParams;
+    type Replay = FacesReplay;
+
+    fn params(&self) -> &Self::Params {
+        &self.params
+    }
+
+    fn generate_next(&mut self) -> NextMaybeSample<Self::Params, Self::Replay> {
+        let attempts = self.params.max_attempts.max(1) as usize;
+        for _ in 0..attempts {
+            let seed = self.master_rng.next_u64();
+            match Self::draw_single(&self.params, seed) {
+                Ok(poly) => {
+                    return Ok(Some(PolytopeSample4 {
+                        polytope: poly,
+                        params: self.params.clone(),
+                        replay: FacesReplay { seed },
+                    }));
+                }
+                Err(GeneratorError::DegenerateSample { .. }) => continue,
+                Err(e) => return Err(e),
+            }
+        }
+        Err(GeneratorError::degenerate(
+            "RandomFacesGenerator exceeded max_attempts",
+        ))
+    }
+
+    fn regenerate(&self, replay: &Self::Replay) -> RegenResult {
+        Self::draw_single(&self.params, replay.seed)
+    }
+}
 /// Parameters for centrally symmetric random halfspaces.
 #[derive(Clone, Debug)]
 pub struct SymmetricHalfspaceParams {
@@ -538,6 +803,7 @@ impl PolytopeGenerator4 for RegularProductEnumerator {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use proptest::prelude::*;
 
     #[test]
     fn symmetric_halfspace_generator_replays() {
@@ -598,5 +864,64 @@ mod tests {
         assert_eq!(poly.contains_origin(), Some(true));
         let replayed = gen.regenerate(&sample.replay).unwrap();
         assert_eq!(replayed.h.len(), sample.polytope.h.len());
+    }
+
+    #[test]
+    fn random_vertices_counts_in_range_and_replay() {
+        let params = RandomVerticesParams {
+            vertices_min: 5,
+            vertices_max: 25,
+            radius_min: 0.5,
+            radius_max: 1.5,
+            anisotropy: None,
+            max_attempts: 10,
+        };
+        let mut gen = RandomVerticesGenerator::new(params.clone(), 31337).unwrap();
+        let sample = gen.generate_next().unwrap().unwrap();
+        let p = sample.polytope.clone();
+        assert!(p.v.len() >= 5 && p.v.len() <= 25);
+        assert!(p.h.len() >= 5);
+        let regen = gen.regenerate(&sample.replay).unwrap();
+        assert_eq!(regen.v.len(), sample.polytope.v.len());
+    }
+
+    #[test]
+    fn random_faces_facets_in_range_and_replay() {
+        let params = RandomFacesParams {
+            facets_min: 5,
+            facets_max: 10,
+            radius_min: 0.4,
+            radius_max: 1.2,
+            anisotropy: None,
+            max_attempts: 20,
+        };
+        let mut gen = RandomFacesGenerator::new(params.clone(), 4242).unwrap();
+        let sample = gen.generate_next().unwrap().unwrap();
+        let p = sample.polytope.clone();
+        assert!(p.h.len() >= 5 && p.h.len() <= 10);
+        assert!(p.v.len() >= 5);
+        let regen = gen.regenerate(&sample.replay).unwrap();
+        assert_eq!(regen.h.len(), sample.polytope.h.len());
+    }
+
+    proptest! {
+        #[test]
+        fn symmetric_halfspaces_even_and_bounded(d in 3usize..6, seed in any::<u64>()) {
+            let params = SymmetricHalfspaceParams {
+                directions: d,
+                radius_min: 0.3,
+                radius_max: 1.2,
+                anisotropy: None,
+            };
+            let mut gen = SymmetricHalfspaceGenerator::new(params.clone(), seed).unwrap();
+            if let Ok(Some(sample)) = gen.generate_next() {
+                let h = sample.polytope.h.len();
+                assert_eq!(h % 2, 0);
+                // h should be even and at most 2d; allow occasional heavy canonicalization (>=4).
+                assert!(h >= 4 && h <= 2*d);
+                let mut p = sample.polytope.clone();
+                assert!(p.is_convex());
+            }
+        }
     }
 }

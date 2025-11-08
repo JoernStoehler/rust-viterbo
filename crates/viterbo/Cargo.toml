@@ -9,6 +9,7 @@ rand = { version = "0.8", features = ["std", "std_rng"] }
 
 [dev-dependencies]
 criterion = "0.5"
+proptest = "1"
 
 [[bench]]
 name = "poly2_bench"
@@ -20,4 +21,8 @@ harness = false
 
 [[bench]]
 name = "oe4_bench"
+harness = false
+
+[[bench]]
+name = "gen_bench"
 harness = false

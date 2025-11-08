@@ -39,7 +39,12 @@ fn bench_push_forward(c: &mut Criterion) {
     let edges: Vec<_> = g
         .edges
         .iter()
-        .filter(|e| matches!(e.dom_in.halfspace_intersection(), HalfspaceIntersection::Bounded(_)))
+        .filter(|e| {
+            matches!(
+                e.dom_in.halfspace_intersection(),
+                HalfspaceIntersection::Bounded(_)
+            )
+        })
         .take(64)
         .cloned()
         .collect();
@@ -76,7 +81,11 @@ fn bench_tau_inequalities(c: &mut Criterion) {
     }
     let other_facet = |r: &Ridge, f: usize| -> usize {
         let (a, b) = (r.facets.0 .0, r.facets.1 .0);
-        if a == f { b } else { a }
+        if a == f {
+            b
+        } else {
+            a
+        }
     };
     // Collect small workset: (ri, rj, facet, chart_ut) and precomputed v
     let mut work = Vec::new();
@@ -134,7 +143,12 @@ fn bench_per_edge_lower_bound(c: &mut Criterion) {
     let edges: Vec<_> = g
         .edges
         .iter()
-        .filter(|e| matches!(e.dom_in.halfspace_intersection(), HalfspaceIntersection::Bounded(_)))
+        .filter(|e| {
+            matches!(
+                e.dom_in.halfspace_intersection(),
+                HalfspaceIntersection::Bounded(_)
+            )
+        })
         .take(64)
         .cloned()
         .collect();

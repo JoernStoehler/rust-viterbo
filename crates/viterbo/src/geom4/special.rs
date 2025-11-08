@@ -63,7 +63,12 @@ pub fn orthogonal_simplex(a: f64, b: f64, c: f64, d: f64) -> Poly4 {
     let v3 = Vector4::new(a, b, c, 0.0);
     let v4 = Vector4::new(a, b, c, d);
     let centroid = (v0 + v1 + v2 + v3 + v4) / 5.0;
-    let verts = vec![v0 - centroid, v1 - centroid, v2 - centroid, v3 - centroid, v4 - centroid];
+    let verts = vec![
+        v0 - centroid,
+        v1 - centroid,
+        v2 - centroid,
+        v3 - centroid,
+        v4 - centroid,
+    ];
     Poly4::from_v(verts)
 }
-

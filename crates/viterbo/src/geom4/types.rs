@@ -57,16 +57,16 @@ pub struct Poly4 {
 /// - preserve original relative order of remaining facets.
 fn canonicalize_h_strict(hs: Vec<Hs4>) -> Vec<Hs4> {
     // Normalize and drop degenerate.
-    let tmp: Vec<Hs4> = hs
-        .iter()
-        .filter_map(|h| h.normalized())
-        .collect();
+    let tmp: Vec<Hs4> = hs.iter().filter_map(|h| h.normalized()).collect();
     if tmp.is_empty() {
         return tmp;
     }
     // Redundancy pruning: keep only facets that are near-active on some vertex.
     // Compute vertices once from the current set (may be expensive but robust).
-    let mut poly = Poly4 { h: tmp.clone(), v: Vec::new() };
+    let mut poly = Poly4 {
+        h: tmp.clone(),
+        v: Vec::new(),
+    };
     poly.ensure_vertices_from_h();
     if poly.v.is_empty() {
         // Unbounded or degenerate: return normalized set as-is.
@@ -141,7 +141,10 @@ impl Poly4 {
     #[inline]
     pub fn from_h(h: Vec<Hs4>) -> Self {
         let h_canon = canonicalize_h_strict(h);
-        Self { h: h_canon, v: Vec::new() }
+        Self {
+            h: h_canon,
+            v: Vec::new(),
+        }
     }
     #[inline]
     pub fn from_v(v: Vec<Vector4<f64>>) -> Self {

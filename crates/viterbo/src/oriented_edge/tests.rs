@@ -81,7 +81,11 @@ fn tau_domain_basic_properties_on_cube() {
     }
     let other_facet = |r: &Ridge, f: usize| -> usize {
         let (a, b) = (r.facets.0 .0, r.facets.1 .0);
-        if a == f { b } else { a }
+        if a == f {
+            b
+        } else {
+            a
+        }
     };
     // Check a subset to keep the test fast.
     let sample_edges = g.edges.iter().take(64);
@@ -242,8 +246,14 @@ fn cycle_closure_unique_fixed_point_on_tiny_graph() {
         facet: FacetId(10),
         dom_in: poly_unit.clone(),
         img_out: poly_unit.clone(),
-        map_ij: Affine2 { m: m_half, t: Vector2::new(0.0, 0.0) },
-        action_inc: Aff1 { a: Vector2::new(0.0, 0.0), b: 0.0 },
+        map_ij: Affine2 {
+            m: m_half,
+            t: Vector2::new(0.0, 0.0),
+        },
+        action_inc: Aff1 {
+            a: Vector2::new(0.0, 0.0),
+            b: 0.0,
+        },
         rotation_inc: 0.0,
         lb_action: 0.0,
     };
@@ -253,8 +263,14 @@ fn cycle_closure_unique_fixed_point_on_tiny_graph() {
         facet: FacetId(11),
         dom_in: poly_unit.clone(),
         img_out: poly_unit.clone(),
-        map_ij: Affine2 { m: m_half, t: t_total },
-        action_inc: Aff1 { a: Vector2::new(0.0, 0.0), b: 0.0 },
+        map_ij: Affine2 {
+            m: m_half,
+            t: t_total,
+        },
+        action_inc: Aff1 {
+            a: Vector2::new(0.0, 0.0),
+            b: 0.0,
+        },
         rotation_inc: 0.0,
         lb_action: 0.0,
     };
@@ -303,13 +319,20 @@ fn golden_capacity_product_of_squares_matches_min_area() {
     let mut p4 = product_of_two_squares(1.0, 2.0);
     assert!(p4.check_canonical().is_ok());
     let g = build_graph(&mut p4, GeomCfg::default());
-    let (best, _cycle) = dfs_solve(&g, GeomCfg::default(), SearchCfg::default()).expect("capacity exists");
+    let (best, _cycle) =
+        dfs_solve(&g, GeomCfg::default(), SearchCfg::default()).expect("capacity exists");
     let expected = 4.0;
-    assert!((best - expected).abs() <= 5e-6, "capacity {best} vs expected {expected}");
+    assert!(
+        (best - expected).abs() <= 5e-6,
+        "capacity {best} vs expected {expected}"
+    );
     // Volume (4D) is product of areas: 4 * 16 = 64. Systolic ratio vol / c^2 = 64 / 16 = 4.
     let volume = 64.0;
     let systolic = volume / (best * best);
-    assert!((systolic - 4.0).abs() <= 1e-6, "systolic ratio {systolic} vs 4");
+    assert!(
+        (systolic - 4.0).abs() <= 1e-6,
+        "systolic ratio {systolic} vs 4"
+    );
 }
 
 #[test]
@@ -319,7 +342,8 @@ fn golden_capacity_hypercube_minus1_1_pow4_is_4() {
     let mut p4 = product_of_two_squares(1.0, 1.0);
     assert!(p4.check_canonical().is_ok());
     let g = build_graph(&mut p4, GeomCfg::default());
-    let (best, _cycle) = dfs_solve(&g, GeomCfg::default(), SearchCfg::default()).expect("capacity exists");
+    let (best, _cycle) =
+        dfs_solve(&g, GeomCfg::default(), SearchCfg::default()).expect("capacity exists");
     assert!((best - 4.0).abs() <= 5e-6, "capacity {best} vs 4");
 }
 
@@ -328,27 +352,41 @@ fn invariance_under_block_rotation_symplectomorphism() {
     // Capacity must be invariant under linear symplectomorphisms.
     // Use the product-of-squares example and a block rotation M=diag(R,R) (R∈SO(2)).
     use crate::geom4::is_symplectic;
-    use nalgebra::{Matrix2, Matrix4, Vector4};
     use crate::oriented_edge::{build_graph, dfs_solve, SearchCfg};
+    use nalgebra::{Matrix2, Matrix4, Vector4};
     let mut base = product_of_two_squares(1.0, 2.0);
     assert!(base.check_canonical().is_ok());
     let gb = build_graph(&mut base, GeomCfg::default());
-    let (c0, _cyc0) = dfs_solve(&gb, GeomCfg::default(), SearchCfg::default()).expect("capacity exists");
+    let (c0, _cyc0) =
+        dfs_solve(&gb, GeomCfg::default(), SearchCfg::default()).expect("capacity exists");
     // Block rotation
     let th = std::f64::consts::FRAC_PI_6; // 30°
     let r = Matrix2::new(th.cos(), -th.sin(), th.sin(), th.cos());
     let m = Matrix4::new(
-        r[(0,0)], r[(0,1)], 0.0, 0.0,
-        r[(1,0)], r[(1,1)], 0.0, 0.0,
-        0.0, 0.0, r[(0,0)], r[(0,1)],
-        0.0, 0.0, r[(1,0)], r[(1,1)],
+        r[(0, 0)],
+        r[(0, 1)],
+        0.0,
+        0.0,
+        r[(1, 0)],
+        r[(1, 1)],
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        r[(0, 0)],
+        r[(0, 1)],
+        0.0,
+        0.0,
+        r[(1, 0)],
+        r[(1, 1)],
     );
     assert!(is_symplectic(&m));
     let transformed = base.push_forward(m, Vector4::zeros()).expect("invertible");
     let mut p4_t = transformed.clone();
     assert!(p4_t.check_canonical().is_ok());
     let gt = build_graph(&mut p4_t, GeomCfg::default());
-    let (c1, _cyc1) = dfs_solve(&gt, GeomCfg::default(), SearchCfg::default()).expect("capacity exists after transform");
+    let (c1, _cyc1) = dfs_solve(&gt, GeomCfg::default(), SearchCfg::default())
+        .expect("capacity exists after transform");
     assert!(
         (c0 - c1).abs() <= 5e-6,
         "capacity must be invariant: {c0} vs {c1}"
@@ -360,7 +398,10 @@ fn cross_polytope_and_simplex_smoke_capacities() {
     use crate::geom4::special::cross_polytope_l1;
     use crate::oriented_edge::{build_graph, dfs_solve, SearchCfg};
     let cfg = GeomCfg::default();
-    let scfg = SearchCfg { use_rotation_prune: false, rotation_budget: 2.0 };
+    let scfg = SearchCfg {
+        use_rotation_prune: false,
+        rotation_budget: 2.0,
+    };
     // Cross polytope (ℓ1 ball) radius 1.
     let mut cp = cross_polytope_l1(1.0);
     assert!(cp.check_canonical().is_ok());
