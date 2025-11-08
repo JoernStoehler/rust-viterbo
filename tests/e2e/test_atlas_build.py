@@ -41,6 +41,8 @@ def test_build_dataset_tiny(tmp_path: Path):
     hypercube = df.filter(pl.col("family_name").str.contains("hypercube")).to_dicts()
     assert hypercube, "expected hypercube row in special catalog"
     assert hypercube[0]["volume"] == pytest.approx(16.0, rel=1e-6)
+    assert hypercube[0]["capacity_ehz"] == pytest.approx(4.0, rel=1e-6)
+    assert hypercube[0]["systolic_ratio"] == pytest.approx(0.5, rel=1e-6)
 
     with preview_path.open("r", encoding="utf-8") as handle:
         preview = json.load(handle)

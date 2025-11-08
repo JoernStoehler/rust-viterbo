@@ -101,11 +101,18 @@ if (( ${#BENCH_NAMES[@]} > 0 )); then
   done
   for bname in "${BENCH_NAMES[@]}"; do
     echo ">>> cargo bench (-p $PKG --bench $bname ${CARGO_ARGS[*]:-}) target=$CARGO_TARGET_DIR warmup=$BENCH_WARMUP measure=$BENCH_MEASURE samples=$BENCH_SAMPLES ${CRITERION_ARGS[*]:-}"
-    cargo bench -p "$PKG" --bench "$bname" "${CARGO_ARGS[@]:-}" -- \
-      --warm-up-time "$BENCH_WARMUP" \
-      --measurement-time "$BENCH_MEASURE" \
-      --sample-size "$BENCH_SAMPLES" \
-      "${CRITERION_ARGS[@]:-}"
+    if (( ${#CRITERION_ARGS[@]} > 0 )); then
+      cargo bench -p "$PKG" --bench "$bname" "${CARGO_ARGS[@]}" -- \
+        --warm-up-time "$BENCH_WARMUP" \
+        --measurement-time "$BENCH_MEASURE" \
+        --sample-size "$BENCH_SAMPLES" \
+        "${CRITERION_ARGS[@]}"
+    else
+      cargo bench -p "$PKG" --bench "$bname" "${CARGO_ARGS[@]}" -- \
+        --warm-up-time "$BENCH_WARMUP" \
+        --measurement-time "$BENCH_MEASURE" \
+        --sample-size "$BENCH_SAMPLES"
+    fi
   done
 else
   echo "warning: could not discover bench names; running cargo bench without per-bench args"

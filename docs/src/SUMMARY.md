@@ -11,3 +11,4 @@
 - [4D Polytopes (H/V-rep)](thesis/geom4d_polytopes.md)
 - [4D Volume Algorithm](thesis/geom4d_volume.md)
 - [Random Polytope Generators](thesis/random-polytopes.md)
+- [Implementation Status FAQ](thesis/status-math.md)

@@ -1,0 +1,11 @@
+| bench | parameter | samples | min (ns) | mean (ns) | stddev (ns) |
+| --- | --- | ---: | ---: | ---: | ---: |
+| mahler_next | default | 50 | 300216.846 | 303182.077 | 4060.104 |
+| mahler_regen | default | 50 | 301370.897 | 303424.935 | 2605.117 |
+| random_faces_next | 5-10 | 50 | 22307.709 | 22793.297 | 645.475 |
+| random_vertices_next | 5-25 | 50 | 6407580.583 | 6546529.745 | 127826.064 |
+| regular_product_next | 8x10 | 50 | 721.484 | 727.615 | 12.202 |
+| regular_product_regen | 8x10 | 50 | 701.124 | 714.137 | 13.630 |
+| sym_halfspaces_generate_single | d5 | 50 | 23225.449 | 24535.334 | 1237.717 |
+
+_Updated 2025-11-08 16:33:39Z · commit 7bd6b64 · host 58a0cbf58a7c · rustc rustc 1.91.0 (f8297e351 2025-10-28)_

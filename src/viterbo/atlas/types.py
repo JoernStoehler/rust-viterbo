@@ -66,19 +66,41 @@ def poly_dict_to_record(payload: Mapping[str, Any]) -> PolytopeRecord:
     return PolytopeRecord(vertices=vertices, halfspaces=halfspaces)
 
 
-def compute_volume(poly: PolytopeRecord) -> float:
-    """Use the native helper to compute 4D volume from half-spaces."""
-
+def _halfspaces_for_native(
+    poly: PolytopeRecord,
+) -> list[tuple[tuple[float, float, float, float], float]]:
     hs_for_native = []
     for h in poly.halfspaces:
         if len(h) != 5:
             raise ValueError("halfspaces must be length-5 lists [n0,n1,n2,n3,c]")
-        normal = (h[0], h[1], h[2], h[3])
-        hs_for_native.append((normal, h[4]))
+        normal = (float(h[0]), float(h[1]), float(h[2]), float(h[3]))
+        hs_for_native.append((normal, float(h[4])))
+    return hs_for_native
+
+
+def compute_volume(poly: PolytopeRecord) -> float:
+    """Use the native helper to compute 4D volume from half-spaces."""
+
+    hs_for_native = _halfspaces_for_native(poly)
     try:
         return float(_NATIVE.poly4_volume_from_halfspaces(hs_for_native))
     except Exception:
         return math.nan
+
+
+def compute_capacity(poly: PolytopeRecord) -> float:
+    """Compute c_EHZ using the oriented-edge solver (returns NaN on failure)."""
+
+    hs_for_native = _halfspaces_for_native(poly)
+    try:
+        result = _NATIVE.poly4_capacity_ehz_from_halfspaces(hs_for_native)
+    except Exception:
+        return math.nan
+    if result is None:
+        return math.nan
+    if math.isnan(result):
+        return math.nan
+    return float(result)
 
 
 def build_atlas_row(
@@ -93,7 +115,10 @@ def build_atlas_row(
 ) -> AtlasRow:
     record = poly_dict_to_record(poly_payload)
     volume = compute_volume(record)
-    capacity = float(capacity_ehz) if capacity_ehz is not None else math.nan
+    if capacity_ehz is not None:
+        capacity = float(capacity_ehz)
+    else:
+        capacity = compute_capacity(record)
     orbit = orbit_label or "unavailable"
     systolic = systolic_ratio(capacity, volume)
     return AtlasRow(

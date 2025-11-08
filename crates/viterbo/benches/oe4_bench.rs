@@ -40,10 +40,15 @@ fn bench_push_forward(c: &mut Criterion) {
         .edges
         .iter()
         .filter(|e| {
-            matches!(
-                e.dom_in.halfspace_intersection(),
-                HalfspaceIntersection::Bounded(_)
-            )
+            // Some edges (especially on symmetric cubes) produce singular
+            // ψ_ij maps when the ridge is parallel to the Reeb direction.
+            // Skip them so the bench keeps a stable workset instead of
+            // panicking on `.push_forward` expecting invertibility.
+            e.map_ij.m.determinant().abs() > 1e-12
+                && matches!(
+                    e.dom_in.halfspace_intersection(),
+                    HalfspaceIntersection::Bounded(_)
+                )
         })
         .take(64)
         .cloned()

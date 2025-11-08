@@ -86,9 +86,13 @@ def collect_group_rows(group_dir: Path, context: dict[str, str]) -> List[dict[st
     for estimates_path in sorted(group_dir.glob("**/new/estimates.json")):
         rel = estimates_path.relative_to(group_dir)
         parts = rel.parts
-        if len(parts) < 4:
+        if len(parts) >= 4:
+            bench_name, parameter = parts[0], parts[1]
+        elif len(parts) >= 3:
+            # Some benches (e.g., volume4) only encode the parameter level.
+            bench_name, parameter = group_dir.name, parts[0]
+        else:
             continue
-        bench_name, parameter = parts[0], parts[1]
         estimates = json.loads(estimates_path.read_text())
         mean_ns = estimates.get("mean", {}).get("point_estimate")
         std_ns = estimates.get("std_dev", {}).get("point_estimate")

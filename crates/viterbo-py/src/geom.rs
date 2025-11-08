@@ -1,9 +1,10 @@
 //! Geometric helper bindings (kept separate so `lib.rs` stays tiny).
 
-use nalgebra::{Vector2, Vector4};
-use pyo3::exceptions::{PyNotImplementedError, PyValueError};
+use crate::common::{map_volume_err, poly4_from_py_halfspaces};
+use nalgebra::Vector2;
+use pyo3::exceptions::PyNotImplementedError;
 use pyo3::prelude::*;
-use viterbo::geom4::{volume4, Hs4, Poly4};
+use viterbo::geom4::volume4;
 
 #[pyfunction]
 pub fn parallelogram_area(a: (f64, f64), b: (f64, f64)) -> f64 {
@@ -30,20 +31,8 @@ pub fn polygon_polar_todo() -> PyResult<()> {
 pub fn poly4_volume_from_halfspaces(
     hs: Vec<((f64, f64, f64, f64), f64)>,
 ) -> PyResult<f64> {
-    if hs.len() < 5 {
-        return Err(PyValueError::new_err(
-            "need at least 5 half-spaces for a bounded 4D polytope",
-        ));
-    }
-    let mut poly = Poly4::from_h(
-        hs.into_iter()
-            .map(|(normal, c)| {
-                let n = Vector4::new(normal.0, normal.1, normal.2, normal.3);
-                Hs4::new(n, c)
-            })
-            .collect(),
-    );
-    volume4(&mut poly).map_err(|err| PyValueError::new_err(err.to_string()))
+    let mut poly = poly4_from_py_halfspaces(hs)?;
+    volume4(&mut poly).map_err(map_volume_err)
 }
 
 pub fn register(m: &PyModule) -> PyResult<()> {

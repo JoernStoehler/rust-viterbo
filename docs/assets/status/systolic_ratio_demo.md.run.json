@@ -1,0 +1,7 @@
+{
+  "timestamp": "2025-11-08T16:34:12Z",
+  "git_commit": "7bd6b64a51d275a24fd022ccc0a54306323a5cb2",
+  "command": "cargo run -p viterbo --example systolic_ratio --release",
+  "host": "58a0cbf58a7c",
+  "notes": "Example prints capacity/volume timings for a 9-facet cube-with-cap polytope."
+}
