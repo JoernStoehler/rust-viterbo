@@ -142,7 +142,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `safe --timeout 60 -- cargo test -q -p viterbo`
   - `safe --timeout 120 -- bash scripts/rust-test.sh -p viterbo -- -q`
   - `safe --timeout 300 -- uv run pytest -q -m e2e tests/e2e/test_atlas_build.py::test_build_dataset_tiny`
-  - Atlas data (full): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/full.json`
+  - Atlas data (small): `safe --timeout 300 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/small.json`
   - Rust benches (quick): `safe --timeout 180 -- bash scripts/rust-bench-quick.sh`
   - Rust benches (regular → data/bench/criterion): `safe --timeout 300 -- bash scripts/rust-bench.sh`
   - Bench docs stage (CSV/Markdown refresh): `safe --timeout 120 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json`

@@ -1,62 +1,123 @@
 <!-- Author: Codex & Jörn -->
 
-This document describes an experiment idea, or rather a dataset idea that can be reused by many other experiments.
+# Atlas Dataset
 
-We want to create a dataset with many different polytopes as rows, and various computed quantities as columns. We can use different sources for (4d, convex, star-shaped) polytopes, importantly different random distributions to sample from, and enumerations of certain classes, and lists of special polytopes from the literature or that are interesting for other reasons. Generator design, interface conventions, and the growing catalogue now live in [Random Polytope Generators](./random-polytopes.md#random-polytopes); this page focuses on how the atlas experiment consumes those generators.
+Atlas aggregates many families of 4D, star-shaped, convex polytopes into one table so downstream experiments do not need to orchestrate generators manually. The `src/viterbo/atlas` package owns the pipeline:
 
-## Config Format
+- `stage_build.py` validates a JSON config and writes a Parquet dataset + provenance sidecar.
+- `stage_visualize.py` turns any dataset into a compact JSON preview (`docs/assets/atlas/*.json`) that the mdBook can embed.
+- `torch_dataset.py` exposes a minimal `torch.utils.data.Dataset` wrapper so ML experiments can pull features without bespoke glue.
 
-- JSON configs (see `configs/atlas/test.json`) enumerate `sources`, each with a `name` and an explicit `rows` count. Enumerative sources may use `max_rows` when they halt naturally (the build stage treats `max_rows` as the emitted row count for reproducible datasets).
-- Global knobs (`seed`, output path, provenance) remain at the top level; there is no single `rows_total` anymore. Scaling up/down is done by editing the per-source integers.
-- The build stage records `source`, `source_row`, and `replay_token` columns so downstream analysis knows exactly how many rows originated from each generator.
+Generator internals and mathematical context continue to live in [Random Polytope Generators](./random-polytopes.md#random-polytopes); this page documents how Atlas consumes them, the schema we keep stable, and the trade-offs we made.
 
-Random distributions mainly distinguish themselves by whether we target a half-space or vertex count, whether there are constraints we respect, e.g. an in-sphere, or a circum-sphere, or a lagrangian product structure.
-We don't care about affine symplectomorphisms, so volume normalization doesn't matter, and at most helps with numerics. We care about star-shapedness, so we recenter, or discard invalid polytopes during generation.
+## Row schema
 
-We may want to enumerate the class of lagrangian products of 2d regular polygons with a rational rotation angle. The viterbo counterexample is of this form, and we may find more counterexamples this way.
-This is in addition to random lagrangian products.
+Each row represents a single polytope. The columns we keep stable today are:
 
-Another random class of interest are Mahler-conjecture polygons, i.e. products $K x K^o$ for 2d convex bodies K. We can sample K randomly (see the Mahler sampler in [Random Polytope Generators](./random-polytopes.md#random-polytopes)). It's proven that the Viterbo Conjecture is equivalent to the Mahler Conjecture in this case, and the Mahler Conjecture is known to be true in 2d, so these polytopes should all have systolic ratio <= 1.
+| Column            | Type            | Description |
+| ----------------- | --------------- | ----------- |
+| `row_id`          | int64           | Global monotonically increasing index. |
+| `family`          | str             | Generator family name (`symmetric_halfspaces`, `mahler_products`, `regular_products`, `special_catalog`). |
+| `family_name`     | str             | Human-readable alias from the config (e.g. `regular_demo` or `special_baseline:hypercube`). |
+| `family_parameters` | JSON string  | Serialized copy of the generator parameters that produced the row (including derived seeds). |
+| `replay_token`    | JSON string     | Token we pass back to the PyO3 bindings to regenerate the exact polytope. |
+| `vertices`        | list\[list\[float\]] | V-representation, always eagerly materialized. |
+| `halfspaces`      | list\[list\[float\]] | H-representation as `[n0, n1, n2, n3, c]` tuples. |
+| `vertex_count` / `halfspace_count` | int64 | Derived counts, handy for quick slicing and for the preview asset. |
+| `volume`          | float64         | Computed via `_native.poly4_volume_from_halfspaces`. |
+| `capacity_ehz`    | float64         | Currently `NaN` (see “Gaps” below). |
+| `dominant_orbit`  | str             | `"unavailable"` placeholder until we expose orbit finders. |
+| `systolic_ratio`  | float64         | `capacity_ehz^2 / (2·volume)`; also `NaN` until capacities land. |
 
-For special polytopes, we mainly care about
-- the viterbo counterexample by Heim-Kisliv (2024)
-- the recentered orthogonal unit simplex (0, e_1, e_2, e_3, e_4)
-- the hypercube [-1,1]^4
-- the cross polytope conv(±e_1, ±e_2, ±e_3, ±e_4)
-- the symplectic disc, i.e. any *symplectic* instead of lagrangian product of two 2d polytopes, since 2d polytopes are symplectomorphic to discs (which only matters for *symplectic* products, not for lagrangian products, since in latter case there's no symplectomorphism that homotopies both factors at the same time to discs)
+The row schema is intentionally redundant: we keep both H- and V-representations, plus replay metadata, so any downstream experiment can decide how lazy it wants to be.
 
-There's other classes related to c_ECH capacity, mayyybe we will add those later.
+## Source families
 
-For columns, we want to compute
-- the geometric representation: half-spaces, vertices
-- volume
-- EHZ capacity
-  - via minkowski billiard algorithm for lagrangian products
-  - via our combinatorical algorithm in the 2-face graph
-  - via the HK linear programming algorithm
-- the minimum action orbit
-  - again via the above algorithms
-- the systolic ratio = c_EHZ^2 / (2 vol)
-- future: the EHZ capacity spectrum, i.e. the list of lowest-action orbits, not just the minimum one; we do not have an algorithm for this yet, though it's easy to get a basic one by dropping the rotation constraint, rethinking the exclusion of paths along 1-faces, rethinking the "visit each 3-face at most once" theorem, and then only using a constant action cutoff to enumerate all orbits instead of just the minimum one.
+Each JSON source entry selects a family, number of rows, and family-specific parameters. The following mapping is implemented by `src/viterbo/atlas/sources.py`:
 
-It may make sense to look at umap/t-sne projections of the dataset. Potential metrics of similarity between polytopes include
-- Hausdorff distance between boundaries
-- for equal vertex count: Sum of squared distances, minimized over a vertex matching
-- Hausdorff distance, minimized over affine symplectomorphisms (might require best-guess symplectomorphisms via gradient descent)
-It makes sense to normalize volume to 1 first when computing distances.
+1. **`symmetric_halfspaces`** – repeatedly calls the PyO3 binding `rand4_symmetric_halfspace_sample(params, seed)` which wraps `SymmetricHalfspaceGenerator` from the Rust crate. Config knobs:
+   - `directions`, `radius_min`, `radius_max`
+   - optional `anisotropy` (4×4 matrix) to bias directions
+2. **`mahler_products`** – deterministic sampling of Mahler products `K × K°`. Config carries the `radial_cfg` and `bounds` dictionaries described in the thesis.
+3. **`regular_products`** – enumerates lagrangian products of two regular polygons. Config lists `factors_a`/`factors_b` (each `sides`, `rotation`, `scale`) plus `max_pairs`.
+4. **`special_catalog`** – deterministic catalogue of hand-coded shapes (currently the hypercube `[-1,1]^4`, the cross polytope, and the orthogonal simplex). Config sets `rows` and a list of `members`; when `rows` exceeds the number of listed members we cycle the list.
 
-We can augment distance metrics by feature vectors if we e.g. want to further distinguish similar polytopes but different systolic ratios or equivalently capacities after normalizing volume.
+Every random source derives its own stream seed from the global `config.seed`, plus an offset, so rows stay reproducible across versions.
 
-The dataset is intended to be used for
-- scanning the dataset for more counterexamples to the Viterbo Conjecture that are different from the known one
-- fitting regression and classification models
-- using distance metrics to simplify the regions in polytope-space and investigate whether there are large components of counterexamples etc.
-- just having data to immerse oneself in
-- benchmarking algorithms against each other on a large variety of polytopes
-- it encourages high code quality, and working math algorithms with optimized performance, which is useful for other experiments as well
+## Config files
 
-For E2E testing we simply create ~10 rows, maybe 1-3 per random distribution to balance size distribution, after picking 1 from any enumeration scheme plus the special polytopes. Same column, row format, just fewer rows.
+Config version 3 (see `configs/atlas/test.json`, `small.json`, `large.json`) uses the following structure:
 
-We may also have a profiled version, where the full dataset creation is profiled to identify hotspots. If we include extra benchmark columns, we can then connect polytope size and distribution to the runtime cost of different algorithms.
+```json
+{
+  "version": 3,
+  "seed": 42,
+  "sources": [
+    {
+      "name": "sym_tiny",
+      "family": "symmetric_halfspaces",
+      "rows": 4,
+      "params": { "directions": 6, "radius_min": 0.7, "radius_max": 1.25 }
+    },
+    {
+      "name": "mahler_probe",
+      "family": "mahler_products",
+      "rows": 3,
+      "params": {
+        "radial_cfg": { "vertex_count": {"kind": "uniform", "min": 6, "max": 8}, ... },
+        "bounds": { "r_in_min": 0.2, "r_out_max": 2.5 },
+        "max_attempts": 8
+      }
+    },
+    { "... regular products ..." },
+    { "... special catalog ..." }
+  ],
+  "out": {
+    "dataset": "data/atlas/test.parquet",
+    "preview": "docs/assets/atlas/test_preview.json",
+    "preview_limit": 24
+  }
+}
+```
 
-The building of large datasets also matters for the simplex-dataset, that may yield a computer-assisted proof of the viterbo conjecture for simplices.
+Key points:
+
+- Paths in `out` are relative to the repo root. The builder resolves them to absolute paths before writing.
+- `rows` is mandatory except for catalogue sources where it can be inferred from the `members` list.
+- `preview` is optional, but we keep it enabled for `test` and `small` so the mdBook always has a recent asset.
+- `stage_build.py --preview-only --config <file>` lets us refresh the preview without regenerating the (possibly huge) dataset.
+
+## Storage, previews, and alternatives
+
+- **Storage format**: Apache Parquet with Zstd compression. Alternatives we considered:
+  1. Arrow IPC/Feather – adds zero-copy sharing with Python, but Parquet keeps the datasets diffable and is friendlier for Git LFS.
+  2. SQLite – tempting for random access but significantly more boilerplate, and harder to hook into Torch workflows.
+  3. JSONL – extremely easy to inspect, but 10–100× larger and no nested-type schema.
+- **Preview assets**: `docs/assets/atlas/*.json` contain a handful of high-signal columns (`row_id`, `family`, counts, `volume`, `systolic_ratio`). We intentionally drop the heavy geometry columns here so the mdBook can embed the table without exploding bundle size.
+- **Torch loader**: `AtlasTorchDataset` (see `src/viterbo/atlas/torch_dataset.py`) takes a dataset path, list of feature columns, and optional target column, then exposes an iterable over `torch.float32` tensors. We keep the class tiny on purpose so experiments can subclass or wrap it as needed.
+
+## Current gaps (and required Rust work)
+
+- `capacity_ehz`, `dominant_orbit`, and the derived `systolic_ratio` are stubs today (`NaN` + `"unavailable"`). We need the following native helpers to finish the acceptance criteria:
+  1. A PyO3 binding for whichever EHZ algorithm we settle on (likely the HK LP solver and the billiard code).
+  2. A binding that returns not just the minimum action value but also the orbit description so we can populate `dominant_orbit`.
+- Special catalogue currently ships hand-coded shapes. The Heim–Kislev counterexample and other literature polytopes still need to be coded up once the Rust side lands.
+- Visualization is table-only. When we start comparing families we should add quick scatterplots (UMAP/t-SNE) once distance metrics become available.
+
+## Companion files
+
+- `configs/atlas/test.json` – tiny fixture used by the E2E test suite and docs preview.
+- `configs/atlas/small.json` – ~10³ rows; runs in a few seconds and is the recommended day-to-day dataset for analysis.
+- `configs/atlas/large.json` – aspirational 10⁶-row run (1–10 hours). We will not run this until the parallel EHZ implementations land.
+- `docs/assets/atlas/test_preview.json` – committed preview (kept in sync by `stage_build`).
+- `docs/assets/atlas/small_preview.json` – optional preview for the small dataset so the mdBook can demonstrate a larger slice.
+
+Runbook snippet:
+
+```bash
+safe --timeout 60 -- python -m viterbo.atlas.stage_build --config configs/atlas/test.json
+safe --timeout 60 -- python -m viterbo.atlas.stage_visualize --dataset data/atlas/test.parquet \
+    --out docs/assets/atlas/test_preview.json --limit 32
+```
+
+That command sequence regenerates the dataset, provenance sidecar, and preview asset in one go.

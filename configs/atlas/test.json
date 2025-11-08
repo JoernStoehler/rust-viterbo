@@ -1,13 +1,88 @@
 {
-  "version": 2,
+  "version": 3,
   "seed": 42,
   "sources": [
-    { "name": "symmetric_halfspaces", "rows": 4 },
-    { "name": "mahler", "rows": 3 },
-    { "name": "regular_products", "max_rows": 2 },
-    { "name": "special_catalog", "rows": 1 }
+    {
+      "name": "sym_tiny",
+      "family": "symmetric_halfspaces",
+      "rows": 4,
+      "params": {
+        "directions": 6,
+        "radius_min": 0.7,
+        "radius_max": 1.25
+      }
+    },
+    {
+      "name": "mahler_probe",
+      "family": "mahler_products",
+      "rows": 3,
+      "params": {
+        "radial_cfg": {
+          "vertex_count": {
+            "kind": "uniform",
+            "min": 6,
+            "max": 8
+          },
+          "angle_jitter_frac": 0.2,
+          "radial_jitter": 0.15,
+          "base_radius": 1.0,
+          "random_phase": true
+        },
+        "bounds": {
+          "r_in_min": 0.2,
+          "r_out_max": 2.5
+        },
+        "max_attempts": 8
+      }
+    },
+    {
+      "name": "regular_demo",
+      "family": "regular_products",
+      "rows": 2,
+      "params": {
+        "factors_a": [
+          {
+            "sides": 4,
+            "rotation": 0.0,
+            "scale": 1.0
+          },
+          {
+            "sides": 5,
+            "rotation": 0.15,
+            "scale": 0.9
+          }
+        ],
+        "factors_b": [
+          {
+            "sides": 3,
+            "rotation": 0.2,
+            "scale": 0.7
+          },
+          {
+            "sides": 6,
+            "rotation": 0.05,
+            "scale": 1.1
+          }
+        ],
+        "max_pairs": 4
+      }
+    },
+    {
+      "name": "special_baseline",
+      "family": "special_catalog",
+      "rows": 3,
+      "params": {
+        "members": [
+          "hypercube",
+          "cross_polytope",
+          "orthogonal_simplex"
+        ]
+      }
+    }
   ],
   "out": {
-    "dataset": "data/atlas/test.parquet"
+    "dataset": "data/atlas/test.parquet",
+    "preview": "docs/assets/atlas/test_preview.json",
+    "preview_limit": 24
   }
 }

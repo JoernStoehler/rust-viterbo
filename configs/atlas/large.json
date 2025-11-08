@@ -1,0 +1,98 @@
+{
+  "version": 3,
+  "seed": 987654,
+  "sources": [
+    {
+      "name": "sym_large",
+      "family": "symmetric_halfspaces",
+      "rows": 400000,
+      "params": {
+        "directions": 14,
+        "radius_min": 0.5,
+        "radius_max": 1.6
+      }
+    },
+    {
+      "name": "mahler_large",
+      "family": "mahler_products",
+      "rows": 300000,
+      "params": {
+        "radial_cfg": {
+          "vertex_count": {
+            "kind": "uniform",
+            "min": 8,
+            "max": 14
+          },
+          "angle_jitter_frac": 0.3,
+          "radial_jitter": 0.22,
+          "base_radius": 1.0,
+          "random_phase": true
+        },
+        "bounds": {
+          "r_in_min": 0.25,
+          "r_out_max": 3.0
+        },
+        "max_attempts": 24
+      }
+    },
+    {
+      "name": "regular_large",
+      "family": "regular_products",
+      "rows": 250000,
+      "params": {
+        "factors_a": [
+          {
+            "sides": 4,
+            "rotation": 0.0,
+            "scale": 1.0
+          },
+          {
+            "sides": 5,
+            "rotation": 0.15,
+            "scale": 1.1
+          },
+          {
+            "sides": 10,
+            "rotation": 0.05,
+            "scale": 0.9
+          }
+        ],
+        "factors_b": [
+          {
+            "sides": 3,
+            "rotation": 0.1,
+            "scale": 0.8
+          },
+          {
+            "sides": 6,
+            "rotation": 0.0,
+            "scale": 1.0
+          },
+          {
+            "sides": 7,
+            "rotation": 0.12,
+            "scale": 1.2
+          }
+        ],
+        "max_pairs": 900000
+      }
+    },
+    {
+      "name": "special_large",
+      "family": "special_catalog",
+      "rows": 50000,
+      "params": {
+        "members": [
+          "hypercube",
+          "cross_polytope",
+          "orthogonal_simplex"
+        ]
+      }
+    }
+  ],
+  "out": {
+    "dataset": "data/atlas/large.parquet",
+    "preview": "docs/assets/atlas/large_preview.json",
+    "preview_limit": 64
+  }
+}

@@ -1,8 +1,8 @@
 {
-  "git_commit": "54515bb5fa8e89654d0267e7d8c815515c77aed5",
-  "timestamp": "2025-11-08T07:41:00Z",
+  "git_commit": "abca874f5caa3d14e3b190ad46a1c8c91c3b5f56",
+  "timestamp": "2025-11-08T13:55:54Z",
   "rustc": "rustc 1.91.0 (f8297e351 2025-10-28)",
   "filename": "viterbo_native.abi3.so",
-  "size_bytes": 14600368,
-  "sha256": "381cdb3604603a83e12823142bd5ff813c9663cb18dbbe8edccdbef116d82d2f"
+  "size_bytes": 17603328,
+  "sha256": "c6110d9af9017bf1c8f255dbf53d7530883fa01dfd7dca7e919b265cad9568e2"
 }

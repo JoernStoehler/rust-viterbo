@@ -1,0 +1,124 @@
+{
+  "version": 3,
+  "seed": 2025,
+  "sources": [
+    {
+      "name": "sym_small",
+      "family": "symmetric_halfspaces",
+      "rows": 400,
+      "params": {
+        "directions": 10,
+        "radius_min": 0.6,
+        "radius_max": 1.4,
+        "anisotropy": [
+          [
+            1.0,
+            0.0,
+            0.0,
+            0.0
+          ],
+          [
+            0.0,
+            1.0,
+            0.1,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            1.0,
+            0.0
+          ],
+          [
+            0.0,
+            0.0,
+            0.0,
+            0.8
+          ]
+        ]
+      }
+    },
+    {
+      "name": "mahler_small",
+      "family": "mahler_products",
+      "rows": 300,
+      "params": {
+        "radial_cfg": {
+          "vertex_count": {
+            "kind": "uniform",
+            "min": 7,
+            "max": 11
+          },
+          "angle_jitter_frac": 0.25,
+          "radial_jitter": 0.2,
+          "base_radius": 1.0,
+          "random_phase": true
+        },
+        "bounds": {
+          "r_in_min": 0.3,
+          "r_out_max": 2.8
+        },
+        "max_attempts": 16
+      }
+    },
+    {
+      "name": "regular_small",
+      "family": "regular_products",
+      "rows": 250,
+      "params": {
+        "factors_a": [
+          {
+            "sides": 4,
+            "rotation": 0.0,
+            "scale": 1.0
+          },
+          {
+            "sides": 5,
+            "rotation": 0.2,
+            "scale": 0.9
+          },
+          {
+            "sides": 8,
+            "rotation": 0.1,
+            "scale": 1.2
+          }
+        ],
+        "factors_b": [
+          {
+            "sides": 3,
+            "rotation": 0.1,
+            "scale": 0.7
+          },
+          {
+            "sides": 6,
+            "rotation": 0.0,
+            "scale": 1.0
+          },
+          {
+            "sides": 7,
+            "rotation": 0.18,
+            "scale": 1.1
+          }
+        ],
+        "max_pairs": 400
+      }
+    },
+    {
+      "name": "special_small",
+      "family": "special_catalog",
+      "rows": 20,
+      "params": {
+        "members": [
+          "hypercube",
+          "cross_polytope",
+          "orthogonal_simplex"
+        ]
+      }
+    }
+  ],
+  "out": {
+    "dataset": "data/atlas/small.parquet",
+    "preview": "docs/assets/atlas/small_preview.json",
+    "preview_limit": 48
+  }
+}

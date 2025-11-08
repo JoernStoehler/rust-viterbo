@@ -257,7 +257,10 @@ impl MahlerProductGenerator {
         })
     }
 
-    fn sample_with_token(
+    /// Build a Mahler product directly from a replay token. Public so PyO3
+    /// bindings and downstream crates can regenerate rows without instantiating
+    /// a streaming generator.
+    pub fn sample_with_token(
         params: &MahlerProductParams,
         token: Poly2ReplayToken,
     ) -> Result<Poly4, GeneratorError> {
@@ -436,7 +439,7 @@ impl RegularProductEnumParams {
         Ok(())
     }
 
-    fn total_pairs(&self) -> usize {
+    pub fn total_pairs(&self) -> usize {
         self.factors_a.len() * self.factors_b.len()
     }
 }
@@ -473,7 +476,7 @@ impl RegularProductEnumerator {
         })
     }
 
-    fn build_poly(&self, replay: &RegularProductReplay) -> Result<Poly4, GeneratorError> {
+    pub fn build_poly(&self, replay: &RegularProductReplay) -> Result<Poly4, GeneratorError> {
         let spec_a = self
             .params
             .factors_a

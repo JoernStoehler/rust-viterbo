@@ -54,7 +54,7 @@ echo "=== Reproduce: copy native .so into src/viterbo ==="
 bash scripts/safe.sh --timeout 60 -- bash scripts/rust-build.sh --copy-only
 
 echo "=== Reproduce: run data pipeline ==="
-bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/full.json
+bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/small.json
 
 echo "=== Reproduce: build thesis book (mdBook) ==="
 bash scripts/safe.sh --timeout 600 -- mdbook build docs
