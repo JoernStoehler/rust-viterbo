@@ -35,11 +35,14 @@ sudo mkdir -p /var/tmp/vibe-kanban
 sudo chown "$(id -u):$(id -g)" /var/tmp/vibe-kanban
 rm -rf /var/tmp/vibe-kanban/worktrees 2>/dev/null || true
 ln -sfn "$PERSIST_DIR/vibe-worktrees" /var/tmp/vibe-kanban/worktrees
+sudo mkdir -p /var/tmp/vk-target
+sudo chown "$(id -u):$(id -g)" /var/tmp/vk-target
 
 # Set envvars
 export PATH="/usr/local/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 export CARGO_HOME="$HOME/.cargo"
 export RUSTUP_HOME="$HOME/.rustup"
+export CARGO_TARGET_DIR="/var/tmp/vk-target"
 
 # Install Rust toolchain
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -117,6 +120,7 @@ export RUSTUP_HOME="$HOME/.rustup"
 export RUSTC_WRAPPER="sccache"
 export SCCACHE_DIR="$HOME/.sccache"
 export RUST_BACKTRACE=1
+export CARGO_TARGET_DIR="/var/tmp/vk-target"
 EOF
 
 echo "✅ Post-create setup completed successfully."

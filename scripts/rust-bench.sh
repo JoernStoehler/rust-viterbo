@@ -3,8 +3,9 @@
 # Contract
 # - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
 # - No internal timeouts; inherits the top-level timeout from safe.sh.
-# - Defaults cargo target dir to the workspace target/ (Cargo default). Criterion output is
-#   rsynced into data/bench after the run so Git LFS only tracks the JSON that matters.
+# - Defaults cargo target dir to a shared absolute path (/var/tmp/vk-target) for cross-worktree
+#   reuse via sccache. Criterion output is rsynced into data/bench after the run so Git LFS only
+#   tracks the JSON that matters.
 # - BENCH_EXPORT_DIR controls where curated artifacts land (default: data/bench).
 # - BENCH_RUN_POSTPROCESS=1 enables running the Python bench stage after export (default: 0 — run it explicitly via python -m viterbo....).
 # - BENCH_EXPORT_RESULTS=0 skips the rsync copy (default: 1).
@@ -46,8 +47,8 @@ BENCH_WARMUP="${BENCH_WARMUP:-1.0}"
 BENCH_MEASURE="${BENCH_MEASURE:-4.0}"
 BENCH_SAMPLES="${BENCH_SAMPLES:-50}"
 
-# Default cargo target dir to the workspace target/ unless overridden.
-DEFAULT_TARGET_DIR="$ROOT_DIR/target"
+# Default cargo target dir to a shared absolute path unless overridden.
+DEFAULT_TARGET_DIR="/var/tmp/vk-target"
 TARGET_DIR="${CARGO_TARGET_DIR:-$DEFAULT_TARGET_DIR}"
 if [[ "$TARGET_DIR" != /* ]]; then
   TARGET_DIR="$ROOT_DIR/$TARGET_DIR"

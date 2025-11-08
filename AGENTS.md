@@ -76,6 +76,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
   - Git LFS (latest 3.x). Run `git lfs install --local` once per worktree and `git lfs pull --include "data/**" --exclude ""` after switching branches so large artifacts are available locally.
   - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test), then `bash scripts/rust-fmt.sh`, `bash scripts/rust-test.sh`, and `bash scripts/rust-clippy.sh` before running selective smoke/e2e tests.
+  - Rust build cache strategy: sccache is enabled (`RUSTC_WRAPPER=sccache`) and all Rust builds default to a shared absolute target dir `CARGO_TARGET_DIR=/var/tmp/vk-target` to maximize cross‑worktree cache hits for third‑party crates. Occasional “blocking waiting for file lock” is expected and safe; locks are kernel‑released on process exit/crash, and `scripts/safe.sh` timeouts ensure cleanup.
   - Native extension: build/refresh via `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`. CI also builds natively to catch drift early. We do not publish to PyPI; packaging-for-distribution assumptions do not apply in this repo.
 
 ## Safe Wrapper (timeouts & cleanup)
@@ -127,6 +128,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Example: `bash scripts/safe.sh --timeout 10 -- uv run python -m viterbo.atlas.stage_build --config configs/atlas/test.json`
 - Manual CI before handing in work to the project owner for merge:
   - `safe --timeout 300 -- bash scripts/ci.sh`
+- Rust build cache hygiene:
+  - Default target dir is global: `/var/tmp/vk-target` (set in devcontainer and wrappers). This enables sccache hits across VK worktrees.
+  - Brief lock waits during overlapping builds are normal (“blocking waiting for file lock”). Locks are freed on process exit/crash or by `safe.sh` timeouts.
+  - Cleanup when needed: `safe -t 60 -- cargo clean` (or remove `/var/tmp/vk-target` during downtime only).
 - Get feedback fast after working on code:
   - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
   - `safe --timeout 10 -- bash scripts/rust-fmt.sh`

@@ -77,4 +77,7 @@ if [[ -f "Cargo.toml" ]]; then
   cargo fetch --locked >/dev/null || cargo fetch >/dev/null
 fi
 
+# Ensure global Cargo target dir exists for cross-worktree sccache reuse.
+mkdir -p /var/tmp/vk-target || true
+
 log "vk-setup completed."

@@ -19,7 +19,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 # Default Cargo target dir for tests unless the caller overrides.
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-data/target}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/var/tmp/vk-target}"
 mkdir -p "$CARGO_TARGET_DIR"
 
 # Prefer sccache if available for faster compiles across worktrees.

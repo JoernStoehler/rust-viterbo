@@ -7,7 +7,7 @@ if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
 fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-data/target}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/var/tmp/vk-target}"
 mkdir -p "$CARGO_TARGET_DIR"
 if command -v sccache >/dev/null 2>&1; then
   export RUSTC_WRAPPER="${RUSTC_WRAPPER:-sccache}"
@@ -24,4 +24,3 @@ done
 echo ">>> cargo clippy (-p $PKG) --all-targets"
 cargo clippy -p "$PKG" --all-targets -- -D warnings "${EXTRA[@]:-}"
 echo "Rust clippy completed."
-
