@@ -1,6 +1,6 @@
 //! Symplectic matrices, Reeb directions, and 2D face chart maps.
 
-use nalgebra::{Matrix2x4, Matrix4, Matrix4x2, Vector2, Vector4};
+use nalgebra::{Matrix2, Matrix2x4, Matrix4, Matrix4x2, Vector2, Vector4};
 
 use super::cfg::SYMPLECTIC_EPS;
 use super::types::Poly4;
@@ -43,6 +43,71 @@ pub fn reeb_on_facets(hs: &[super::types::Hs4]) -> Vec<Vector4<f64>> {
 /// Stub: Reeb flows on 1-faces (requires additional derivation).
 pub fn reeb_on_edges_stub() -> Option<Vec<Vector4<f64>>> {
     None
+}
+
+/// Sample a random linear symplectomorphism `M ∈ Sp(4, R)` using simple generators.
+///
+/// Construction (n=2):
+/// - Draw `A ∈ GL(2, R)` with `det(A) > 0`.
+/// - Draw symmetric `B, C`.
+/// - Compose `M = D(A) · S(B) · T(C)` where
+///   - `D(A) = [[A, 0], [0, A^{-T}]]`,
+///   - `S(B) = [[I, B], [0, I]]` (B symmetric),
+///   - `T(C) = [[I, 0], [C, I]]` (C symmetric).
+#[allow(clippy::identity_op)]
+pub fn random_symplectic_4(seed: u64) -> Matrix4<f64> {
+    use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
+    let mut rng = StdRng::seed_from_u64(seed);
+    // Moderately conditioned A with det>0
+    let a = loop {
+        let m = Matrix2::new(
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
+        );
+        let det: f64 = m.determinant();
+        if det.abs() > 0.2 && det.is_finite() {
+            let m_ok = if det < 0.0 {
+                Matrix2::new(-m[(0, 0)], -m[(0, 1)], m[(1, 0)], m[(1, 1)])
+            } else {
+                m
+            };
+            break m_ok;
+        }
+    };
+    let a_inv_t = a.try_inverse().unwrap().transpose();
+    let d = Matrix4::new(
+        a[(0, 0)], a[(0, 1)], 0.0, 0.0, //
+        a[(1, 0)], a[(1, 1)], 0.0, 0.0, //
+        0.0, 0.0, a_inv_t[(0, 0)], a_inv_t[(0, 1)], //
+        0.0, 0.0, a_inv_t[(1, 0)], a_inv_t[(1, 1)],
+    );
+    // Symmetric B, C with small magnitude
+    let sym = |r: &mut StdRng, scale: f64| Matrix2::new(
+        r.gen_range(-scale..=scale),
+        r.gen_range(-scale..=scale),
+        0.0,
+        r.gen_range(-scale..=scale),
+    );
+    let mut b = sym(&mut rng, 0.5);
+    b[(1, 0)] = b[(0, 1)];
+    let mut c = sym(&mut rng, 0.5);
+    c[(1, 0)] = c[(0, 1)];
+    let s = Matrix4::new(
+        1.0, 0.0, b[(0, 0)], b[(0, 1)], //
+        0.0, 1.0, b[(1, 0)], b[(1, 1)], //
+        0.0, 0.0, 1.0, 0.0, //
+        0.0, 0.0, 0.0, 1.0,
+    );
+    let t = Matrix4::new(
+        1.0, 0.0, 0.0, 0.0, //
+        0.0, 1.0, 0.0, 0.0, //
+        c[(0, 0)], c[(0, 1)], 1.0, 0.0, //
+        c[(1, 0)], c[(1, 1)], 0.0, 1.0,
+    );
+    d * s * t
 }
 
 /// Build a 2D map for a 2-face given by two facet indices (i,j).

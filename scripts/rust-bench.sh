@@ -89,17 +89,27 @@ fi
 
 if (( ${#BENCH_NAMES[@]} > 0 )); then
   echo ">>> Running benches: ${BENCH_NAMES[*]}"
+  # Split extra args into cargo-side and criterion-side. Recognize --no-run for cargo.
+  CARGO_ARGS=()
+  CRITERION_ARGS=()
+  for arg in "${EXTRA[@]:-}"; do
+    if [[ "$arg" == "--no-run" ]]; then
+      CARGO_ARGS+=("--no-run")
+    else
+      CRITERION_ARGS+=("$arg")
+    fi
+  done
   for bname in "${BENCH_NAMES[@]}"; do
-    echo ">>> cargo bench (-p $PKG --bench $bname) target=$CARGO_TARGET_DIR warmup=$BENCH_WARMUP measure=$BENCH_MEASURE samples=$BENCH_SAMPLES ${EXTRA[*]:-}"
-    cargo bench -p "$PKG" --bench "$bname" -- \
+    echo ">>> cargo bench (-p $PKG --bench $bname ${CARGO_ARGS[*]:-}) target=$CARGO_TARGET_DIR warmup=$BENCH_WARMUP measure=$BENCH_MEASURE samples=$BENCH_SAMPLES ${CRITERION_ARGS[*]:-}"
+    cargo bench -p "$PKG" --bench "$bname" "${CARGO_ARGS[@]:-}" -- \
       --warm-up-time "$BENCH_WARMUP" \
       --measurement-time "$BENCH_MEASURE" \
       --sample-size "$BENCH_SAMPLES" \
-      "${EXTRA[@]:-}"
+      "${CRITERION_ARGS[@]:-}"
   done
 else
   echo "warning: could not discover bench names; running cargo bench without per-bench args"
-  cargo bench -p "$PKG"
+  cargo bench -p "$PKG" "${EXTRA[@]:-}"
 fi
 echo "Rust benches completed."
 

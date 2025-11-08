@@ -17,3 +17,7 @@ harness = false
 [[bench]]
 name = "volume4_bench"
 harness = false
+
+[[bench]]
+name = "oe4_bench"
+harness = false

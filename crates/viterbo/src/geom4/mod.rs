@@ -21,11 +21,12 @@ mod maps;
 mod types;
 mod util;
 mod volume;
+pub mod special;
 
 pub use faces::{enumerate_faces_from_h, Face1, Face2, Face3};
 pub use maps::{
     face2_as_poly2_hrep, invert_affine_4, is_symplectic, j_matrix_4, oriented_orth_map_face2,
-    reeb_on_edges_stub, reeb_on_facets,
+    random_symplectic_4, reeb_on_edges_stub, reeb_on_facets,
 };
 pub use types::{Hs4, Poly4};
 pub use volume::{volume4, volume_from_halfspaces, VolumeError};
