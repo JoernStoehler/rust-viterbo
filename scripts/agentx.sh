@@ -182,7 +182,7 @@ _next_ts(){
 _next_turn(){
   local slug="$1"
   local last_turn
-  last_turn="$(_list_messages "$slug" | awk -F'-' '/^........T......Z-t[0-9]{2}-(start|final|abort)\.md$/ { if(match($0,/t([0-9]{2})-/,m)){print m[1]} }' | tail -n1)"
+  last_turn="$(_list_messages "$slug" | sed -n 's/^.*-t\([0-9][0-9]\)-.*$/\1/p' | tail -n1)"
   if [ -z "$last_turn" ]; then printf '01'; else printf '%02d' "$((10#$last_turn + 1))"; fi
 }
 _write_message_file(){
@@ -413,7 +413,7 @@ run(){
   _ensure_symlink_exact "$worktree/$LOCAL_TICKET_FOLDER" "$AGENTX_TICKETS_DIR"
 
   ( cd "$worktree"
-    if [ -n "$AGENTX_HOOK_BEFORE_RUN" ]; then _run_with_timeout 10 "$AGENTX_HOOK_BEFORE_RUN" || _log_warn "Hook failed: AGENTX_HOOK_BEFORE_RUN"; fi
+    if [ -n "$AGENTX_HOOK_BEFORE_RUN" ]; then _run_with_timeout 5 "$AGENTX_HOOK_BEFORE_RUN" || _log_warn "Hook failed: AGENTX_HOOK_BEFORE_RUN"; fi
     tmp_events="$(mktemp "${run_dir}/events.XXXX.jsonl")"
     # Build prompt text; include external message only when provided.
     PROMPT_TEXT="You have been assigned a ticket.
@@ -437,14 +437,34 @@ ${message}
     # Optional run cap: default 10h (AGENTX_RUN_TIMEOUT); set 0 to disable.
     if [ "${AGENTX_RUN_TIMEOUT:-0}" -gt 0 ]; then
       _require_cmd safe || true
-      _run_with_timeout "${AGENTX_RUN_TIMEOUT}" "codex exec --json  -a never -s danger-full-access  --output-last-message \"${last_msg_file}\"  \"\${PROMPT_TEXT}\" | tee \"${tmp_events}\" >/dev/null"
+      _run_with_timeout "${AGENTX_RUN_TIMEOUT}" "codex exec --json -c approval_policy=never -s danger-full-access --output-last-message \"${last_msg_file}\"  \"\${PROMPT_TEXT}\" | tee \"${tmp_events}\" >/dev/null"
     else
       codex exec --json \
-      -a never -s danger-full-access \
+      -c approval_policy=never -s danger-full-access \
       --output-last-message "$last_msg_file" \
       "$PROMPT_TEXT" | tee "$tmp_events" >/dev/null
     fi
-    awk 'sid=="" { if (match($0, /\"session_id\"[[:space:]]*:[[:space:]]*\"([^\"]+)\"/, m)) { print m[1]; sid="set" } }' "$tmp_events" > "$sid_file" || true
+    python3 - "$tmp_events" "$sid_file" <<'PY' || true
+import json, sys
+src, dst = sys.argv[1], sys.argv[2]
+session_id = None
+try:
+    with open(src, "r", encoding="utf-8") as fh:
+        for line in fh:
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            value = obj.get("session_id")
+            if isinstance(value, str) and value:
+                session_id = value
+                break
+    if session_id:
+        with open(dst, "w", encoding="utf-8") as out:
+            out.write(session_id + "\n")
+except FileNotFoundError:
+    pass
+PY
     if [ -n "$AGENTX_HOOK_AFTER_RUN" ]; then _run_with_timeout 10 "$AGENTX_HOOK_AFTER_RUN" || _log_warn "Hook failed: AGENTX_HOOK_AFTER_RUN"; fi
     rm -f "$tmp_events"
   )
@@ -629,8 +649,9 @@ read_bundle(){
 _tmux_ensure_session() {
   local sess="$1"
   if ! tmux has-session -t "$sess" 2>/dev/null; then
-    tmux new-session -d -s "$sess" -n "init" "sleep 1"
-    tmux kill-window -t "${sess}:init" || true
+    # Create a detached session with a persistent shell window.
+    # Do NOT kill the only window; tmux deletes the session when its last window exits.
+    tmux new-session -d -s "$sess" -n "home"
     _log_info "Created tmux session '$sess'."
   fi
 }

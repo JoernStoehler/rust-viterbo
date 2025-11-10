@@ -89,6 +89,7 @@ Always‑relevant guide for coding agents. Keep it lean, explicit, correct, up�
   - Optional native build for code paths that depend on it.
 - Escalate only for destructive actions, unusual long budgets, or external services.
 - Always summarize commands and key logs when you ran something.
+- Shell tool quirk: every `functions.exec_command` invocation (what Codex uses for `bash -lc …`) blocks until **all** stdout/stderr pipes close. Long‑running helpers (e.g., `agentx start`, custom scripts) must either finish quickly or wrap themselves with `scripts/safe.sh` + timeouts and ensure child processes don’t keep inherited stdout/stderr open. If you spawn background work, redirect its stdio or detach fully, otherwise the exec never returns.
 
 ## Git Conventions
 - Commit often; include `Ticket: <slug>` in messages.

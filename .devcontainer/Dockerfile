@@ -9,6 +9,8 @@ RUN apt-get update \
     ca-certificates \
     curl \
     gnupg \
+    tmux \
+    git-lfs \
     graphviz \
     ripgrep \
     jq \
@@ -27,6 +29,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
  && apt-get install -y --no-install-recommends nodejs \
  && rm -rf /var/lib/apt/lists/* \
  && node -v && npm -v
+
+# Enable Git LFS globally in the image (safe even if repo doesn't use LFS)
+RUN git lfs install --system || true
 
 # Install uv/uvx into /usr/local/bin (non-interactive)
 ENV UV_INSTALL_DIR=/usr/local/bin
