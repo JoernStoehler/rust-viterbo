@@ -6,13 +6,13 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - None
 
 ## Source of Truth and Layers
-- Tickets (Vibe Kanban) are the source of truth.
+- Tickets (file-based via `agentx`) are the source of truth.
 - Thesis specs in `docs/src/thesis/` define algorithms and data at a higher level.
 - Code/tests implement the specs; data artifacts are outputs.
 - Flow: tickets → thesis → code/tests → data. If problems are encountered, escalate to the thesis spec and tickets layers first.
 - Cross‑refs in code or markdown `<!-- comments -->`:
   - `Docs: docs/src/thesis/<path>#<anchor>`
-  - `Ticket: <uuid>`
+  - `Ticket: <slug>`
   - `Code: <path>::<symbol>`
 - All code files start with a comment block that explains the purpose of the file, the why behind its architecture, and references useful further readings. These comment blocks help freshly onboarded agents get up to speed quickly. They are also colocated with the code to minimize search time, and to make maintenance both faster and more likely.
 
@@ -41,7 +41,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`. Both live in Git LFS; commit the artifact and its `.run.json` together to keep provenance aligned.
   - `data/downloads/`: Paper downloads (text sources + PDFs). Also under Git LFS so offline copies travel with the repo.
   - `docs/assets/`: Small publication artifacts (including interactive figures) that stay in the regular git history for easy diffs/review.
-- `data/` now rides through Git LFS instead of VK rsyncs. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. `scripts/reproduce.sh` is the single source of truth for regenerating *every* artifact that shows up in the docs/thesis (bench tables, figures, data files, etc.). Whenever you add or change an artifact, update `scripts/reproduce.sh` in the same ticket so nobody ever has to guess whether it belongs there.
+- `data/` rides through Git LFS. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. `scripts/reproduce.sh` is the single source of truth for regenerating *every* artifact that shows up in the docs/thesis (bench tables, figures, data files, etc.). Whenever you add or change an artifact, update `scripts/reproduce.sh` in the same ticket so nobody ever has to guess whether it belongs there.
 - Explicit, documented devops:
   - `AGENTS.md`: This file. Onboarding for all new agents.
   - `scripts/`: Devops scripts.
@@ -54,11 +54,10 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
     - `reproduce.sh`: Reproduction entrypoint (as defined in README). Builds the code, runs tests (including E2E), regenerates data artifacts, and builds the mdBook. Also serves as a readable reference of the project’s dataflow.
     - `rust-bench.sh`: Criterion benches (regular preset; exports curated JSON into `data/bench/criterion`). Set `BENCH_RUN_POSTPROCESS=1` to chain the docs stage automatically.
     - `rust-bench-quick.sh`: Criterion quick preset for local iteration (reduced warm-up/measurement; does not export).
-    - Both Rust wrappers default `CARGO_TARGET_DIR` to the shared absolute cache `/var/tmp/vk-target`. Keep it there so every worktree reuses the same compiled deps; only override when debugging deeply isolated builds.
+    - Both Rust wrappers default `CARGO_TARGET_DIR` to the repo-local shared cache `.persist/cargo-target`. Keep it there so every worktree reuses the same compiled deps; only override when debugging deeply isolated builds.
     - Legacy cleanup: if a worktree sprouted `data/target*` directories, delete them and reset your env—those came from pointing `CARGO_TARGET_DIR` inside the repo.
     - `paper-download.sh`: Fetch paper sources and PDFs into `data/downloads/`.
-    - `vk.sh`: Local VK web server for the human project owner.
-    - `vk-setup.sh`: VK worktree setup hook.
+
 
 ## Platform and Tooling
 - Platform:
@@ -67,14 +66,14 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - Interop via NumPy (`pyo3‑numpy`) for now; convert to/from Torch tensors in Python.
   - Geometry: `nalgebra`. Data wrangling: `polars`. RNG: `rand` in Rust, `random`, `numpy.random`, and `torch.manual_seed(...)` in Python.
   - No Jupyter notebooks.
-- Vibe‑Kanban (VK) provisions the environment and worktree; agents do not perform manual setup unless a ticket explicitly asks for it.
-- Development environment: everything runs inside a single VS Code devcontainer on the project owner’s Ubuntu desktop. There is one clone of the repo, no GitHub-hosted CI, and all automation (vk-setup, scripts/python-lint-type-test.sh, etc.) executes inside that container. Assume local resources; escalate before assuming external services exist.
+- agentx provisions the environment and worktree; agents do not perform manual setup unless a ticket explicitly asks for it.
+- Development environment: everything runs inside a single VS Code devcontainer on the project owner’s Ubuntu desktop. There is one clone of the repo, no GitHub-hosted CI, and all automation (agentx, scripts/python-lint-type-test.sh, etc.) executes inside that container. Assume local resources; escalate before assuming external services exist.
 - Tooling:
   - Python 3.11+ runtime; examples use `safe --timeout 60 -- uv run ...` for command execution.
   - Rust stable toolchain (see `rust-toolchain.toml`), with `rustfmt`, `clippy`.
   - Git LFS (latest 3.x). Run `git lfs install --local` once per worktree and `git lfs pull --include "data/**" --exclude ""` after switching branches so large artifacts are available locally.
   - Fast feedback: `bash scripts/python-lint-type-test.sh` (Python format/lint/type/test), then `bash scripts/rust-fmt.sh`, `bash scripts/rust-test.sh`, and `bash scripts/rust-clippy.sh` before running selective smoke/e2e tests.
-  - Rust build cache strategy: sccache is enabled (`RUSTC_WRAPPER=sccache`) and all Rust builds default to a shared absolute target dir `CARGO_TARGET_DIR=/var/tmp/vk-target` to maximize cross‑worktree cache hits for third‑party crates. Occasional “blocking waiting for file lock” is expected and safe; locks are kernel‑released on process exit/crash, and `scripts/safe.sh` timeouts ensure cleanup.
+  - Rust build cache strategy: sccache is enabled (`RUSTC_WRAPPER=sccache`) and all Rust builds default to a repo-local shared target dir `CARGO_TARGET_DIR=.persist/cargo-target` to maximize cross‑worktree cache hits for third‑party crates. Occasional “blocking waiting for file lock” is expected and safe; locks are kernel‑released on process exit/crash, and `scripts/safe.sh` timeouts ensure cleanup.
   - Native extension: build/refresh via `safe -t 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml`. CI also builds natively to catch drift early. We do not publish to PyPI; packaging-for-distribution assumptions do not apply in this repo.
   - PyO3 best practices: prefer modern signatures in `#[pymodule]` (`fn m(_py: Python, m: &Bound<'_, PyModule>)`) and avoid deprecated GIL ref shims. Do not add tests that assert the native `.so` stamp matches HEAD; rely on runtime symbol errors to signal rebuild needs. The abi3 module (`src/viterbo/viterbo_native*.so`) and a `.run.json` stamp are versioned to keep the repo self-contained for agents.
 
@@ -109,18 +108,12 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Only escalate before running when the action is potentially destructive, requires unusually long budgets beyond those above, or needs external services beyond our local toolchain.
 - Always summarize what you ran and any failures; include exact commands and key logs. The owner’s time is valuable—minimize round trips.
 
-## Ticketing and VK Workflow
-- VK manages tickets in a kanban board. Accessible via mcp function calls only.
-- Project owner starts "attempts" (agents) on tickets; VK provisions a git worktree for each agent, runs a setup hook (`scripts/vk-setup.sh`), and starts the agent with the ticket description as first input. The hook recreates baseline dirs, installs Git LFS, and pulls tracked artifacts so agents begin with hydrated `data/` contents.
-- After every agent turn, VK commits the worktree automatically; Please update `.gitignore` early if you plan to add files that need to be ignored; Do not rely on uncommitted state.
-- Project owner can post follow-up messages to the agent, agent can pause and ask for clarifications.
-- After the project owner closes the ticket, VK merges the ticket branch back to main. `target/` stays local-only, but everything under `data/` now merges through Git LFS, so always commit artifacts + provenance as part of the ticket.
-- The human project owner runs a local VK server: `bash scripts/vk.sh` (serves on port 3000). Agents interact with VK via their MCP tools.
+## Ticketing Workflow (agentx)
+See “Ticketing Workflow (agentx)” below for the file-based system.
 
 ## Git Conventions
-- Commit often; include `Ticket: <uuid>` in commit messages.
+- Commit often; include `Ticket: <slug>` in commit messages.
 - No pre‑commit hooks; rely on `bash scripts/python-lint-type-test.sh`, `bash scripts/rust-fmt.sh`, `bash scripts/rust-test.sh`, `bash scripts/rust-clippy.sh`, and selective E2E runs for validation.
-- VK automatically commits after every agent turn, but you can commit manually as needed.
 
 ## Command Line Quick Reference
 - Wrap long/unknown‑cost commands in `scripts/safe.sh` with an explicit timeout; see “Safe Wrapper” section for policy and budgets.
@@ -128,9 +121,9 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Manual CI before handing in work to the project owner for merge:
   - `safe --timeout 300 -- bash scripts/ci.sh`
 - Rust build cache hygiene:
-  - Default target dir is global: `/var/tmp/vk-target` (set in devcontainer and wrappers). This enables sccache hits across VK worktrees.
+  - Default target dir is repo-local shared cache: `.persist/cargo-target` (set in devcontainer and wrappers). This enables sccache hits across worktrees.
   - Brief lock waits during overlapping builds are normal (“blocking waiting for file lock”). Locks are freed on process exit/crash or by `safe.sh` timeouts.
-  - Cleanup when needed: `safe -t 60 -- cargo clean` (or remove `/var/tmp/vk-target` during downtime only).
+  - Cleanup when needed: `safe -t 60 -- cargo clean` (or remove `.persist/cargo-target` during downtime only).
 - Get feedback fast after working on code:
   - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh` (format/lint/type are intentionally non-fatal via `|| true` so you see all issues in one run; tests remain strict)
   - `safe --timeout 10 -- bash scripts/rust-fmt.sh`
@@ -169,7 +162,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Keep stages composable; reuse helpers; do not over‑abstract (YAGNI, KISS).
 - Provide tiny test config variants for fast dev cycles (≤10s); Use E2E tests to assert on the outputs of the test configs.
 - Rust kernels do not write provenance; Python orchestrator owns it.
- - Cargo build caches: keep *all* builds on the shared absolute cache `/var/tmp/vk-target` (exported by the devcontainer and every wrapper) so worktrees reuse compiled deps. Never point `CARGO_TARGET_DIR` anywhere under `data/` or the repo; if you need isolation, create a different path under `/var/tmp` or use another worktree.
+- Cargo build caches: keep builds in the shared repo-local cache `.persist/cargo-target` (exported by the devcontainer and every wrapper) so worktrees reuse compiled deps. Never point `CARGO_TARGET_DIR` under `data/`. If you need isolation, use another worktree or a temporary alternate cache under `.persist`.
 
 ## Seeding and Determinism (situational)
 - Put a top‑level `"seed"` in JSON configs.
@@ -198,8 +191,15 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - High-level specs in `docs/src/thesis/` about the mathematics, algorithms, data formats, and experiment ideas.
 - Meta documentation in `docs/src/meta/` about project-specific conventions, workflows, and reminders that fix encountered mistakes.
 - Keep `AGENTS.md` lean and always relevant; move situational further readings to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`
+- Reading rule: agents read AGENTS.md end-to-end in one pass before starting work. Do not rely on progressive disclosure here; surface all essential conventions and workflows directly, with concise examples.
+- Authoring rules for this file (very important):
+  - Do not add “Quick Start” sections or separate summaries. This file is the single canonical contract and is read end‑to‑end.
+  - Avoid duplicating content already covered in this file; instead, improve the existing section or link to anchors.
+  - If you need orientation for humans, put it in `README.md` or `agentx --help`, not here.
+  - Section size limit: keep every top‑level section (## …) ≤ 250 lines. If a section grows larger, split it into smaller subsections or move detail to `docs/src/meta/` and link back with a clear “when to read” hint. This ensures sections are easy to scan and compatible with our CLI’s chunked reads.
+  - Retrieval‑friendly structure: give each section a unique, stable H2 header and begin with a short mental‑model bullet list so tools (and humans) can jump directly to the right anchor without paging the whole file.
 - Use GitHub Pages to host the mdBook site at https://joernstoehler.github.io/rust-viterbo/ via `scripts/publish.sh`.
-- Write in a clear, unambiguous, specific, actionable, explicit style with low cognitive overhead, so that development agents can read text and get to work quickly without needing to think through ambiguities or infer implications that weren't spelled out.
+- Write in a clear, unambiguous, specific, actionable, explicit style with low cognitive overhead, so that development agents can read text and get to work quickly without needing to think through ambiguities or infer implications that weren’t spelled out.
 - Use KaTeX-safe math only (no `\\operatorname`).
 - Create small tables/figures/interactive plots for inclusion in the mdBook site via `docs/assets/`.
  - Algorithm pages include a terminal section titled “Clarifications (unstable, unsorted)” to park quick notes about code/spec divergences and open questions. Entries are intentionally ephemeral; once stabilized, fold them into the main text and remove from the list.
@@ -209,7 +209,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   1) one-paragraph context; 2) Setting and Notation; 3) Definitions; 4) Main Facts/Theorems (with footnote citations); 5) “What We Use Later” bullets for algorithms; 6) optional “Deviations and clarifications for review”.
 - Citations: use non-obstructive footnotes with author–year text; prefer official DOI or arXiv link; no proposition/page numbers (they vary across PDFs). Example: `[^HK19]: Haim‑Kislev (2019) ...`.
 - Cross‑refs: link to sibling chapters via relative paths; avoid duplicate headers; prefer section names over numbers.
-- HTML comments at the top: include `Ticket: <uuid>` and any brief editing notes for future agents.
+- HTML comments at the top: include `Ticket: <slug>` and any brief editing notes for future agents.
 - Rendering checks: after edits run the quick loops and docs build without asking:
   - `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
   - `safe --timeout 10 -- bash scripts/rust-fmt.sh`
@@ -222,7 +222,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - How: pause work, leave a concise summary + options.
 
 ## Git History Cleanup (Quick Guide)
-- Schedule downtime: pause all VK attempts/worktrees besides your own and get the owner’s explicit go-ahead before rewriting history.
+- Schedule downtime: pause all other agent attempts/worktrees besides your own and get the owner’s explicit go-ahead before rewriting history.
 - Capture the baseline (`git rev-parse main`, `git count-objects -vH`, `git lfs ls-files | wc -l`) for provenance.
 - Work in a mirror clone: `git clone --mirror /workspaces/rust-viterbo /tmp/history-cleanup.git && cd /tmp/history-cleanup.git`.
 - Remove bench build artifacts by running\
@@ -240,6 +240,64 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Self‑documenting project: record conventions, workflows, and reminders in `docs/src/meta/`; cross-reference tickets and thesis specs.
 - AI Agents as first-class developers: design everything for easy onboarding of new agents; clear, specific, and actionable tickets; maintain always‑relevant knowledge in a lean `AGENTS.md`, and move situational info to `docs/src/meta/` with clear "when to read" hints in `docs/src/meta/README.md`; avoid overhead for agents, reduce tool friction and keep related information close together to minimize search time; 
 - Continuous Improvement: accept feedback from agents and the project owner; refactor with breaking changes, rewrite documentation, open additional tickets when it raises the quality of the project for future agents.
+
+## Ticketing Workflow (agentx)
+<!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
+This project uses a minimal CLI (`agentx`) with a folder‑based “ticket bundle”. Learn this model first; it’s small and predictable.
+
+- Model (1–1–1–1):
+  - One ticket bundle ↔ one git branch ↔ one git worktree ↔ one Codex session.
+  - Bundles live in `.persist/agentx/tickets/<slug>/` and are symlinked into each worktree at `shared/tickets/`.
+  - Bundle contents (flat):
+    - `meta.yml` — minimal operational state: `status` (required), optional `owner`, `depends_on: []`, `dependency_of: []`. Everything else (slug, branch/worktree, timestamps, turns) is derived.
+    - `body.md` — spec text for humans. Treat it as stable after provision and read once for context.
+    - Message files (immutable): `YYYYMMDDThhmmssZ-provision.md`, `YYYYMMDDThhmmssZ-t01-start.md`, `…-t01-final.md` or `…-t01-abort.md`.
+
+- Event rules (strict):
+  - Exactly one `provision` before any turn.
+  - For each turn N: exactly one `tNN-start` and exactly one terminal event: `tNN-final` OR `tNN-abort`.
+  - Turns strictly increase: `t01, t02, …`. Use `agentx start` to begin the next turn.
+
+- Status semantics:
+  - `status=open`: provisioned, no active turn.
+  - `status=active`: a turn is in progress (after `*-start`, before its terminal message).
+  - `status=stopped`: last terminal was an abort.
+  - `status=done`: last terminal was a final message.
+
+- Commands (slug‑only):
+  - `agentx provision <slug> [--body-file path] [--inherit-from <slug>] [--base <ref>] [--copy src[:dst]]...`
+    - Creates the bundle and branch/worktree; writes `meta.yml`, `body.md`, and a `provision` message.
+  - `agentx start <slug> --message "..."`: starts a new turn in tmux, writes a `tNN-start` message, runs the agent, then writes a `tNN-final` on success.
+  - `agentx abort <slug>`: writes a `tNN-abort` for the active turn, sets `status=stopped`, and kills the tmux window.
+  - `agentx await <slug> [--timeout N]`: returns when `meta.yml.status != active`.
+  - `agentx read <slug> [--events N] [--json]`: prints `meta.yml`, `body.md` path, and the last N messages.
+  - `agentx info <slug> [--fields a,b,c]`: prints selected fields from `meta.yml`.
+  - `agentx list [--status s]`: lists bundles with basic fields.
+  - `agentx merge <from-slug> [<into-slug>]`: merges the done child branch into the target worktree branch (infers into from CWD if omitted).
+  - `agentx doctor <slug>`: tmux/worktree diagnostics for the slug.
+
+- Hooks (optional per worktree):
+  - `AGENTX_HOOK_PROVISION` runs right after `git worktree add` during `provision` (inside the new worktree). Recommended value: `bash scripts/agentx-hook-provision.sh`.
+  - `AGENTX_HOOK_START`, `AGENTX_HOOK_RESUME`, `AGENTX_HOOK_BEFORE_RUN`, `AGENTX_HOOK_AFTER_RUN` run inside the worktree.
+
+- Configuration (env) — set these in devcontainer.json `containerEnv` (or `remoteEnv`):
+  - `AGENTX_TICKETS_DIR=/workspaces/rust-viterbo/.persist/agentx/tickets`
+  - `AGENTX_WORKTREES_DIR=/workspaces/rust-viterbo/.persist/agentx/worktrees`
+  - `LOCAL_TICKET_FOLDER=./shared/tickets`
+  - Optional hooks: `AGENTX_HOOK_PROVISION="bash scripts/agentx-hook-provision.sh"`, `AGENTX_HOOK_START="safe --timeout 10 -- bash scripts/python-lint-type-test.sh && safe --timeout 10 -- bash scripts/rust-fmt.sh"`
+
+- Agent checklist (always do this before acting):
+  - Read `shared/tickets/<slug>/meta.yml` (status, owner, depends_on/dependency_of). Keep `status` truthful if you change it.
+  - Read `shared/tickets/<slug>/body.md` once for context.
+  - Tail `ls shared/tickets/<slug>/ | sort | tail -n 10` to see recent messages (`provision`, `tNN-start`, `tNN-final`/`tNN-abort`). Do not edit existing message files.
+
+- Final message:
+  - End each turn with a concise final message that explains what changed, how to validate (exact commands), and what’s next (if anything). agentx captures it into the ticket as `tNN-final.md`.
+
+- Conventions:
+  - Commands accept a slug only. Do not pass file paths or session ids.
+  - Order is defined by the UTC timestamp prefix in message filenames; ignore filesystem mtimes.
+  - `meta.yml` is authoritative and intentionally small. agentx writes/reads only `status`; you may edit `owner`, `depends_on`, `dependency_of`. agentx derives slug/branch/worktree/turns/timestamps from the folder layout and message files.
 
 ## API Policy (Internal Only)
 - We have no stable public API. All Rust modules are project‑internal.

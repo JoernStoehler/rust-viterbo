@@ -38,3 +38,6 @@ build/
 # Note: we intentionally commit the built abi3 native module
 # (src/viterbo/viterbo_native*.so) together with a .run.json stamp so the repo
 # is self-contained for agents. Do not add ignore rules for that file.
+
+# tx bundle symlink (created in each worktree)
+shared/

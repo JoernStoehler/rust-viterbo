@@ -7,7 +7,7 @@ if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
 fi
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
-export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/var/tmp/vk-target}"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-/workspaces/rust-viterbo/.persist/cargo-target}"
 mkdir -p "$CARGO_TARGET_DIR"
 if command -v sccache >/dev/null 2>&1; then
   export RUSTC_WRAPPER="${RUSTC_WRAPPER:-sccache}"

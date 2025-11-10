@@ -1,6 +1,6 @@
 <!-- Author: Codex -->
 
-<!-- Ticket: Please add the VK ticket UUID here once available. -->
+<!-- Ticket: <slug> -->
 
 <!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md -->
 <!-- Docs: docs/src/thesis/viterbo-conjecture-counterexample.md -->

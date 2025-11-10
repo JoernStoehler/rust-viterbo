@@ -12,7 +12,7 @@ if command -v sccache >/dev/null 2>&1; then
   export RUSTC_WRAPPER="${RUSTC_WRAPPER:-sccache}"
 fi
 # Use a shared absolute target dir by default for cross-worktree reuse via sccache.
-DEFAULT_TARGET_DIR="/var/tmp/vk-target"
+DEFAULT_TARGET_DIR="/workspaces/rust-viterbo/.persist/cargo-target"
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$DEFAULT_TARGET_DIR}"
 mkdir -p "$CARGO_TARGET_DIR"
 PKG="viterbo"

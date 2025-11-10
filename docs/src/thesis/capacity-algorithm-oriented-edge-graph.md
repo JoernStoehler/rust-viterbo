@@ -1,6 +1,6 @@
 <!-- Author: Codex & Jörn -->
 
-<!-- Ticket: Please add the VK ticket UUID here once available. -->
+<!-- Ticket: <slug> -->
 
 <!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md -->
 

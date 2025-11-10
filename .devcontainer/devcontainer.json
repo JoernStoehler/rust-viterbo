@@ -70,6 +70,19 @@
       }
     }
   },
+  // agentx configuration for ticket bundles and hooks
+  "containerEnv": {
+    // Ticket bundle locations (agentx and provision hook read these)
+    "AGENTX_TICKETS_DIR": "/workspaces/rust-viterbo/.persist/agentx/tickets",
+    "AGENTX_WORKTREES_DIR": "/workspaces/rust-viterbo/.persist/agentx/worktrees",
+    "LOCAL_TICKET_FOLDER": "./shared/tickets",
+    // Rust shared build cache (repo-local; excluded via .persist/)
+    "CARGO_TARGET_DIR": "/workspaces/rust-viterbo/.persist/cargo-target",
+    // Provision-time setup (symlink + LFS hydrate)
+    "AGENTX_HOOK_PROVISION": "bash scripts/agentx-hook-provision.sh"
+    // Optional quick loops on turn start:
+    // "AGENTX_HOOK_START": "safe --timeout 10 -- bash scripts/python-lint-type-test.sh && safe --timeout 10 -- bash scripts/rust-fmt.sh"
+  },
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
   "remoteUser": "vscode"
 }

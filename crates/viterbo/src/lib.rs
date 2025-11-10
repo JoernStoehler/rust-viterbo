@@ -2,7 +2,7 @@
 //!
 //! Cross-refs live in doc comments:
 //! TH: anchors refer to docs/src/thesis/*.md headings.
-//! VK: UUIDs refer to Vibe Kanban tickets.
+//! Ticket: slugs refer to agentx tickets.
 //!
 //! API Policy
 //! - This crate is project-internal. There is no stable public API.

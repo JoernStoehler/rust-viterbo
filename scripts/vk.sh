@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-# Run the Vibe Kanban web server in the foreground via npx.
-# State directories are persisted via devcontainer postCreate symlinks.
-# We intentionally pull the latest stable release to pick up new VK features as soon as they land.
-echo "Starting Vibe Kanban (latest) via npx…"
-echo "State: $HOME/.local/share/vibe-kanban; Worktrees: /var/tmp/vibe-kanban/worktrees"
-PORT=3000 exec npx -y vibe-kanban@latest
