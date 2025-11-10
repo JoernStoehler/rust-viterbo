@@ -1,9 +1,21 @@
 #!/bin/bash
-## AgentX — Ticket Management CLI (folder-based)
+## AgentX — Ticket Management CLI (folder‑based, agent‑first)
 ##
 ## Use: 'agentx --help' (after install) or 'scripts/agentx.sh --help' (from repo).
 ##
-## Model:
+## Purpose and Invariants (read this first)
+## - AgentX manages “tickets” as folders and Git worktrees for an agent‑first workflow.
+## - All state created by AgentX lives under this repository:
+##   - Bundles:   .persist/agentx/tickets/<slug>/
+##   - Worktrees: .persist/agentx/worktrees/<slug>/  (checked out to branch 'ticket/<slug>')
+##   - Runtime:   <worktree>/.tx/
+##   - Symlinks:  shared/tickets at repo root and at each worktree root -> .persist/agentx/tickets
+## - AgentX must not write outside those locations (besides normal Git ops inside the worktree).
+## - Slugs are short filesystem‑safe identifiers: ^[a-z0-9][a-z0-9._-]{0,63}$
+## - Hooks (AGENTX_HOOK_*) always run if set, but are bounded to 10s each for hygiene.
+## - Agent turns can be long; default run cap is 10 hours (AGENTX_RUN_TIMEOUT=36000). Set 0 to disable.
+##
+## Model (files + events):
 ## - Ticket = folder: .persist/agentx/tickets/<slug>/
 ##   - meta.yml  : minimal operational state (status, optional owner/depends_on/dependency_of).
 ##   - body.md   : spec text for humans (stable after provision unless asked).
@@ -17,7 +29,7 @@
 ##   - UTC timestamp prefix controls ordering: YYYYMMDDThhmmssZ-...
 ##   - Same‑second collisions are bumped by 1s.
 ##
-## meta.yml (minimal, human-editable):
+## meta.yml (minimal, human‑editable):
 ##   - Required: status (open|active|done|stopped)
 ##   - Optional: depends_on: [slug,...], dependency_of: [slug,...], owner: <string>
 ##   - Everything else (slug, branch, worktree, timestamps, turns) is derived by AgentX.
@@ -37,6 +49,7 @@ AGENTX_WORKTREES_DIR="${AGENTX_WORKTREES_DIR:-${PERSIST_ROOT_DEFAULT}/worktrees}
 GLOBAL_TMUX_SESSION="${GLOBAL_TMUX_SESSION:-tickets}"
 # Symlink path (created inside each worktree and the main repo)
 LOCAL_TICKET_FOLDER=${LOCAL_TICKET_FOLDER:-"./shared/tickets"}
+AGENTX_RUN_TIMEOUT="${AGENTX_RUN_TIMEOUT:-36000}"  # seconds; 0 disables run cap
 
 # Optional hooks (env), run inside the worktree:
 AGENTX_HOOK_START="${AGENTX_HOOK_START:-}"
@@ -52,10 +65,54 @@ _log_err()  { printf '[agentx][err] %s\n' "$*" >&2; }
 _die() { _log_err "$*"; exit 1; }
 _require_cmd() { command -v "$1" >/dev/null 2>&1 || _die "Missing dependency: $1. Please install it and retry."; }
 
+_validate_slug() {
+  local s="${1:-}"
+  [[ "$s" =~ ^[a-z0-9][a-z0-9._-]{0,63}$ ]] || _die "invalid slug: '$s'. Allowed: ^[a-z0-9][a-z0-9._-]{0,63}$"
+}
+
+_dest_abs_from_repo_root() {
+  local rel="${1:-}"
+  if [[ "$rel" = /* ]]; then printf '%s' "$rel"; else printf '%s/%s' "$REPO_ROOT" "${rel#./}"; fi
+}
+
+_ensure_symlink_exact() {
+  # Create a symlink only if it does not exist. If it exists, it must be an exact symlink to target.
+  # Never clobber mismatched paths.
+  local dest="$1"; local target="$2"
+  mkdir -p "$(dirname "$dest")"
+  if [ -L "$dest" ]; then
+    local cur; cur="$(readlink "$dest")" || cur=""
+    if [ "$cur" != "$target" ]; then
+      _die "symlink mismatch at '$dest' (found -> $cur, expected -> $target). Remove/fix it and retry."
+    fi
+  elif [ -e "$dest" ]; then
+    _die "path exists and is not the expected symlink: '$dest'. Remove/fix it and retry."
+  else
+    ln -s "$target" "$dest"
+  fi
+}
+
+_run_with_timeout() {
+  # Prefer 'safe' when available; otherwise fall back to GNU timeout.
+  local seconds="$1"; shift
+  if [ "$seconds" -le 0 ]; then
+    # No timeout requested
+    bash -lc "$*"
+    return $?
+  fi
+  if command -v safe >/dev/null 2>&1; then
+    safe -t "$seconds" -- bash -lc "$*"
+  else
+    _require_cmd timeout
+    timeout --kill-after=10 "${seconds}s" bash -lc "$*"
+  fi
+}
+
 _ensure_folders() {
   mkdir -p "${AGENTX_TICKETS_DIR}" "${AGENTX_TICKETS_MIGRATED}" "${AGENTX_WORKTREES_DIR}"
-  mkdir -p "$(dirname "${LOCAL_TICKET_FOLDER}")"
-  ln -sfn "${AGENTX_TICKETS_DIR}" "${LOCAL_TICKET_FOLDER}"
+  # Ensure the repo-root symlink exists and points exactly to the tickets dir.
+  local dest; dest="$(_dest_abs_from_repo_root "${LOCAL_TICKET_FOLDER}")"
+  _ensure_symlink_exact "$dest" "${AGENTX_TICKETS_DIR}"
 }
 _timestamp() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
 _slug_to_branch(){ printf 'ticket/%s' "$1"; }
@@ -194,6 +251,13 @@ Tooling:
       Copy this script to $INSTALL_DIR/$INSTALL_NAME (defaults shown).
   help
       Show this help message.
+
+Policies:
+- Slugs: ^[a-z0-9][a-z0-9._-]{0,63}$. Branch: ticket/<slug>.
+- Writes: only under .persist/agentx/{tickets,worktrees}/ and <worktree>/.tx/. 
+- Symlink: 'shared/tickets' exists only at repo root and worktree roots and must point to .persist/agentx/tickets.
+- Hooks: always run if set, each bounded to 10s.
+- Runs: default cap AGENTX_RUN_TIMEOUT=36000s (10h). Set 0 to disable.
 EOF
 }
 
@@ -213,6 +277,7 @@ install(){
 provision() {
   local slug="${1:-}"; shift || true
   [ -n "$slug" ] || _die "provision: missing <slug>"
+  _validate_slug "$slug"
   local inherit_from="" base_ref="" copies=()
   local body_file=""
   while [ $# -gt 0 ]; do
@@ -274,11 +339,11 @@ provision() {
     _log_info "Created worktree: $worktree"
   fi
   mkdir -p "$(dirname "$worktree/$LOCAL_TICKET_FOLDER")"
-  ln -sfn "$AGENTX_TICKETS_DIR" "$worktree/$LOCAL_TICKET_FOLDER"
+  _ensure_symlink_exact "$worktree/$LOCAL_TICKET_FOLDER" "$AGENTX_TICKETS_DIR"
 
   # Optional provision hook (runs inside the new worktree)
   if [ -n "$AGENTX_HOOK_PROVISION" ]; then
-    ( cd "$worktree" && bash -lc "$AGENTX_HOOK_PROVISION" ) || _log_warn "Hook failed: AGENTX_HOOK_PROVISION"
+    ( cd "$worktree" && _run_with_timeout 10 "$AGENTX_HOOK_PROVISION" ) || _log_warn "Hook failed: AGENTX_HOOK_PROVISION"
   fi
 
   # Copy paths strictly if requested
@@ -306,6 +371,7 @@ run(){
   _require_cmd codex
   local slug="${1:-}"; shift || true
   [ -n "$slug" ] || _die "run: missing <slug>"
+  _validate_slug "$slug"
   local message=""
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -340,19 +406,17 @@ run(){
   local nt; nt="$(_next_turn "$slug")"; local nti=$((10#$nt))
   _set_meta_many "$slug" "status=active"
   _write_message_file "$slug" "start" "$nti" "agentx" "$message"
-  if [ -n "$AGENTX_HOOK_START" ]; then ( cd "$worktree" && bash -lc "$AGENTX_HOOK_START" ) || _log_warn "Hook failed: AGENTX_HOOK_START"; fi
+  if [ -n "$AGENTX_HOOK_START" ]; then ( cd "$worktree" && _run_with_timeout 10 "$AGENTX_HOOK_START" ) || _log_warn "Hook failed: AGENTX_HOOK_START"; fi
 
   # Ensure shared tickets symlink in the worktree
   mkdir -p "$(dirname "$worktree/$LOCAL_TICKET_FOLDER")"
-  ln -sfn "$AGENTX_TICKETS_DIR" "$worktree/$LOCAL_TICKET_FOLDER"
+  _ensure_symlink_exact "$worktree/$LOCAL_TICKET_FOLDER" "$AGENTX_TICKETS_DIR"
 
   ( cd "$worktree"
-    if [ -n "$AGENTX_HOOK_BEFORE_RUN" ]; then bash -lc "$AGENTX_HOOK_BEFORE_RUN" || _log_warn "Hook failed: AGENTX_HOOK_BEFORE_RUN"; fi
+    if [ -n "$AGENTX_HOOK_BEFORE_RUN" ]; then _run_with_timeout 10 "$AGENTX_HOOK_BEFORE_RUN" || _log_warn "Hook failed: AGENTX_HOOK_BEFORE_RUN"; fi
     tmp_events="$(mktemp "${run_dir}/events.XXXX.jsonl")"
-    codex exec --json \
-      -a never -s danger-full-access \
-      --output-last-message "$last_msg_file" \
-      "You have been assigned a ticket.
+    # Build prompt text; include external message only when provided.
+    PROMPT_TEXT="You have been assigned a ticket.
 
 - TICKET_SLUG: ${slug}
 - WORKTREE: ${worktree}
@@ -362,13 +426,26 @@ Do this:
 - Read the ticket bundle in shared/tickets/${slug}/
 - Complete the work.
 - Commit deliverables.
-- End with a clear final message; it will be copied into the ticket messages.
+- End with a clear final message; it will be copied into the ticket messages."
+    if [ -n "$message" ]; then
+      PROMPT_TEXT="${PROMPT_TEXT}
 
 External message:
 ${message}
-" | tee "$tmp_events" >/dev/null
+"
+    fi
+    # Optional run cap: default 10h (AGENTX_RUN_TIMEOUT); set 0 to disable.
+    if [ "${AGENTX_RUN_TIMEOUT:-0}" -gt 0 ]; then
+      _require_cmd safe || true
+      _run_with_timeout "${AGENTX_RUN_TIMEOUT}" "codex exec --json  -a never -s danger-full-access  --output-last-message \"${last_msg_file}\"  \"\${PROMPT_TEXT}\" | tee \"${tmp_events}\" >/dev/null"
+    else
+      codex exec --json \
+      -a never -s danger-full-access \
+      --output-last-message "$last_msg_file" \
+      "$PROMPT_TEXT" | tee "$tmp_events" >/dev/null
+    fi
     awk 'sid=="" { if (match($0, /\"session_id\"[[:space:]]*:[[:space:]]*\"([^\"]+)\"/, m)) { print m[1]; sid="set" } }' "$tmp_events" > "$sid_file" || true
-    if [ -n "$AGENTX_HOOK_AFTER_RUN" ]; then bash -lc "$AGENTX_HOOK_AFTER_RUN" || _log_warn "Hook failed: AGENTX_HOOK_AFTER_RUN"; fi
+    if [ -n "$AGENTX_HOOK_AFTER_RUN" ]; then _run_with_timeout 10 "$AGENTX_HOOK_AFTER_RUN" || _log_warn "Hook failed: AGENTX_HOOK_AFTER_RUN"; fi
     rm -f "$tmp_events"
   )
 
@@ -387,6 +464,7 @@ abort(){
   _require_cmd tmux
   local slug="${1:-}"; shift || true
   [ -n "${slug}" ] || _die "abort: missing <slug>"
+  _validate_slug "$slug"
   local now="$(_timestamp)"
   if tmux list-windows -t "$GLOBAL_TMUX_SESSION" 2>/dev/null | awk '{print $2}' | sed 's/:$//' | grep -qx "$slug"; then
     tmux kill-window -t "${GLOBAL_TMUX_SESSION}:${slug}" || true
@@ -406,6 +484,7 @@ start(){
   _ensure_folders
   local slug="${1:-}"; shift || true
   [ -n "${slug}" ] || _die "start: missing <slug>. See: agentx.sh --help"
+  _validate_slug "$slug"
   local message=""
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -428,6 +507,7 @@ stop(){ abort "$@"; }
 info(){
   local slug="${1:-}"; shift || true
   [ -z "${slug}" ] && _die "info: missing <slug>"
+  _validate_slug "$slug"
   local fields_csv=""
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -455,6 +535,7 @@ info(){
 await(){
   local slug="${1:-}"; shift || true
   [ -z "${slug}" ] && _die "await: missing <slug>"
+  _validate_slug "$slug"
   local timeout=60
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -513,6 +594,7 @@ list(){
 read_bundle(){
   local slug="${1:-}"; shift || true
   [ -n "$slug" ] || _die "read: missing <slug>"
+  _validate_slug "$slug"
   local events=10 json=0
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -556,6 +638,7 @@ _tmux_ensure_session() {
 merge(){
   local child="${1:-}"; local parent="${2:-}"
   [ -n "$child" ] || _die "merge: missing <from-slug>"
+  _validate_slug "$child"
   if [ -z "$parent" ]; then
     local cwd_root; cwd_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
     [ -n "$cwd_root" ] || _die "merge: not inside a git worktree; specify <into> explicitly."
@@ -567,6 +650,7 @@ merge(){
     done
     [ -n "$parent" ] || _die "merge: could not infer <into> from CWD. Pass it explicitly."
   fi
+  _validate_slug "$parent"
   _require_cmd git
   local child_file="$(_meta_path "$child")"; [ -f "$child_file" ] || _die "merge: unknown child slug '$child'"
   local parent_file="$(_meta_path "$parent")"; [ -f "$parent_file" ] || _die "merge: unknown parent slug '$parent'"
@@ -579,15 +663,21 @@ merge(){
   ( cd "$p_worktree"
     git fetch -q origin || true
     git checkout "$p_branch" >/dev/null 2>&1 || true
-    _log_info "Merging '$c_branch' into '$p_branch' in $p_worktree"
-    git merge --no-ff --no-edit "$c_branch"
-    git diff --name-only --name-status HEAD@{1}..HEAD | sed 's/^/[changed] /' || true
+    # Enforce clean tree and fast-forward only to avoid messy merges.
+    if ! git diff --quiet --ignore-submodules --; then
+      _die "merge: target worktree has uncommitted changes. Commit/stash to proceed."
+    fi
+    _log_info "Merging (fast-forward) '$c_branch' into '$p_branch' in $p_worktree"
+    git merge --ff-only "$c_branch"
+    # Show the files changed by the fast-forward (if any)
+    git diff --name-only HEAD@{1}..HEAD 2>/dev/null | sed 's/^/[changed] /' || true
   )
 }
 
 doctor(){
   local slug="${1:-}"; shift || true
   [ -n "$slug" ] || _die "doctor: missing <slug>"
+  _validate_slug "$slug"
   local wt="$(_slug_to_worktree "$slug")"
   printf 'slug: %s\n' "$slug"
   printf 'worktree: %s\n' "$wt"
@@ -601,6 +691,18 @@ doctor(){
     printf 'tmux: session not present (%s)\n' "$GLOBAL_TMUX_SESSION"
   fi
   if [ -d "$wt" ]; then printf 'worktree: present\n'; else printf 'worktree: missing\n'; fi
+  # Repo-root symlink check (informational)
+  local root_link; root_link="$(_dest_abs_from_repo_root "${LOCAL_TICKET_FOLDER}")"
+  if [ -L "$root_link" ]; then
+    local t; t="$(readlink "$root_link")" || t=""
+    if [ "$t" = "$AGENTX_TICKETS_DIR" ]; then
+      printf 'root-link: ok (%s -> %s)\n' "$root_link" "$t"
+    else
+      printf 'root-link: mismatch (%s -> %s, expected -> %s)\n' "$root_link" "$t" "$AGENTX_TICKETS_DIR"
+    fi
+  else
+    printf 'root-link: missing (%s)\n' "$root_link"
+  fi
 }
 
 # ---- Main ----
