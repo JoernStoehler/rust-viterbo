@@ -50,6 +50,8 @@ GLOBAL_TMUX_SESSION="${GLOBAL_TMUX_SESSION:-tickets}"
 # Symlink path (created inside each worktree and the main repo)
 LOCAL_TICKET_FOLDER=${LOCAL_TICKET_FOLDER:-"./shared/tickets"}
 AGENTX_RUN_TIMEOUT="${AGENTX_RUN_TIMEOUT:-36000}"  # seconds; 0 disables run cap
+AGENTX_RUNNER_QUEUE="${AGENTX_RUNNER_QUEUE:-${PERSIST_ROOT_DEFAULT}/queue}"
+export AGENTX_RUNNER_QUEUE
 
 # Optional hooks (env), run inside the worktree:
 AGENTX_HOOK_START="${AGENTX_HOOK_START:-}"
@@ -108,8 +110,13 @@ _run_with_timeout() {
   fi
 }
 
+_runner_cmd() {
+  _require_cmd python3
+  PYTHONPATH="$REPO_ROOT/scripts" python3 "$REPO_ROOT/scripts/agentx_runner.py" "$@"
+}
+
 _ensure_folders() {
-  mkdir -p "${AGENTX_TICKETS_DIR}" "${AGENTX_TICKETS_MIGRATED}" "${AGENTX_WORKTREES_DIR}"
+  mkdir -p "${AGENTX_TICKETS_DIR}" "${AGENTX_TICKETS_MIGRATED}" "${AGENTX_WORKTREES_DIR}" "${AGENTX_RUNNER_QUEUE}"
   # Ensure the repo-root symlink exists and points exactly to the tickets dir.
   local dest; dest="$(_dest_abs_from_repo_root "${LOCAL_TICKET_FOLDER}")"
   _ensure_symlink_exact "$dest" "${AGENTX_TICKETS_DIR}"
@@ -368,7 +375,7 @@ provision() {
 }
 
 run(){
-  _require_cmd codex
+  _require_cmd python3
   local slug="${1:-}"; shift || true
   [ -n "$slug" ] || _die "run: missing <slug>"
   _validate_slug "$slug"
@@ -379,105 +386,8 @@ run(){
       *) _die "run: unknown arg: $1";;
     esac; shift || true
   done
-
-  local branch worktree now
-  branch="$(_slug_to_branch "$slug")"
-  worktree="$(_slug_to_worktree "$slug")"
-  now="$(_timestamp)"
-
-  # Refuse to run if a tmux window already exists for this ticket.
-  if tmux has-session -t "$GLOBAL_TMUX_SESSION" 2>/dev/null; then
-    if tmux list-windows -t "$GLOBAL_TMUX_SESSION" 2>/dev/null | awk '{print $2}' | sed 's/:$//' | grep -qx "$slug"; then
-      _die "run: an agent is already running in tmux window '${GLOBAL_TMUX_SESSION}:${slug}'. Use 'agentx abort <slug>' first or 'agentx doctor <slug>'."
-    fi
-  fi
-
-  # Prepare run dir for captured output and session id
-  local run_dir="${worktree}/.tx"
-  mkdir -p "$run_dir"
-  local last_msg_file="${run_dir}/last_message.txt"
-  local sid_file="${run_dir}/session_id"
-  local SESSION_UUID=""
-  if [ -s "$sid_file" ]; then
-    SESSION_UUID="$(cat "$sid_file")"
-  fi
-
-  # Start new turn
-  local nt; nt="$(_next_turn "$slug")"; local nti=$((10#$nt))
-  _set_meta_many "$slug" "status=active"
-  _write_message_file "$slug" "start" "$nti" "agentx" "$message"
-  if [ -n "$AGENTX_HOOK_START" ]; then ( cd "$worktree" && _run_with_timeout 10 "$AGENTX_HOOK_START" ) || _log_warn "Hook failed: AGENTX_HOOK_START"; fi
-
-  # Ensure shared tickets symlink in the worktree
-  mkdir -p "$(dirname "$worktree/$LOCAL_TICKET_FOLDER")"
-  _ensure_symlink_exact "$worktree/$LOCAL_TICKET_FOLDER" "$AGENTX_TICKETS_DIR"
-
-  ( cd "$worktree"
-    if [ -n "$AGENTX_HOOK_BEFORE_RUN" ]; then _run_with_timeout 5 "$AGENTX_HOOK_BEFORE_RUN" || _log_warn "Hook failed: AGENTX_HOOK_BEFORE_RUN"; fi
-    tmp_events="$(mktemp "${run_dir}/events.XXXX.jsonl")"
-    # Build prompt text; include external message only when provided.
-    PROMPT_TEXT="You have been assigned a ticket.
-
-- TICKET_SLUG: ${slug}
-- WORKTREE: ${worktree}
-- BRANCH: ${branch}
-
-Do this:
-- Read the ticket bundle in shared/tickets/${slug}/
-- Complete the work.
-- Commit deliverables.
-- End with a clear final message; it will be copied into the ticket messages."
-    if [ -n "$message" ]; then
-      PROMPT_TEXT="${PROMPT_TEXT}
-
-External message:
-${message}
-"
-    fi
-    # Optional run cap: default 10h (AGENTX_RUN_TIMEOUT); set 0 to disable.
-    if [ "${AGENTX_RUN_TIMEOUT:-0}" -gt 0 ]; then
-      _require_cmd safe || true
-      _run_with_timeout "${AGENTX_RUN_TIMEOUT}" "codex exec --json -c approval_policy=never -s danger-full-access --output-last-message \"${last_msg_file}\"  \"\${PROMPT_TEXT}\" | tee \"${tmp_events}\" >/dev/null"
-    else
-      codex exec --json \
-      -c approval_policy=never -s danger-full-access \
-      --output-last-message "$last_msg_file" \
-      "$PROMPT_TEXT" | tee "$tmp_events" >/dev/null
-    fi
-    python3 - "$tmp_events" "$sid_file" <<'PY' || true
-import json, sys
-src, dst = sys.argv[1], sys.argv[2]
-session_id = None
-try:
-    with open(src, "r", encoding="utf-8") as fh:
-        for line in fh:
-            try:
-                obj = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            value = obj.get("session_id")
-            if isinstance(value, str) and value:
-                session_id = value
-                break
-    if session_id:
-        with open(dst, "w", encoding="utf-8") as out:
-            out.write(session_id + "\n")
-except FileNotFoundError:
-    pass
-PY
-    if [ -n "$AGENTX_HOOK_AFTER_RUN" ]; then _run_with_timeout 10 "$AGENTX_HOOK_AFTER_RUN" || _log_warn "Hook failed: AGENTX_HOOK_AFTER_RUN"; fi
-    rm -f "$tmp_events"
-  )
-
-  # Finalize
-  if [ -s "$last_msg_file" ]; then
-    local FINAL_MESSAGE; FINAL_MESSAGE="$(cat "$last_msg_file")"
-    _write_message_file "$slug" "final" "$nti" "agentx" "$FINAL_MESSAGE"
-    _set_meta_many "$slug" "status=done"
-    _log_info "Ticket '$slug' turn t${nt} marked done; final message recorded."
-  else
-    _log_warn "No final message captured; leaving status as active."
-  fi
+  if [ ! -d "$(_bundle_dir "$slug")" ]; then provision "$slug"; fi
+  _runner_cmd run "$slug" --message "$message"
 }
 
 abort(){
@@ -500,7 +410,6 @@ abort(){
 
 start(){
   _require_cmd git
-  _require_cmd tmux
   _ensure_folders
   local slug="${1:-}"; shift || true
   [ -n "${slug}" ] || _die "start: missing <slug>. See: agentx.sh --help"
@@ -513,16 +422,28 @@ start(){
     esac; shift || true
   done
   if [ ! -d "$(_bundle_dir "$slug")" ]; then provision "$slug"; fi
-  local branch="$(_slug_to_branch "$slug")"
-  local worktree="$(_slug_to_worktree "$slug")"
-
-  _tmux_ensure_session "$GLOBAL_TMUX_SESSION"
-  local self_path; self_path="$(readlink -f "$0" 2>/dev/null || echo "$0")"
-  tmux new-window -d -t "$GLOBAL_TMUX_SESSION" -n "$slug" \
-    "bash -lc '\"$self_path\" run \"$slug\" --message \"\$(printf %q \"$message\")\"'"
-  _log_info "Started ticket '$slug' in tmux session '$GLOBAL_TMUX_SESSION', window '$slug'."
+  local queue_path
+  queue_path="$(_runner_cmd queue "$slug" --message "$message")"
+  _log_info "Queued run for '$slug': ${queue_path}. Ensure 'bash scripts/agentx.sh service' is running."
 }
 stop(){ abort "$@"; }
+
+service(){
+  local once=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --once) once=1 ;;
+      *) _die "service: unknown arg: $1" ;;
+    esac
+    shift || true
+  done
+  _ensure_folders
+  if [ "$once" -eq 1 ]; then
+    _runner_cmd service --once
+  else
+    _runner_cmd service
+  fi
+}
 
 info(){
   local slug="${1:-}"; shift || true
@@ -741,6 +662,7 @@ case "${COMMAND}" in
   read|tail) read_bundle "$@" ;;
   run) run "$@" ;;
   merge) merge "$@" ;;
+  service) service "$@" ;;
   doctor) doctor "$@" ;;
   help|--help|-h|"") usage ;;
   *) echo "Unknown command: ${COMMAND}"; usage; exit 1 ;;
