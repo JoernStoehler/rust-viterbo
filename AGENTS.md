@@ -10,6 +10,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Thesis specs in `docs/src/thesis/` define algorithms and data at a higher level.
 - Code/tests implement the specs; data artifacts are outputs.
 - Flow: tickets → thesis → code/tests → data. If problems are encountered, escalate to the thesis spec and tickets layers first.
+- Stay local: never involve `origin/...` for day-to-day work. All coordination happens inside this clone plus its agentx worktrees.
 - Cross‑refs in code or markdown `<!-- comments -->`:
   - `Docs: docs/src/thesis/<path>#<anchor>`
   - `Ticket: <slug>`
@@ -243,15 +244,15 @@ See “Ticketing Workflow (agentx)” below for the file-based system.
 
 ## Ticketing Workflow (agentx)
 <!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
-This project uses a minimal CLI (`agentx`) with a folder‑based “ticket bundle”. Learn this model first; it’s small and predictable.
+This project uses a minimal CLI (`agentx`) with a file‑based ticket stub (front matter + log). Learn this model first; it’s small and predictable.
 
 - Model (1–1–1–1):
-  - One ticket bundle ↔ one git branch ↔ one git worktree ↔ one Codex session.
-  - Bundles live in `.persist/agentx/tickets/<slug>/` and are symlinked into each worktree at `shared/tickets/`.
-  - Bundle contents (flat):
-    - `meta.yml` — minimal operational state: `status` (required), optional `owner`, `depends_on: []`, `dependency_of: []`. Everything else (slug, branch/worktree, timestamps, turns) is derived.
-    - `body.md` — spec text for humans. Treat it as stable after provision and read once for context.
-    - Message files (immutable): `YYYYMMDDThhmmssZ-provision.md`, `YYYYMMDDThhmmssZ-t01-start.md`, `…-t01-final.md` or `…-t01-abort.md`.
+  - One ticket file (`<slug>.md` + `<slug>.log.jsonl`) ↔ one git branch ↔ one git worktree ↔ one Codex session.
+- Ticket files live in `.persist/agentx/tickets/` and are symlinked into each worktree at `shared/tickets/`.
+- `.md` front matter (mutable): `status`, `owner`, `depends_on`, `dependency_of`, `turn_counter`, timestamps. Edit only the header; keep the Markdown body immutable after provisioning.
+- `.log.jsonl` (append-only): chronological events (`provision`, `tNN-start`, `tNN-final`, `tNN-abort`) recorded as JSON lines.
+- Entry point: run all ticket commands via `safe -t 60 -- uv script agentx.py <command> ...` from the repo root. (The CLI file lives at `/workspaces/rust-viterbo/agentx.py`.)
+- Create/edit stubs manually: copy `docs/src/meta/ticket-template.md` to `shared/tickets/<slug>.md`, fill in the YAML header/body, then run `agentx provision` only when you actually need a worktree.
 
 - Event rules (strict):
   - Exactly one `provision` before any turn.
@@ -265,16 +266,18 @@ This project uses a minimal CLI (`agentx`) with a folder‑based “ticket bundl
   - `status=done`: last terminal was a final message.
 
 - Commands (slug‑only):
-  - `agentx provision <slug> [--body-file path] [--inherit-from <slug>] [--base <ref>] [--copy src[:dst]]...`
-    - Creates the bundle and branch/worktree; writes `meta.yml`, `body.md`, and a `provision` message.
-  - `agentx start <slug> [--message "..."]`: provisions if needed, enqueues a new turn, writes `tNN-start`, and relies on the long‑running `agentx service` loop to actually launch Codex and record `tNN-final`.
+    - Creates or overwrites the ticket stub (`shared/tickets/<slug>.md` + `.log.jsonl`) without touching git.
+  - `agentx provision <slug> [--inherit-from <slug>] [--base <ref>] [--copy src[:dst]]...`
+    - Creates the branch/worktree for the slug, symlinks `shared/tickets/`, and logs a `provision` event. Requires an existing ticket stub.
+    - Always pass an explicit source via `--inherit-from <slug>` (uses that worktree’s HEAD) or `--base <slug|branch|commit>`. Remote refs such as `origin/main` are forbidden and the command errors if no base is provided.
+  - `agentx start <slug> [--message "..."]`: provisions if needed, enqueues a new turn, logs `tNN-start`, and relies on the long‑running `agentx service` loop to actually launch Codex and record `tNN-final`.
   - `agentx service [--once]`: drains the queue and runs Codex turns inside tmux. Keep it running (usually in tmux) so queued starts actually execute.
-  - `agentx abort <slug>`: writes a `tNN-abort` for the active turn, sets `status=stopped`, and kills the tmux window.
-  - `agentx await <slug> [--timeout N]`: returns when `meta.yml.status != active`.
-  - `agentx info <slug> [--fields a,b,c]`: prints selected fields from `meta.yml`.
-  - `agentx list [--status s]`: lists bundles with basic fields.
+  - `agentx abort <slug>`: logs `tNN-abort` for the active turn, sets `status=stopped`, and kills the tmux window.
+  - `agentx await <slug> [--timeout N]`: returns when the YAML `status` field changes from `active`.
+  - `agentx info <slug> [--fields a,b,c]`: prints selected fields from the YAML header.
+  - `agentx list [--status s]`: lists tickets with basic fields.
   - `agentx doctor <slug>`: tmux/worktree diagnostics for the slug.
-  - There is no CLI `read`/`tail` helper anymore—inspect bundles directly (`ls shared/tickets/<slug>/`, `cat meta.yml`, etc.) and commit any edits you make.
+  - There is no CLI `read`/`tail` helper anymore—inspect tickets directly (`cat shared/tickets/<slug>.md`, `tail shared/tickets/<slug>.log.jsonl`) and commit any YAML header edits you make.
 
 - Hooks (optional per worktree):
   - `AGENTX_HOOK_PROVISION` runs right after `git worktree add` during `provision` (inside the new worktree). Recommended value: `bash scripts/agentx-hook-provision.sh`.
@@ -287,17 +290,41 @@ This project uses a minimal CLI (`agentx`) with a folder‑based “ticket bundl
   - Optional hooks: `AGENTX_HOOK_PROVISION="bash scripts/agentx-hook-provision.sh"`, `AGENTX_HOOK_START="safe --timeout 10 -- bash scripts/python-lint-type-test.sh && safe --timeout 10 -- bash scripts/rust-fmt.sh"`
 
 - Agent checklist (always do this before acting):
-  - Read `shared/tickets/<slug>/meta.yml` (status, owner, depends_on/dependency_of). Keep `status` truthful if you change it.
-  - Read `shared/tickets/<slug>/body.md` once for context.
-  - Tail `ls shared/tickets/<slug>/ | sort | tail -n 10` to see recent messages (`provision`, `tNN-start`, `tNN-final`/`tNN-abort`). Do not edit existing message files.
+  - New slug? Copy the ticket template to `shared/tickets/<slug>.md`, edit it, and only then touch git/provision.
+  - Read `shared/tickets/<slug>.md` (YAML front matter + Markdown body). Keep `status` truthful if you change it, and avoid touching the body unless a ticket explicitly asks for a rewrite.
+  - Tail `shared/tickets/<slug>.log.jsonl` to review the most recent events (`provision`, `tNN-start`, `tNN-final`/`tNN-abort`). Do not rewrite past log lines.
+
+- Ticket peer reviews (use Codex to sanity-check large/ambiguous specs before coding or handoff):
+  - Typical command (run from repo root):  
+    ```
+    codex --yolo --cd /workspaces/rust-viterbo \
+      --model gpt-5-codex -c reasoning_budget='"medium"' \
+      exec 'You are reviewing ticket specs only ...' \
+      > /tmp/codex-review-$(date +%s).txt
+    ```
+    Use shell redirection so long outputs never truncate inside the harness.
+  - Model choice trade-offs: `gpt-5-codex` + medium reasoning is fast and good at shell/tool use; `gpt-5` + high reasoning yields slower but deeper critiques. Mix as needed (example: codex run for quick pass, then a slower follow-up if issues persist).
+  - Prompts must forbid mutating commands and request critique dimensions (clarity, completeness, actionability, specificity). Keep sandbox read-only unless you have a strong reason otherwise.
+  - When to run: before starting a new large ticket, before requesting review on a complicated spec, or when scope creep is suspected. Document outcomes in the ticket log or update the ticket body immediately.
+  - Optional QoL flags (check `codex --help` for availability): `--color=never` to keep logs clean, `--json` or `--output-last-message` for structured captures, `--quiet/--no-internal-output` to suppress tool chatter.
+
+- Ticket body structure and style:
+  - Keep each ticket body deterministic and high-signal; follow this outline unless the owner specifies another template:
+    1. **Generating idea / context** — one short paragraph capturing why the work exists (source insight, bug, or hypothesis).
+    2. **Goals & constraints** — explicit success criteria plus constraint list with forgiveness notes (what is non-negotiable vs. stretch).
+    3. **Final deliverable** — bullet list of concrete artifacts (code, docs, data) that prove the goal is met.
+    4. **High-level plan** — 3–6 ordered steps that link the generating idea to the deliverable (tickets → thesis → code flow). Each step should be testable.
+    5. **Mid-level plan & tradeoffs** — per-step detail covering major components, key decisions, and known tradeoffs (e.g., tooling choices, performance vs. scope). Reference specs/tickets via the `Docs:/Ticket:/Code:` comment convention when relevant.
+    6. **Variations / adaptation hooks** — pre-approved pivots, fallback options, or monitoring notes that guide future agents if assumptions change.
+  - Style rules: write in the same concise, explicit tone as AGENTS.md; favor lists over prose; note open questions; avoid duplicating AGENTS.md—link to sections instead. Treat the ticket body as immutable once work starts unless the owner updates it.
 
 - Final message:
   - End each turn with a concise final message that explains what changed, how to validate (exact commands), and what’s next (if anything). agentx captures it into the ticket as `tNN-final.md`.
 
 - Conventions:
   - Commands accept a slug only. Do not pass file paths or session ids.
-  - Order is defined by the UTC timestamp prefix in message filenames; ignore filesystem mtimes.
-  - `meta.yml` is authoritative and intentionally small. agentx writes/reads only `status`; you may edit `owner`, `depends_on`, `dependency_of`. agentx derives slug/branch/worktree/turns/timestamps from the folder layout and message files.
+  - Order is defined by the log timestamps; ignore filesystem mtimes.
+  - The YAML front matter is authoritative and intentionally small. agentx writes/reads only `status`, `turn_counter`, and timestamps; you may edit `owner`, `depends_on`, `dependency_of` when needed. agentx derives slug/branch/worktree/turns/timestamps from the ticket file and log.
 
 ## API Policy (Internal Only)
 - We have no stable public API. All Rust modules are project‑internal.

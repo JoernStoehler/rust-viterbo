@@ -26,16 +26,30 @@
   - Fix the standard complex structure $J$ so that $\omega_0(u,v)=\langle Ju, v\rangle$ and $J^\top J=I$, $J^\top=-J$.
 - Symplectic polytope hypothesis:
   - No 2-face is Lagrangian: for every 2-face $F$, the restriction $\omega_0|_{TF}\ne 0$. This matches the “symplectic polytope” condition in the Chaidez–Hutchings framework and ensures well-posed combinatorial Reeb dynamics across ridges.
+  - Lemma (no interior crossings of Lagrangian ridges). Let $i=F\cap G$ be a ridge with $\omega_0|_{T_i}=0$. Because $T_i=n_F^{\perp}\cap n_G^{\perp}$ is Lagrangian, we have $J T_i = T_i^{\perp} = \operatorname{span}\{n_F,n_G\}$, hence $v_F=J n_F$ and $v_G=J n_G$ lie in $T_i$.
+    Therefore $\langle n_G,v_F\rangle=\langle n_F,v_G\rangle=0$, the denominator in $\tau_{ij}$ collapses, and no point of $i$ flows transversely from $F$ into $G$ (or conversely).
+    Any Reeb trajectory that hits the interior of such a ridge is trapped inside it, so action-minimizing closed characteristics—which require isolated transverse crossings—cannot use it. Excluding Lagrangian ridges from the oriented-edge graph is thus lossless for minimizers. <!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#setting -->
 - Facets and Reeb directions:
   - For each facet $f\in \mathcal{F}_3$, with plane $H_f=\{x:\langle n_f,x\rangle=b_f\}$, trajectories of the Reeb flow on $H_f\cap\partial K$ are straight segments parallel to $v_f:=J n_f$ (speed may vary; directions are constant).
   - We only need directions to get exit points; actions are integrals of $\lambda_0$ along these straight segments.
 - Genericity/non-degeneracy assumptions (used for correctness and robust numerics):
   1) For each facet $f$, and each ridge $r\subset f$ with co-facet $g\ne f$, we have $\langle v_f, n_g\rangle\ne 0$.  
   2) For a fixed $f$, in the region where a particular co-facet $g$ is the first one hit along $v_f$, that co-facet is uniquely first (no ties on a set of positive measure).  
-  3) Action-minimizing cycles do not involve segments on 1-faces (rotation blow-up); crossings of 2-faces occur at single points.  
+  3) Assumption (Chaidez–Hutchings conjecture). Action-minimizing cycles do not involve segments on 1-faces (rotation blow-up); crossings of 2-faces occur at single points; we enforce this even though CH only state it as a conjecture.[^CHConj]  
   <!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#setting -->
   <!-- Comment: (1)-(3) match the “generic” case we intend to handle first; degenerate tie-breaking and 1-face handling can be added later. -->
   <!-- Comment: The non-Lagrangian 2-face hypothesis lines up with our ridge-crossing model and with CH’s notion of symplectic polytopes. -->
+
+## Terminology (fast glossary)
+- **Facet $F$ (3-face).** A supporting half-space $H_F=\{x:\langle n_F,x\rangle=b_F\}$ with outward unit normal $n_F$ and Reeb direction $v_F:=J n_F$.
+- **Ridge $i$ (2-face).** Intersection of two facets $F,G$ with $\omega_0|_{Ti}\ne 0$. We write $i=F\cap G$ and keep the ordered pair of facet indices $(F,G)$ only so we know which facet we are entering/leaving in an oriented edge.
+- **Ridge chart $U_i$.** The $2\times 4$ matrix whose rows form an orthonormal, $\omega_0$-positive basis of $Ti$. The chart map is $\pi_i: i \to A_i\subset\mathbb{R}^2$, $\pi_i(x)=U_i x$. Its image $A_i$ is the intrinsic polygon used throughout the algorithm.
+- **Chart reconstruction map $\Xi_i$.** The inverse affine map $\Xi_i(y)=A_i y + c_i$ that sends chart coordinates back to the geometric ridge, i.e. it satisfies $U_i \Xi_i(y)=y$ and both facet equations $\langle n_F,\Xi_i(y)\rangle=b_F$, $\langle n_G,\Xi_i(y)\rangle=b_G$. Whenever we refer to “lifting a point from $A_i$ to the 2-face” we mean applying $\Xi_i$.
+- **Domain $\operatorname{dom}\psi_{ij}$.** Subset of $A_i$ defined by (i) the entrance inequality $\tau_{ij}>0$ inside facet $F$ and (ii) all exit comparisons $\tau_{ij}\le\tau_{ik}$ against other admissible co-facets. All inequalities are evaluated after pushing $y$ through $\Xi_i$ so they act on the actual ridge, not a translated plane.
+- **First-hit map $\psi_{ij}$.** The composition “lift to the ridge, flow inside $F$ until hitting $j$, then project with $U_j$.” Written on charts as $\psi_{ij}(y)=M_{ij}y+t_{ij}$ with $M_{ij}\in\mathrm{GL}^+(2,\mathbb{R})$ by the orientation lemma.
+- **Image $\operatorname{im}\psi_{ij}$.** The polygon $M_{ij}(\operatorname{dom}\psi_{ij})+t_{ij}\subset A_j$, used both for sanity checks and for pruning in the DFS.
+- **Action increment $A_{ij}$.** The affine functional $A_{ij}(y)=\frac{b_F}{2}\tau_{ij}(y)$ pulled back to chart coordinates via $\Xi_i$.
+- **Facet digraph / ridge digraph.** Two layers: facets connected via ridges (used for quick transversality checks) and ridges connected via facets (the oriented-edge graph proper). Unless stated otherwise, “graph” below refers to the ridge digraph.
 
 ## Face Graphs
 - 3-face digraph:
@@ -44,10 +58,16 @@
   - This orientation is well-defined by convexity and the genericity assumptions.
 - 2-face digraph (the main search graph):
   - Nodes: ridges $i\in \mathcal{F}_2$. Each ridge $i$ is the intersection of two distinct facets $f(i)$ and $g(i)$.
-  - Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.
-  - Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.
+  - Oriented edges: include $i\to j$ labeled by the facet $F$ iff (i) $i,j\subset F$, and (ii) the first-exit domain $\operatorname{dom}\psi_{ij}\subset A_i$ is non-empty—equivalently, some point of $i$ flows along $v_F$ and hits $j$ first. Merely being an entrance and an exit of the facet is insufficient (see the “parallelogram” counterexample); we certify every edge by explicitly solving the first-hit inequalities. When a numeric degeneracy prevents us from certifying the domain even though the combinatorics says it should exist, we still emit the edge but flag it as **suspicious** so downstream passes can treat it conservatively instead of silently dropping a potentially valid orbit.
+  - Multiple outgoing edges from a ridge within a common facet are possible; absent (or discarded) edges correspond exactly to “no point flows $i\to j$ first”.
   <!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
   - Orientation convention (decision): for every ridge $i$, fix the chart $U_i$ to be the canonical one induced by $\omega_0$ (choose an orthonormal basis $(u_1,u_2)$ of the face plane with $\omega_0(u_1,u_2)>0$). Charts are fixed per ridge (independent of the incoming facet). This pins the sign of rotation angles extracted from $D\psi_{ij}$.
+  - Claim (first-hit edges, no false positives):
+    - Ridges that do not share a facet never admit a first-hit map, so the builder never even enumerates such pairs. The only candidates are pairs $(i,j)$ contained in the same facet $F$.
+    - Inside a facet $F$, a candidate edge survives only when the **forward denominator** $\langle n_{G(j,F)}, v_F\rangle$ is strictly positive and the intersection defining $\operatorname{dom}\psi_{ij}$ is non-empty. This guarantees that some $x\in i$ exits $F$ toward $j$ in positive time before touching any other ridge of $F$.
+    - Because $\operatorname{dom}\psi_{ij}\subseteq A_i$ and $A_i$ is the bounded ridge polygon, $\operatorname{dom}\psi_{ij}$ is compact. Treating it as “unbounded” would contradict the geometry, so the implementation aborts instead of continuing in that case.
+    - Lemma “Reeb first-hit maps preserve orientation” below implies $\det D\psi_{ij}>0$ on every non-empty domain. Therefore a non-positive determinant signals a violation of the hypotheses (e.g., bad chart orientation or an invalid edge) and we panic rather than silently dropping the edge.
+    - Summary: every stored oriented edge represents at least one bona fide first-hit strip; if any prerequisite (shared facet, forward denominator, non-empty domain, positive determinant) fails we treat it as a fatal error. This is how we keep the combinatorial graph synchronized with the symplectic specification.
 
 ## Notation Recap
 - Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.
@@ -66,7 +86,7 @@
   - Push-forward candidates: $C'=\psi_{i_ki_{k+1}}\!\bigl(C\cap \operatorname{dom}\psi_{i_ki_{k+1}}\bigr)\subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$.
   - Update action $A'$ via composition with $\psi^{-1}$ and add the per-edge increment; prune by $A'(z)\le A_{\mathrm{best}}$; update $\rho'=\rho+\rho_{i_ki_{k+1}}\le 2$.
   - Repeat; on returning to the start ridge, solve the fixed-point equation $\Psi(z)=z$ within $C$ and update the incumbent.
-- Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2019).
+- Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2019, Theorem 3.1).[^HKSimple]
 
 ## Per-edge Maps and Polyhedral Domains
 Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathcal{F}_3$, $i,j\subset F$. Let $G(j,F)$ denote the co‑facet: the unique facet $G\neq F$ such that $j=F\cap G$.
@@ -85,7 +105,7 @@ Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathc
       \;\le\;
       \sigma_k\bigl(b_k-\langle n_k,x\rangle\bigr)\,\langle n_{G(j,F)},v_F\rangle.
       $$
-    - Combine these with $x\in i$ and $\tau_{ij}(x)>0$ (a single linear inequality after sign normalization). Projecting by $\pi_i$ yields $\operatorname{dom}\psi_{ij}\subset A_i$ as a convex polygon in half-space form.
+    - Combine these with $x\in i$ and $\tau_{ij}(x)>0$ (a single linear inequality after sign normalization). Projecting by $\pi_i$ yields $\operatorname{dom}\psi_{ij}\subset A_i$ as a convex polygon in half-space form. We require this polygon to have non-empty interior; if the linear program says “empty/unbounded” we keep the edge only as a **suspicious** placeholder, recording that the certificate failed and that the search must treat the edge with reduced trust.
 - Domains and images:
   - Domain (in $A_i$): $\operatorname{dom}\psi_{ij}\subset A_i$ consists of ridge points that flow first to ridge $j$ across facet $F$ (convex polygon).
   - Image (in $A_j$): $\operatorname{im}\psi_{ij}=\psi_{ij}(\operatorname{dom}\psi_{ij})\subset A_j$ (convex polygon).
@@ -98,7 +118,7 @@ Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathc
   <!-- Comment: We explicitly avoid parameterization of the Reeb vector field. Straight-line geometry suffices to locate exits and compute actions. -->
 Symbol map (equations above)
 - $\psi_{ij}$: push‑forward map (code: `EdgeData.map_ij`).
-- $\operatorname{dom}\psi_{ij}\subset A_i$: domain polygon in ridge $i$ (code: `EdgeData.dom_in`).
+- $\operatorname{dom}\psi_{ij}\subset A_i$: domain polygon in ridge $i$ (code: `EdgeData.dom_in`). We only add an oriented edge $i\xrightarrow{F} j$ when $\langle n_{G(j,F)}, v_F\rangle > 0$ **and** $\operatorname{dom}\psi_{ij} \neq \varnothing$; otherwise the Reeb ray never hits $j$ first and the edge is omitted. Implementation detail: if floating-point noise masks a true domain, we still emit the edge but mark it as suspicious so verification/reporting layers can keep track of the uncertainty.
 - $\operatorname{im}\psi_{ij}\subset A_j$: image polygon in ridge $j$ (code: `EdgeData.img_out`).
 - $\tau_{ij}$: first‑exit time on facet $F$ (affine on the region where $j$ is first exit).
 - $A_{ij}$: action increment (code: `EdgeData.action_inc`).
@@ -199,18 +219,20 @@ Symbol map (fixed‑point and tolerances)
 - Lower bound for progress reporting: $c_{\mathrm{EHZ}}(K)\ge \pi r^2$ if $B_r\subset K$ (inradius).
 
 ## Correctness Sketch (informal)
-1) Every closed characteristic in the generic polytope case intersects ridges at isolated points and travels linearly on facets parallel to $v_f$.  
-2) Such a trajectory maps to a directed cycle in the 2-face digraph; the per-edge maps and domains capture exactly the “first exit” geometry.  
-3) The action along a cycle equals the sum of per-edge increments evaluated at the unique fixed point $z_\star$ of the composed affine map in the start chart.  
-4) Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points.  
-5) The push‑forward pruning is sound: removing paths with empty candidate sets, with $A>A_{\mathrm{best}}$, or with $\rho>2$ cannot delete the true minimizer (index‑3 implies $\rho\in(1,2)$).
+1) Every closed characteristic in the generic polytope case intersects ridges at isolated points and travels linearly on facets parallel to $ (Chaidez–Hutchings’ combinatorial Reeb model).[^CH21]
+2) Such a trajectory maps to a directed cycle in the 2-face digraph; the per-edge maps and domains capture exactly the “first exit” geometry because each ridge crossing records the next facet via the same CH transition rule.[^CH21]
+3) The action along a cycle equals the sum of per-edge increments evaluated at the unique fixed point \star$ of the composed affine map in the start chart (derived in “Action Increment per Edge” and implemented in “Search Over Directed Cycles”).
+4) Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points (combine (2) with the fixed-point closure described in §“Search Over Directed Cycles”).
+5) The push-forward pruning is sound: removing paths with empty candidate sets, with >A_{\mathrm{best}}$, or with $ho>2$ cannot delete the true minimizer—empties violate (2), action pruning respects the variational definition of {\mathrm{EHZ}}$, and the $ho>2$ guard follows from the 4D index window $ho\in(1,2)$ for an index-3 minimizer (see docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#cz-rotation, citing [^HWZ98][^ABHS18]).
 
 ### Orientation lemma (canonical charts)
-Lemma. Let $i\subset F$ and $j\subset G$ be ridges such that $\omega_0|_{Ti}\ne 0$ and $\omega_0|_{Tj}\ne 0$. With our canonical 2‑face charts $U_i,U_j$ (orthonormal bases oriented by $\omega_0(u_1,u_2)>0$), the Reeb first‑hit map $\psi_{ij}:U_i(i)\to U_j(j)$ is orientation‑preserving: $\det D\psi_{ij}>0$ wherever defined.
+Lemma. Let $i\subset F$ and $j\subset G$ be ridges such that $\omega_0|_{Ti}\ne 0$ and $\omega_0|_{Tj}\ne 0$. Suppose the Reeb flow starting in the interior of $i$ reaches $j$ inside the shared facet $F$ (so the first-hit map exists). With our canonical 2-face charts $U_i,U_j$ (orthonormal bases oriented by $\omega_0(u_1,u_2)>0$), the Reeb first-hit map $\psi_{ij}:U_i(i)\to U_j(j)$ is orientation-preserving: $\det D\psi_{ij}>0$.
 
 Proof (sketch). On each facet $F$, $\alpha:=\lambda_0|_F$ is a contact form and $R$ the Reeb vector field satisfies $\mathcal{L}_R\alpha=i_R d\alpha+d(\alpha(R))=0$, so the Reeb flow preserves both $\alpha$ and $d\alpha$.[^PreserveAlpha] A local surface of section $D\subset F$ transverse to $R$ inherits the positive area form $d\alpha|_D$; the Poincaré first‑hit map preserves $d\alpha|_D$ and hence orientation on $D$.[^ReturnArea] In our chart $U_i$, $d\alpha|_{Ti}=\omega_0|_{Ti}$ is $c\,dy_1\wedge dy_2$ with $c>0$ by construction; therefore $\det D\psi_{ij}>0$ in $y$‑coordinates. The same holds at $j$, so $\psi_{ij}$ preserves the canonical $\mathbb{R}^2$ orientation.
 
 Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a transverse section and no return map is available. Our genericity excludes this case and matches the combinatorial Reeb model on 4D polytopes.[^CH]
+
+Implementation guardrail. In code (`crates/viterbo/src/oriented_edge/build.rs`) we treat $\det D\psi_{ij}\le\varepsilon_{\det}$ as a fatal error: once $\operatorname{dom}\psi_{ij}\ne\varnothing$, the lemma says $\det D\psi_{ij}>0$, so a non-positive determinant indicates a violated hypothesis (bad chart, misidentified edge, or numerical corruption) and must not be “handled” by dropping the edge.
 
 ### Rotation implementation details (guards)
 - Numerical extraction. Compute the orthogonal polar factor via SVD ($M=U\Sigma V^\top$, $R=UV^\top$) and set $\operatorname{rot}(M)=\operatorname{atan2}(R_{12},R_{11})\in[-\pi,\pi]$, $\rho=|\operatorname{rot}|/\pi\in[0,1]$. Reject orientation‑reversing cases.
@@ -223,7 +245,7 @@ Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a t
   - Precompute emptiness table for two-step patterns $(i\to j\to k)$ by checking whether $\psi_{ij}(\operatorname{dom}\psi_{ij})$ lies entirely outside $\operatorname{dom}\psi_{jk}$ (LP feasibility).  
   - Cache affine maps and half-space transforms to avoid recomputation.
   - Early action lower bounds from per-edge minima give a Dijkstra-like ordering over partial paths.
-  - No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem (2019), there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2‑face), which sharply reduces the search.
+  - No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem (2019, Theorem 3.1), there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2-face), which sharply reduces the search.[^HKSimple]
 
 ## Tie-breaking (deterministic and performant)
 When exit times to multiple co-facets are equal within tolerance, we need a deterministic choice that does not affect results but impacts performance.
@@ -247,7 +269,7 @@ When exit times to multiple co-facets are equal within tolerance, we need a dete
   - Best cycle, fixed point $z_\star$, action $A_\star$; lifted 4D polygonal curve via stored charts; provenance sidecar.
 
 ## Type Coverage and Assumptions
-- We target Type 1 combinatorial orbits (segments inside facets; crossings at ridges) under the symplectic‑polytope assumption (no Lagrangian 2-faces). This aligns with the CH framework and the “simple loop” theorem in Haim–Kislev ensuring a minimizer visits each facet at most once.  
+- We target Type 1 combinatorial orbits (segments inside facets; crossings at ridges) under the symplectic-polytope assumption (no Lagrangian 2-faces). This aligns with the CH framework and the “simple loop” theorem in Haim–Kislev, which guarantees a minimizer visits each facet at most once.[^HKSimple]  
 <!-- Docs: thesis/bibliography.md entries “Chaidez–Hutchings 2020/21” and “Haim‑Kislev 2019”. -->
 
 ## Pseudocode (Rust‑ish)
@@ -331,8 +353,9 @@ fn extend(state: &State, e: &EdgeData, A_best: f64) -> Option<State> {
 <!-- Purpose: park quick notes about code/spec divergences or open questions so agents can proceed without blocking on full edits. Treat entries as provisional; once stabilized, fold them into the main text and remove from this list. -->
 - 1-faces not needed: under the stated genericity assumptions, minimizing cycles do not traverse 1-faces; the algorithm uses flow on facets and crossings at ridges only. The helper `geom4::reeb_on_edges_stub()` remains intentionally unimplemented.
 - Orientation convention: we adopt the unique “natural” convention induced by the ambient symplectic form (require the chart orientation to agree with ω₀|_{face}). The implementation enforces this choice; no runtime toggle exists.
-- TODO (owner): write down the quick proof that Lagrangian 2-faces are never crossed in their interior, so omitting them from the graph is safe. Once captured, fold it into the “Setting and Assumptions” section and remove this reminder.
 
 [^PreserveAlpha]: Standard fact in contact dynamics: for a contact form α with Reeb vector field R_α, the flow φ_t satisfies φ_t^*α=α and φ_t^*dα=dα since 𝓛_{R_α}α=i_{R_α}dα+d(α(R_α))=0.
-[^ReturnArea]: Poincaré first‑return maps of Reeb flows on 3‑dimensional contact manifolds are area‑preserving with respect to dα on any transverse surface of section; see e.g. Albers–Geiges–Zehmisch (2018).
-[^CH]: Chaidez–Hutchings (2021): “Computing Reeb dynamics on four‑dimensional convex polytopes”, J. Comput. Dyn. 8(4):403–445; arXiv:2008.10111.
+[^ReturnArea]: Poincaré first-return maps of Reeb flows on 3-dimensional contact manifolds are area-preserving with respect to dα on any transverse surface of section; see e.g. Albers–Geiges–Zehmisch (2018).
+[^CH]: Chaidez–Hutchings (2021): “Computing Reeb dynamics on four-dimensional convex polytopes”, J. Comput. Dyn. 8(4):403–445; arXiv:2008.10111.
+[^CHConj]: Chaidez–Hutchings (2021), §3.4: conjecture that action-minimizing Reeb trajectories on convex polytopes avoid 1-faces; we adopt it as a working genericity assumption.
+[^HKSimple]: Haim–Kislev (2019), “On the Symplectic Size of Convex Polytopes”, Geom. Funct. Anal. 29:440–463, Theorem 3.1 (simple-loop theorem: a minimal-action closed characteristic enters each facet interior at most once).
