@@ -1,10 +1,15 @@
 //! Graph construction (nodes, edges, bounds) for the oriented-edge algorithm.
 
-use crate::geom2::{ordered::HalfspaceIntersection, rotation_angle, Aff1, Aff2, GeomCfg, Hs2};
-use crate::geom4::{
-    enumerate_faces_from_h, face2_as_poly2_hrep, oriented_orth_map_face2, reeb_on_facets, Poly4,
+use crate::geom2::{
+    from_points_convex_hull_strict,
+    ordered::{HalfspaceIntersection, Poly2},
+    rotation_angle, Aff1, Aff2, GeomCfg, Hs2,
 };
-use nalgebra::Vector2;
+use crate::geom4::{
+    cfg::TIGHT_EPS, enumerate_faces_from_h, j_matrix_4, oriented_orth_map_face2, reeb_on_facets,
+    Poly4,
+};
+use nalgebra::{Matrix2x4, Matrix4, Vector2, Vector4};
 
 use super::types::{EdgeData, FacetId, Graph, Ridge, RidgeId};
 
@@ -18,18 +23,26 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
     // Build ridge data with charts and strict polygons.
     let mut ridges: Vec<Ridge> = Vec::new();
     let mut by_facet: Vec<Vec<RidgeId>> = vec![Vec::new(); num_facets];
-    for (ridx, f2) in faces2.iter().enumerate() {
+    let j = j_matrix_4();
+    for f2 in faces2.iter() {
         let (fi, fj) = f2.facets;
-        // Canonical chart (ω0-induced orientation).
-        let (chart_u, chart_ut) = oriented_orth_map_face2(&poly.h, fi, fj).expect("face chart");
-        let poly2 = face2_as_poly2_hrep(poly, fi, fj).expect("face poly2");
+        // Canonical chart (ω0-induced orientation); skip Lagrangian faces (ω≈0).
+        let Some((chart_u, chart_ut)) = oriented_orth_map_face2(&poly.h, fi, fj) else {
+            continue;
+        };
+        if chart_is_lagrangian(&chart_u, &j) {
+            continue;
+        }
+        let Some(poly2) = ridge_poly_from_vertices(&chart_u, &f2.vertices) else {
+            continue;
+        };
         let node = Ridge {
             facets: (FacetId(fi), FacetId(fj)),
             poly: poly2,
             chart_u,
             chart_ut,
         };
-        let id = RidgeId(ridx);
+        let id = RidgeId(ridges.len());
         ridges.push(node);
         by_facet[fi].push(id);
         by_facet[fj].push(id);
@@ -120,9 +133,47 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
                 );
                 let map_ij = Aff2 { m, t };
                 // Orientation should be preserved between canonical ridge charts.
+                let det_map = map_ij.m.determinant();
+                if !det_map.is_finite() {
+                    #[cfg(debug_assertions)]
+                    if std::env::var_os("VITERBO_DEBUG_OE").is_some() {
+                        eprintln!(
+                            "skip ψ_ij with non-finite det (det={det_map}, facet={f}, from={ri:?}{:?}, to={rj:?}{:?}, cofacet_j={h_idx_j}, d_j={d_j})",
+                            ridges[ri.0].facets,
+                            ridges[rj.0].facets
+                        );
+                    }
+                    continue;
+                }
+                if det_map.abs() <= cfg.eps_det {
+                    #[cfg(debug_assertions)]
+                    if std::env::var_os("VITERBO_DEBUG_OE").is_some() {
+                        eprintln!(
+                            "skip ψ_ij with det≈0 (det={det_map}, facet={f}, from={ri:?}{:?}, to={rj:?}{:?}, cofacet_j={h_idx_j}, d_j={d_j})",
+                            ridges[ri.0].facets,
+                            ridges[rj.0].facets
+                        );
+                    }
+                    continue;
+                }
+                if det_map < 0.0 {
+                    #[cfg(debug_assertions)]
+                    if std::env::var_os("VITERBO_DEBUG_OE").is_some() {
+                        eprintln!(
+                            "skip ψ_ij with det<0 (det={det_map}, facet={f}, from={ri:?}{:?}, to={rj:?}{:?}, cofacet_j={h_idx_j}, d_j={d_j}, ω_i={}, ω_j={})",
+                            ridges[ri.0].facets,
+                            ridges[rj.0].facets,
+                            chart_signed_omega(&ridges[ri.0].chart_u, &j),
+                            chart_signed_omega(&ridges[rj.0].chart_u, &j),
+                        );
+                    }
+                    continue;
+                }
                 debug_assert!(
-                    map_ij.is_orientation_preserving(),
-                    "ψ_ij must be orientation-preserving between canonical charts (det>0)"
+                    det_map > 0.0,
+                    "ψ_ij must be orientation-preserving between canonical charts (det={det_map}, facet={f}, from={ri:?}{:?}, to={rj:?}{:?}, cofacet_j={h_idx_j}, d_j={d_j})",
+                    ridges[ri.0].facets,
+                    ridges[rj.0].facets
                 );
                 let rotation_inc = rotation_angle(&map_ij).unwrap_or(0.0);
                 debug_assert!(
@@ -178,4 +229,37 @@ pub fn build_graph(poly: &mut Poly4, cfg: GeomCfg) -> Graph {
         adj,
         num_facets,
     }
+}
+
+fn chart_is_lagrangian(chart_u: &Matrix2x4<f64>, j: &Matrix4<f64>) -> bool {
+    chart_signed_omega(chart_u, j).abs() < TIGHT_EPS
+}
+
+fn chart_signed_omega(chart_u: &Matrix2x4<f64>, j: &Matrix4<f64>) -> f64 {
+    let u1 = Vector4::new(
+        chart_u[(0, 0)],
+        chart_u[(0, 1)],
+        chart_u[(0, 2)],
+        chart_u[(0, 3)],
+    );
+    let u2 = Vector4::new(
+        chart_u[(1, 0)],
+        chart_u[(1, 1)],
+        chart_u[(1, 2)],
+        chart_u[(1, 3)],
+    );
+    u1.dot(&(j * u2))
+}
+
+fn ridge_poly_from_vertices(chart_u: &Matrix2x4<f64>, verts: &[Vector4<f64>]) -> Option<Poly2> {
+    if verts.len() < 2 {
+        return None;
+    }
+    let mut pts = Vec::with_capacity(verts.len());
+    for v in verts {
+        let y = chart_u * *v;
+        let pt = Vector2::new(y[(0, 0)], y[(1, 0)]);
+        pts.push(pt);
+    }
+    from_points_convex_hull_strict(&pts)
 }

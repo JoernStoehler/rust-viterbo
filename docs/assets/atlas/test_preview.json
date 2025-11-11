@@ -26,7 +26,7 @@
       "family_name": "sym_tiny",
       "vertex_count": 36,
       "halfspace_count": 12,
-      "volume": 42.38443133705778,
+      "volume": 42.384431337057784,
       "capacity_ehz": null,
       "systolic_ratio": null
     },
@@ -36,9 +36,9 @@
       "family_name": "sym_tiny",
       "vertex_count": 38,
       "halfspace_count": 12,
-      "volume": 21.70471354925164,
-      "capacity_ehz": 5.027294766262212,
-      "systolic_ratio": 0.5822166832457194
+      "volume": 21.704713549251636,
+      "capacity_ehz": null,
+      "systolic_ratio": null
     },
     {
       "row_id": 3,
@@ -66,7 +66,7 @@
       "family_name": "mahler_probe",
       "vertex_count": 64,
       "halfspace_count": 16,
-      "volume": 9.195485215108059,
+      "volume": 9.195485215108055,
       "capacity_ehz": null,
       "systolic_ratio": null
     },
@@ -76,7 +76,7 @@
       "family_name": "mahler_probe",
       "vertex_count": 49,
       "halfspace_count": 14,
-      "volume": 8.993360825066091,
+      "volume": 8.993360825066093,
       "capacity_ehz": null,
       "systolic_ratio": null
     },

@@ -8,9 +8,6 @@ set -euo pipefail
 # - Can be run directly (preferred for humans). Wrapping the whole script in safe.sh is optional.
 # - This script is intentionally fail-fast. If any stage fails, the script must exit non‑zero.
 #   Do not add `|| true` here; use quick loops for advisory-only checks instead.
-# - Current status (2025-11-08): oriented‑edge Rust tests are failing in this worktree.
-#   This script is expected to fail at the Rust tests stage until the issue is fixed.
-#   Ticket: fbf9964f-31af-43bb-a9d4-a3f33c38ffbc
 # - Stage timeouts (tuned to catch mistakes yet allow expected runs):
 #   * uv venv: 300s
 #   * uv sync (locked): 300s
@@ -44,7 +41,7 @@ bash scripts/safe.sh --timeout 300 -- bash scripts/rust-test.sh
 bash scripts/safe.sh --timeout 300 -- bash scripts/rust-clippy.sh
 
 echo "=== Reproduce: Criterion benchmarks (raw data/bench/criterion) ==="
-bash scripts/safe.sh --timeout 600 -- BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh
+bash scripts/safe.sh --timeout 600 -- env BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh
 
 echo "=== Reproduce: Criterion → docs assets stage ==="
 bash scripts/safe.sh --timeout 180 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
@@ -58,8 +55,8 @@ bash scripts/safe.sh --timeout 300 -- uv run maturin develop -m crates/viterbo-p
 echo "=== Reproduce: copy native .so into src/viterbo ==="
 bash scripts/safe.sh --timeout 60 -- bash scripts/rust-build.sh --copy-only
 
-echo "=== Reproduce: run data pipeline ==="
-bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/small.json
+echo "=== Reproduce: run data pipeline (atlas test config) ==="
+bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/test.json
 
 echo "=== Reproduce: build thesis book (mdBook) ==="
 bash scripts/safe.sh --timeout 600 -- mdbook build docs

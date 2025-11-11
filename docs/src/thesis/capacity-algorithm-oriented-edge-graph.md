@@ -331,6 +331,7 @@ fn extend(state: &State, e: &EdgeData, A_best: f64) -> Option<State> {
 <!-- Purpose: park quick notes about code/spec divergences or open questions so agents can proceed without blocking on full edits. Treat entries as provisional; once stabilized, fold them into the main text and remove from this list. -->
 - 1-faces not needed: under the stated genericity assumptions, minimizing cycles do not traverse 1-faces; the algorithm uses flow on facets and crossings at ridges only. The helper `geom4::reeb_on_edges_stub()` remains intentionally unimplemented.
 - Orientation convention: we adopt the unique “natural” convention induced by the ambient symplectic form (require the chart orientation to agree with ω₀|_{face}). The implementation enforces this choice; no runtime toggle exists.
+- TODO (owner): write down the quick proof that Lagrangian 2-faces are never crossed in their interior, so omitting them from the graph is safe. Once captured, fold it into the “Setting and Assumptions” section and remove this reminder.
 
 [^PreserveAlpha]: Standard fact in contact dynamics: for a contact form α with Reeb vector field R_α, the flow φ_t satisfies φ_t^*α=α and φ_t^*dα=dα since 𝓛_{R_α}α=i_{R_α}dα+d(α(R_α))=0.
 [^ReturnArea]: Poincaré first‑return maps of Reeb flows on 3‑dimensional contact manifolds are area‑preserving with respect to dα on any transverse surface of section; see e.g. Albers–Geiges–Zehmisch (2018).
