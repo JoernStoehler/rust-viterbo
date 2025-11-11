@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AgentX runner: launch Codex in tmux via queue or immediate run."""
+"""AgentX runner: launch Codex in tmux by draining queued requests."""
 from __future__ import annotations
 
 import argparse
@@ -323,11 +323,6 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--message", default="")
     sp.set_defaults(cmd="queue")
 
-    sp = sub.add_parser("run")
-    sp.add_argument("slug")
-    sp.add_argument("--message", default="")
-    sp.set_defaults(cmd="run")
-
     sp = sub.add_parser("service")
     sp.add_argument("--once", action="store_true")
     sp.set_defaults(cmd="service")
@@ -346,8 +341,6 @@ def main(argv: Optional[List[str]] = None) -> int:
         if args.command == "queue":
             req = queue_request(cfg, args.slug, args.message)
             print(req)
-        elif args.command == "run":
-            run_codex(cfg, args.slug, args.message)
         elif args.command == "service":
             drain_queue(cfg, once=args.once)
         else:

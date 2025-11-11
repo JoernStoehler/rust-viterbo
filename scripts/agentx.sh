@@ -55,7 +55,6 @@ export AGENTX_RUNNER_QUEUE
 
 # Optional hooks (env), run inside the worktree:
 AGENTX_HOOK_START="${AGENTX_HOOK_START:-}"
-AGENTX_HOOK_RESUME="${AGENTX_HOOK_RESUME:-}"
 AGENTX_HOOK_BEFORE_RUN="${AGENTX_HOOK_BEFORE_RUN:-}"
 AGENTX_HOOK_AFTER_RUN="${AGENTX_HOOK_AFTER_RUN:-}"
 AGENTX_HOOK_PROVISION="${AGENTX_HOOK_PROVISION:-}"
@@ -223,33 +222,27 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") <command> [arguments]
 
-Base (primitives, slug-only):
+Base (ticket lifecycle):
   provision|new <slug> [--body-file <path>] [--inherit-from <slug>] [--base <ref>] [--copy <path> ...]
-      Create the ticket bundle and branch/worktree for <slug> without launching the agent.
-  run <slug> [--message <text>]
-      Start a new agent turn for <slug> inside tmux; records start/final messages and status.
+      Create the ticket bundle and branch/worktree for <slug>.
+  start <slug> [--message <text>]
+      Provision if absent, enqueue the turn, and rely on 'service' to launch Codex.
   stop|abort <slug>
       Record an abort for the active turn (status=stopped) and kill the tmux window if present.
 
-Convenience (agent lifecycle):
-  start <slug> [--message <text>]
-      provision (if absent) + run (first-time or subsequent).
-  await <slug> [--timeout <seconds>]
-      Wait until meta.yml status changes from 'active' or timeout.
+Queue / automation:
+  service [--once]
+      Drain the queue and run Codex turns inside tmux. Keep it running for async work.
 
-Convenience (ticket bundles):
-  read|tail <slug> [--events <N>] [--json]
-      Print meta.yml, body.md location, and the last N message files (parsed if --json).
+Metadata / status:
   info <slug> [--fields a,b,c]
       Show ticket metadata (from meta.yml).
   list [--status <status>] [--fields a,b,c]
       List tickets with optional filters (from meta.yml).
+  await <slug> [--timeout <seconds>]
+      Wait until meta.yml status changes from 'active' or timeout.
 
-Convenience (git workflows):
-  merge <from-slug> [<into-slug>]
-      Merge the completed ticket <from-slug> into <into-slug>'s branch/worktree (or infer from CWD).
-
-Debug (read-only):
+Diagnostics:
   doctor <slug>
       Verbose health info: tmux session/window, pane PIDs, worktree presence, and mismatches.
 
@@ -261,7 +254,8 @@ Tooling:
 
 Policies:
 - Slugs: ^[a-z0-9][a-z0-9._-]{0,63}$. Branch: ticket/<slug>.
-- Writes: only under .persist/agentx/{tickets,worktrees}/ and <worktree>/.tx/. 
+- Writes: only under .persist/agentx/{tickets,worktrees}/ and <worktree>/.tx/.
+- Bundles live under .persist/agentx/tickets/<slug>; edit them directly if you ever need manual scaffolding (no CLI scaffold helper).
 - Symlink: 'shared/tickets' exists only at repo root and worktree roots and must point to .persist/agentx/tickets.
 - Hooks: always run if set, each bounded to 10s.
 - Runs: default cap AGENTX_RUN_TIMEOUT=36000s (10h). Set 0 to disable.
@@ -372,22 +366,6 @@ provision() {
     _write_message_file "$slug" "provision" "" "agentx" "provisioned branch=$branch worktree=$worktree"
   fi
   _log_info "Provisioned ticket '$slug' at $worktree on $branch."
-}
-
-run(){
-  _require_cmd python3
-  local slug="${1:-}"; shift || true
-  [ -n "$slug" ] || _die "run: missing <slug>"
-  _validate_slug "$slug"
-  local message=""
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --message) shift; message="${1-}";;
-      *) _die "run: unknown arg: $1";;
-    esac; shift || true
-  done
-  if [ ! -d "$(_bundle_dir "$slug")" ]; then provision "$slug"; fi
-  _runner_cmd run "$slug" --message "$message"
 }
 
 abort(){
@@ -532,41 +510,6 @@ list(){
   done
 }
 
-read_bundle(){
-  local slug="${1:-}"; shift || true
-  [ -n "$slug" ] || _die "read: missing <slug>"
-  _validate_slug "$slug"
-  local events=10 json=0
-  while [ $# -gt 0 ]; do
-    case "$1" in
-      --events) shift; events="${1-}";;
-      --json) json=1;;
-  *) _die "read: unknown arg: $1";;
-    esac; shift || true
-  done
-  local dir="$(_bundle_dir "$slug")"; local meta="$(_meta_path "$slug")"; local body="$(_body_path "$slug")"
-  [ -d "$dir" ] || _die "read: ticket not found for slug '$slug'"
-  if [ "$json" -eq 1 ]; then
-    printf '{\n'
-    printf '  "meta": "%s",\n' "$meta"
-    printf '  "body": "%s",\n' "$body"
-    printf '  "events": [\n'
-    local first=1
-    while IFS= read -r f; do
-      [ "$first" -eq 1 ] || printf ',\n'
-      first=0
-      local base; base="$(basename "$f")"
-      local ts="${base%%-*}"; local rest="${base#*-}"; rest="${rest%.md}"
-      local event; event="$rest"
-      printf '    {"file":"%s","ts":"%s","event":"%s"}' "$f" "$ts" "$event"
-    done < <(_list_messages "$slug" | tail -n "$events" | sed "s#^#${dir}/#")
-    printf '\n  ]\n}\n'
-  else
-    printf 'meta: %s\nbody: %s\nevents (last %s):\n' "$meta" "$body" "$events"
-    _list_messages "$slug" | tail -n "$events"
-  fi
-}
-
 _tmux_ensure_session() {
   local sess="$1"
   if ! tmux has-session -t "$sess" 2>/dev/null; then
@@ -575,45 +518,6 @@ _tmux_ensure_session() {
     tmux new-session -d -s "$sess" -n "home"
     _log_info "Created tmux session '$sess'."
   fi
-}
-
-merge(){
-  local child="${1:-}"; local parent="${2:-}"
-  [ -n "$child" ] || _die "merge: missing <from-slug>"
-  _validate_slug "$child"
-  if [ -z "$parent" ]; then
-    local cwd_root; cwd_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-    [ -n "$cwd_root" ] || _die "merge: not inside a git worktree; specify <into> explicitly."
-    local slug cand
-    for cand in "$AGENTX_TICKETS_DIR"/*; do
-      [ -d "$cand" ] || continue
-      slug="$(basename "$cand")"
-      if [ "$(_slug_to_worktree "$slug")" = "$cwd_root" ]; then parent="$slug"; break; fi
-    done
-    [ -n "$parent" ] || _die "merge: could not infer <into> from CWD. Pass it explicitly."
-  fi
-  _validate_slug "$parent"
-  _require_cmd git
-  local child_file="$(_meta_path "$child")"; [ -f "$child_file" ] || _die "merge: unknown child slug '$child'"
-  local parent_file="$(_meta_path "$parent")"; [ -f "$parent_file" ] || _die "merge: unknown parent slug '$parent'"
-  local c_status="$(_yaml_get "$child_file" 'status')"
-  [ "$c_status" = "done" ] || _die "merge: from-ticket is not 'done' (status=$c_status)"
-  local c_branch="$(_slug_to_branch "$child")"
-  local p_worktree="$(_slug_to_worktree "$parent")"
-  local p_branch="$(_slug_to_branch "$parent")"
-  [ -d "$p_worktree" ] || _die "merge: into-worktree not found: $p_worktree"
-  ( cd "$p_worktree"
-    git fetch -q origin || true
-    git checkout "$p_branch" >/dev/null 2>&1 || true
-    # Enforce clean tree and fast-forward only to avoid messy merges.
-    if ! git diff --quiet --ignore-submodules --; then
-      _die "merge: target worktree has uncommitted changes. Commit/stash to proceed."
-    fi
-    _log_info "Merging (fast-forward) '$c_branch' into '$p_branch' in $p_worktree"
-    git merge --ff-only "$c_branch"
-    # Show the files changed by the fast-forward (if any)
-    git diff --name-only HEAD@{1}..HEAD 2>/dev/null | sed 's/^/[changed] /' || true
-  )
 }
 
 doctor(){
@@ -656,13 +560,10 @@ case "${COMMAND}" in
   provision|new) provision "$@" ;;
   start) start "$@" ;;
   stop|abort) stop "$@" ;;
+  service) service "$@" ;;
   info) info "$@" ;;
   await) await "$@" ;;
   list) list "$@" ;;
-  read|tail) read_bundle "$@" ;;
-  run) run "$@" ;;
-  merge) merge "$@" ;;
-  service) service "$@" ;;
   doctor) doctor "$@" ;;
   help|--help|-h|"") usage ;;
   *) echo "Unknown command: ${COMMAND}"; usage; exit 1 ;;

@@ -267,18 +267,18 @@ This project uses a minimal CLI (`agentx`) with a folder‑based “ticket bundl
 - Commands (slug‑only):
   - `agentx provision <slug> [--body-file path] [--inherit-from <slug>] [--base <ref>] [--copy src[:dst]]...`
     - Creates the bundle and branch/worktree; writes `meta.yml`, `body.md`, and a `provision` message.
-  - `agentx start <slug>`: starts a new turn in tmux, writes a `tNN-start` message, runs the agent, then writes a `tNN-final` on success.
+  - `agentx start <slug> [--message "..."]`: provisions if needed, enqueues a new turn, writes `tNN-start`, and relies on the long‑running `agentx service` loop to actually launch Codex and record `tNN-final`.
+  - `agentx service [--once]`: drains the queue and runs Codex turns inside tmux. Keep it running (usually in tmux) so queued starts actually execute.
   - `agentx abort <slug>`: writes a `tNN-abort` for the active turn, sets `status=stopped`, and kills the tmux window.
   - `agentx await <slug> [--timeout N]`: returns when `meta.yml.status != active`.
-  - `agentx read <slug> [--events N] [--json]`: prints `meta.yml`, `body.md` path, and the last N messages.
   - `agentx info <slug> [--fields a,b,c]`: prints selected fields from `meta.yml`.
   - `agentx list [--status s]`: lists bundles with basic fields.
-  - `agentx merge <from-slug> [<into-slug>]`: merges the done child branch into the target worktree branch (infers into from CWD if omitted).
   - `agentx doctor <slug>`: tmux/worktree diagnostics for the slug.
+  - There is no CLI `read`/`tail` helper anymore—inspect bundles directly (`ls shared/tickets/<slug>/`, `cat meta.yml`, etc.) and commit any edits you make.
 
 - Hooks (optional per worktree):
   - `AGENTX_HOOK_PROVISION` runs right after `git worktree add` during `provision` (inside the new worktree). Recommended value: `bash scripts/agentx-hook-provision.sh`.
-  - `AGENTX_HOOK_START`, `AGENTX_HOOK_RESUME`, `AGENTX_HOOK_BEFORE_RUN`, `AGENTX_HOOK_AFTER_RUN` run inside the worktree.
+  - `AGENTX_HOOK_START`, `AGENTX_HOOK_BEFORE_RUN`, `AGENTX_HOOK_AFTER_RUN` run inside the worktree around each Codex turn (triggered by the queue/service flow).
 
 - Configuration (env) — set these in devcontainer.json `containerEnv` (or `remoteEnv`):
   - `AGENTX_TICKETS_DIR=/workspaces/rust-viterbo/.persist/agentx/tickets`
