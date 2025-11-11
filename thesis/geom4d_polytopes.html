@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Meta - Probing Viterbo&#x27;s Conjecture (working title)</title>
+        <title>4D Polytopes (H/V-rep) - Probing Viterbo&#x27;s Conjecture (working title)</title>
 
 
         <!-- Custom HTML head -->
@@ -177,23 +177,73 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="meta-documentation"><a class="header" href="#meta-documentation">Meta Documentation</a></h1>
-<p>This section hosts documentation about meta-level development workflows (not object-level content).</p>
+                        <h1 id="geom4d"><a class="header" href="#geom4d">4D Convex Polytopes — Design Notes</a></h1>
+<!-- Ticket: 372a-create-libraries -->
+<!-- Code: crates/viterbo/src/poly4.rs::Poly4 -->
+<p>Goal: clear, explicit 4D operations with both H/V representations and simple, reliable conversions. Scale is moderate (≈1e6), so naive enumeration is acceptable and keeps dependencies light.</p>
+<h2 id="representations"><a class="header" href="#representations">Representations</a></h2>
 <ul>
-<li>Agent onboarding and always-relevant rules: see <code>AGENTS.md</code> at the workspace root.</li>
-<li>Topic-specific meta docs that only some tickets need live here (e.g., data IO, CI/tooling).</li>
-<li>Paper + helper scripts: see <code>docs/src/meta/misc-tools.md</code> when you need local copies of bibliography items.</li>
+<li>H‑rep: half‑spaces <code>n·x &lt;= c</code>, <code>n ∈ R^4</code>.</li>
+<li>V‑rep: vertices <code>x_i ∈ R^4</code>.</li>
+<li><code>Poly4</code> stores both; each side may be empty and is filled on demand (<code>ensure_*</code>).</li>
+</ul>
+<h2 id="conversions"><a class="header" href="#conversions">Conversions</a></h2>
+<ul>
+<li>H→V: enumerate all 4‑tuples of inequalities, solve the equalities, keep feasible points. Deduplicate by metric tolerance.</li>
+<li>V→H: enumerate 4‑tuples of vertices, form the unique hyperplane through them using a 3×4 cofactor‑based nullspace (no SVD). Keep only supporting planes (all vertices on one side); orient as <code>n·x &lt;= c</code>.</li>
+</ul>
+<p>These are O(N^4) but used infrequently; they keep the implementation compact and transparent.</p>
+<h2 id="faces"><a class="header" href="#faces">Faces</a></h2>
+<ul>
+<li>Derive from H‑rep via vertex saturation:
+<ul>
+<li>3‑faces (facets): vertices saturating a single inequality.</li>
+<li>2‑faces: vertices saturating a pair.</li>
+<li>1‑faces (edges): vertices saturating a triple.</li>
+<li>0‑faces: the vertices themselves.</li>
+</ul>
+</li>
+<li>Return simple structs with facet indices and the corresponding vertex list. For downstream geometry we often only need vertices; equalities are kept as indices for traceability.</li>
+</ul>
+<h2 id="symplectic-helpers"><a class="header" href="#symplectic-helpers">Symplectic Helpers</a></h2>
+<ul>
+<li>J‑matrix in 4D: <code>J = [[0, -I],[I, 0]]</code>.</li>
+<li>Symplectic check: <code>M^T J M ≈ J</code> (tolerance <code>1e-8</code>).</li>
+<li>Reeb flow on 3‑faces: <code>R_i = J n_i</code> (unnormalized). 1‑faces: stub until the derivation is written in the thesis.</li>
+</ul>
+<h2 id="2face--2d-mapping"><a class="header" href="#2face--2d-mapping">2‑Face → 2D Mapping</a></h2>
+<ul>
+<li>Given two facet indices <code>(i,j)</code>, the 2‑face is the plane orthogonal to <code>span{n_i,n_j}</code>.</li>
+<li>Build an orthonormal basis <code>(u1,u2)</code> of that plane via Gram–Schmidt in 4D; map <code>x ↦ y = Ux</code> with <code>U ∈ R^{2×4}</code> (inverse on the plane is <code>x = U^T y</code>).</li>
+<li>Orientation: we expose a boolean to pick the sign; a precise orientation convention (e.g., <code>(u1,u2,n_i,n_j)</code> positively oriented) can be fixed later if needed by algorithms. See “Open Questions”.</li>
+<li>Project the face’s vertices and construct a 2D polytope in H‑rep via <code>Poly2::from_points_convex_hull</code>, giving a faithful 2D model of the face.</li>
+</ul>
+<h2 id="affine-maps"><a class="header" href="#affine-maps">Affine Maps</a></h2>
+<ul>
+<li>Push‑forward (H &amp; V): algebraic transform on H‑rep and direct transform on vertices, requiring <code>M</code> invertible.</li>
+<li>Inversion: <code>(M,t) ↦ (M^{-1}, -M^{-1}t)</code>.</li>
+</ul>
+<h2 id="open-questions--escalations"><a class="header" href="#open-questions--escalations">Open Questions / Escalations</a></h2>
+<ul>
+<li>Orientation of 2‑faces “as crossed by the Reeb flow”: likely induced by the ambient symplectic 2‑form; we left a design hook (sign boolean) and will add a proof‑based convention on request.</li>
+<li>Reeb flow on 1‑faces: placeholder stub until the derivation is added.</li>
+</ul>
+<h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
+<ul>
+<li>Tolerance <code>eps = 1e-9</code> for feasibility/equality; <code>1e-8</code> for symplectic check.</li>
+<li>Keep code explicit and small; use math comments to tie back to this page.</li>
+<li>Tests: smoke tests for cubes/simplex; property tests optional.</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../thesis/visualization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../thesis/geom2d_polytopes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../meta/benchmarks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../thesis/geom4d_volume.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -203,11 +253,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../thesis/visualization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../thesis/geom2d_polytopes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../meta/benchmarks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../thesis/geom4d_volume.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Meta - Probing Viterbo&#x27;s Conjecture (working title)</title>
+        <title>Git History Cleanup - Probing Viterbo&#x27;s Conjecture (working title)</title>
 
 
         <!-- Custom HTML head -->
@@ -177,23 +177,70 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="meta-documentation"><a class="header" href="#meta-documentation">Meta Documentation</a></h1>
-<p>This section hosts documentation about meta-level development workflows (not object-level content).</p>
+                        <!-- When to read: Only for rare, owner‑approved history rewrites. Not needed for normal tickets. -->
+<h1 id="git-history-cleanup-situational"><a class="header" href="#git-history-cleanup-situational">Git History Cleanup (Situational)</a></h1>
+<p>Use only when the owner explicitly requests a repo history rewrite and has scheduled downtime. Escalate first; confirm a backup exists. This page replaces the removed section in AGENTS.md to keep onboarding lean.</p>
+<p>Steps (quick guide)</p>
 <ul>
-<li>Agent onboarding and always-relevant rules: see <code>AGENTS.md</code> at the workspace root.</li>
-<li>Topic-specific meta docs that only some tickets need live here (e.g., data IO, CI/tooling).</li>
-<li>Paper + helper scripts: see <code>docs/src/meta/misc-tools.md</code> when you need local copies of bibliography items.</li>
+<li>Pause other worktrees/sessions; get explicit go‑ahead.</li>
+<li>Capture baseline for provenance:
+<ul>
+<li><code>git rev-parse main</code></li>
+<li><code>git count-objects -vH</code></li>
+<li><code>git lfs ls-files | wc -l</code></li>
+</ul>
+</li>
+<li>Work in a mirror clone:
+<ul>
+<li><code>git clone --mirror /workspaces/rust-viterbo /tmp/history-cleanup.git</code></li>
+<li><code>cd /tmp/history-cleanup.git</code></li>
+</ul>
+</li>
+<li>Remove legacy bench artifacts:
+<ul>
+<li><code>git filter-repo --force --invert-paths --path data/bench/release --path data/bench/release/ --path data/bench/tmp --path data/bench/tmp/ --path data/bench/.rustc_info.json --path data/target --path data/target/ --message-callback 'return message + b\"\n[chore] Drop legacy bench artifacts (Ticket &lt;uuid&gt;)\n\"'</code></li>
+</ul>
+</li>
+<li>Verify:
+<ul>
+<li><code>git rev-list --objects --all | grep data/bench/release</code> (should be empty)</li>
+<li><code>git fsck --full</code></li>
+<li><code>git lfs fetch --all &amp;&amp; git lfs fsck</code></li>
+</ul>
+</li>
+<li>Publish to staging:
+<ul>
+<li>Push rewritten result to a staging branch in <code>/workspaces/rust-viterbo</code> (e.g., <code>main-clean</code>).</li>
+<li>Owner force‑pushes to GitHub; local worktrees rehydrate LFS:
+<ul>
+<li><code>git lfs pull --include "data/**" --exclude ""</code></li>
+</ul>
+</li>
+<li>Run quick loops:
+<ul>
+<li><code>bash scripts/python-lint-type-test.sh</code></li>
+<li><code>bash scripts/rust-test.sh</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Record actions: commands run and key hashes in the ticket; no extra files are required for the rewrite itself.</li>
+</ul>
+<p>Notes</p>
+<ul>
+<li>Do not attempt without owner approval and a quiet window; history rewrites disrupt collaborators’ clones and LFS pointers.</li>
+<li>Prefer targeted filters over broad path patterns; test in a mirror clone first.</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../thesis/visualization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../meta/oriented-edge-charts-and-rotation.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../meta/benchmarks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../meta/protocol-2025-11-04.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -203,11 +250,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../thesis/visualization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../meta/oriented-edge-charts-and-rotation.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../meta/benchmarks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../meta/protocol-2025-11-04.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

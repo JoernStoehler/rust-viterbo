@@ -1,0 +1,669 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Oriented-Edge Graph Algorithm - Probing Viterbo&#x27;s Conjecture (working title)</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Probing Viterbo&#x27;s Conjecture (working title)</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <!-- Author: Codex & Jörn -->
+<!-- Ticket: <slug> -->
+<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md -->
+<h1 id="oriented-edge-graph-algorithm-for-c_ehz-in-r4"><a class="header" href="#oriented-edge-graph-algorithm-for-c_ehz-in-r4">Oriented-Edge Graph Algorithm for c_EHZ in R^4</a></h1>
+<!-- Why: This document specifies a high-level, implementation-ready algorithm to compute the Ekeland–Hofer–Zehnder (EHZ) capacity of a convex, star-shaped, non-degenerate polytope in R^4 by reducing the search for action-minimizing Reeb orbits to a directed cycle search on a 2-face graph with polyhedral feasibility checks. We progressively disclose formal definitions, maps, and constraints, then the search strategy and implementation notes. -->
+<!-- Scope: High-level algorithm and the precise per-edge maps and constraints we need. Low-level performance choices are collected at the end. Mathematical background, including precise definitions of action, Reeb dynamics, and rotation/CZ index, is in the EHZ capacity document. -->
+<h2 id="goal"><a class="header" href="#goal">Goal</a></h2>
+<ul>
+<li>Input:
+<ul>
+<li>Half-space description of a convex, star-shaped, non-degenerate polytope $K \subset \mathbb{R}^4$: $K={x\in \mathbb{R}^4:\langle n_f,x\rangle\le b_f\ \forall f\in \mathcal{F}_3}$, where each facet (3-face) $f$ has outward unit normal $n_f$ and support constant $b_f&gt;0$.</li>
+<li>Optionally, vertices for convenience and validation.</li>
+</ul>
+</li>
+<li>Output:
+<ul>
+<li>The EHZ capacity $c_{\mathrm{EHZ}}(K)$.</li>
+<li>An action-minimizing closed characteristic $\gamma\subset\partial K$ represented combinatorially by a directed cycle of 2-faces and a fixed point in the induced affine map on the start 2-face, together with an explicit piecewise-linear lift to $\partial K$.</li>
+</ul>
+</li>
+</ul>
+<!-- Comment: “non-degenerate” here is the generic position assumption we actually use algorithmically: no Reeb direction is parallel to a ridge; no two exit times tie on a positive-measure set; fixed points do not lie on candidate-set boundaries. Precise statements in Assumptions. -->
+<h2 id="setting-and-assumptions"><a class="header" href="#setting-and-assumptions">Setting and Assumptions</a></h2>
+<ul>
+<li>Space and forms:
+<ul>
+<li>Standard symplectic form $\omega_0$ and Liouville form $\lambda_0$ on $\mathbb{R}^4$.</li>
+<li>Fix the standard complex structure $J$ so that $\omega_0(u,v)=\langle Ju, v\rangle$ and $J^\top J=I$, $J^\top=-J$.</li>
+</ul>
+</li>
+<li>Symplectic polytope hypothesis:
+<ul>
+<li>No 2-face is Lagrangian: for every 2-face $F$, the restriction $\omega_0|_{TF}\ne 0$. This matches the “symplectic polytope” condition in the Chaidez–Hutchings framework and ensures well-posed combinatorial Reeb dynamics across ridges.</li>
+</ul>
+</li>
+<li>Facets and Reeb directions:
+<ul>
+<li>For each facet $f\in \mathcal{F}_3$, with plane $H_f={x:\langle n_f,x\rangle=b_f}$, trajectories of the Reeb flow on $H_f\cap\partial K$ are straight segments parallel to $v_f:=J n_f$ (speed may vary; directions are constant).</li>
+<li>We only need directions to get exit points; actions are integrals of $\lambda_0$ along these straight segments.</li>
+</ul>
+</li>
+<li>Genericity/non-degeneracy assumptions (used for correctness and robust numerics):
+<ol>
+<li>For each facet $f$, and each ridge $r\subset f$ with co-facet $g\ne f$, we have $\langle v_f, n_g\rangle\ne 0$.</li>
+<li>For a fixed $f$, in the region where a particular co-facet $g$ is the first one hit along $v_f$, that co-facet is uniquely first (no ties on a set of positive measure).</li>
+<li>Action-minimizing cycles do not involve segments on 1-faces (rotation blow-up); crossings of 2-faces occur at single points.</li>
+</ol>
+<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#setting -->
+<!-- Comment: (1)-(3) match the “generic” case we intend to handle first; degenerate tie-breaking and 1-face handling can be added later. -->
+<!-- Comment: The non-Lagrangian 2-face hypothesis lines up with our ridge-crossing model and with CH’s notion of symplectic polytopes. -->
+</li>
+</ul>
+<h2 id="face-graphs"><a class="header" href="#face-graphs">Face Graphs</a></h2>
+<ul>
+<li>3-face digraph:
+<ul>
+<li>Nodes: facets $f\in \mathcal{F}_3$.</li>
+<li>Oriented edges $f\xrightarrow{r} f'$ whenever facets $f\ne f'$ share a ridge $r$ and the direction $v_f$ points from a neighborhood of $r$ in $f$ into the interior of $f'$ across $r$ (equivalently: the first exit from $f$ along $v_f$ near points on $r$ is $f'$).</li>
+<li>This orientation is well-defined by convexity and the genericity assumptions.</li>
+</ul>
+</li>
+<li>2-face digraph (the main search graph):
+<ul>
+<li>Nodes: ridges $i\in \mathcal{F}_2$. Each ridge $i$ is the intersection of two distinct facets $f(i)$ and $g(i)$.</li>
+<li>Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.</li>
+<li>Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.</li>
+</ul>
+<!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
+<ul>
+<li>Orientation convention (decision): for every ridge $i$, fix the chart $U_i$ to be the canonical one induced by $\omega_0$ (choose an orthonormal basis $(u_1,u_2)$ of the face plane with $\omega_0(u_1,u_2)&gt;0$). Charts are fixed per ridge (independent of the incoming facet). This pins the sign of rotation angles extracted from $D\psi_{ij}$.</li>
+</ul>
+</li>
+</ul>
+<h2 id="notation-recap"><a class="header" href="#notation-recap">Notation Recap</a></h2>
+<ul>
+<li>Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.</li>
+<li>Facets: for each $F\in\mathcal{F}_3$, outward unit normal $n_F$ and support $b_F&gt;0$, plane $H_F={x:\langle n_F,x\rangle=b_F}$, Reeb direction $v_F:=J n_F$.</li>
+<li>Ridges: $i\in\mathcal{F}_2$ with affine plane $R_i\subset H_F$. Charts $\pi_i:R_i\to\mathbb{R}^2$ define $A_i:=\pi_i(i)$.</li>
+<li>Per-edge quantities along $i\xrightarrow{F}j$:
+<ul>
+<li>Exit time $\tau_{ij}(x)$; affine on regions of constant first exit.</li>
+<li>Affine map $\psi_{ij}:\operatorname{dom}\psi_{ij}\to A_j$, where $\operatorname{dom}\psi_{ij}\subset A_i$ and $\operatorname{im}\psi_{ij}\subset A_j$ are convex polygons.</li>
+<li>Action increment $A_{ij}(x)=\tfrac{b_F}{2},\tau_{ij}(x)$ (affine on $\operatorname{dom}\psi_{ij}$).</li>
+<li>Rotation increment $\rho_{ij}\ge 0$ (polar angle of the linear part via the orthogonal polar factor; see “Rotation and CZ index”).</li>
+</ul>
+</li>
+</ul>
+<h2 id="algorithm-summary-push-forward-only"><a class="header" href="#algorithm-summary-push-forward-only">Algorithm Summary (push-forward only)</a></h2>
+<ul>
+<li>Maintain, at the current ridge, a candidate polygon $C\subset A_{i_k}$, an affine action $A:C\to\mathbb{R}$, a scalar rotation $\rho$, and an optional composed map $\Psi$ to the start chart.</li>
+<li>To extend along an edge $i_k\xrightarrow{F} i_{k+1}$:
+<ul>
+<li>Gate at $i_k$: intersect $C$ with $\operatorname{dom}\psi_{i_ki_{k+1}}\subset A_{i_k}$ (points that flow first to $i_{k+1}$ across $F$).</li>
+<li>Push-forward candidates: $C'=\psi_{i_ki_{k+1}}!\bigl(C\cap \operatorname{dom}\psi_{i_ki_{k+1}}\bigr)\subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$.</li>
+<li>Update action $A'$ via composition with $\psi^{-1}$ and add the per-edge increment; prune by $A'(z)\le A_{\mathrm{best}}$; update $\rho'=\rho+\rho_{i_ki_{k+1}}\le 2$.</li>
+<li>Repeat; on returning to the start ridge, solve the fixed-point equation $\Psi(z)=z$ within $C$ and update the incumbent.</li>
+</ul>
+</li>
+<li>Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2019).</li>
+</ul>
+<h2 id="per-edge-maps-and-polyhedral-domains"><a class="header" href="#per-edge-maps-and-polyhedral-domains">Per-edge Maps and Polyhedral Domains</a></h2>
+<p>Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathcal{F}_3$, $i,j\subset F$. Let $G(j,F)$ denote the co‑facet: the unique facet $G\neq F$ such that $j=F\cap G$.</p>
+<ul>
+<li>Exit-time formula on $F$:
+<ul>
+<li>For $x\in H_F$ near $i$, the first time the straight line $x + t,v_F$ hits the plane $H_{G(j,F)}$ is
+$$\tau_{ij}(x);=;\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{\langle n_{G(j,F)}, v_F\rangle},\quad \text{with }\ \tau_{ij}(x)&gt;0.$$</li>
+<li>The condition that $j$ is indeed first exit among all co-facets $k\subset F$ is
+$$\tau_{ij}(x)\le \tau_{ik}(x)\quad\text{for all admissible }k,$$
+where “admissible” means $\langle n_k,v_F\rangle&gt;0$ (the ray intersects $H_k$ forward in time). After sign normalization these comparisons are linear in $x$ and enforce that $x+t,v_F$ remains in $F$ up to the first hit.</li>
+<li>Explicit half-space description of the domain $\operatorname{dom}\psi_{ij}$:
+<ul>
+<li>Let $\mathcal{K}_F$ be the set of co-facets $k$ of $F$ with $\langle n_k,v_F\rangle\ne 0$. Define $\sigma_k:=\operatorname{sign}\langle n_k,v_F\rangle$.</li>
+<li>For $x\in H_F$, the comparison $\tau_{ij}(x)\le \tau_{ik}(x)$ is equivalent to
+$$
+\sigma_k\bigl(b_{G(j,F)}-\langle n_{G(j,F)},x\rangle\bigr),\langle n_k,v_F\rangle
+;\le;
+\sigma_k\bigl(b_k-\langle n_k,x\rangle\bigr),\langle n_{G(j,F)},v_F\rangle.
+$$</li>
+<li>Combine these with $x\in i$ and $\tau_{ij}(x)&gt;0$ (a single linear inequality after sign normalization). Projecting by $\pi_i$ yields $\operatorname{dom}\psi_{ij}\subset A_i$ as a convex polygon in half-space form.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Domains and images:
+<ul>
+<li>Domain (in $A_i$): $\operatorname{dom}\psi_{ij}\subset A_i$ consists of ridge points that flow first to ridge $j$ across facet $F$ (convex polygon).</li>
+<li>Image (in $A_j$): $\operatorname{im}\psi_{ij}=\psi_{ij}(\operatorname{dom}\psi_{ij})\subset A_j$ (convex polygon).</li>
+</ul>
+</li>
+<li>Exit point and affine map:
+<ul>
+<li>Exit point in $F$: $x' = x + \tau_{ij}(x), v_F$, affine in $x$ on the region where $j$ is first exit.</li>
+<li>Let $R_i$ and $R_j$ be the affine 2-planes containing ridges $i$ and $j$. Choose fixed linear charts (projections) $\pi_i:R_i\to \mathbb{R}^2$ and $\pi_j:R_j\to \mathbb{R}^2$ for every ridge; identify $A_i:=\pi_i(i)\subset\mathbb{R}^2$.</li>
+<li>Define the per-edge affine map
+$$\psi_{ij}:\ \operatorname{dom}\psi_{ij}\ \to\ A_j,\qquad \psi_{ij}(\pi_i(x));=;\pi_j\bigl(x+\tau_{ij}(x),v_F\bigr),$$
+with $\operatorname{dom}\psi_{ij}\subset A_i$ as above. By convexity and genericity, $\operatorname{dom}\psi_{ij}$ is a convex polygon (possibly empty), $\psi_{ij}$ is affine on it, and $\operatorname{im}\psi_{ij}$ is convex in $A_j$.</li>
+</ul>
+<!-- Comment: We explicitly avoid parameterization of the Reeb vector field. Straight-line geometry suffices to locate exits and compute actions. -->
+</li>
+</ul>
+<p>Symbol map (equations above)</p>
+<ul>
+<li>$\psi_{ij}$: push‑forward map (code: <code>EdgeData.map_ij</code>).</li>
+<li>$\operatorname{dom}\psi_{ij}\subset A_i$: domain polygon in ridge $i$ (code: <code>EdgeData.dom_in</code>).</li>
+<li>$\operatorname{im}\psi_{ij}\subset A_j$: image polygon in ridge $j$ (code: <code>EdgeData.img_out</code>).</li>
+<li>$\tau_{ij}$: first‑exit time on facet $F$ (affine on the region where $j$ is first exit).</li>
+<li>$A_{ij}$: action increment (code: <code>EdgeData.action_inc</code>).</li>
+<li>$\rho_{ij}$: rotation increment from the polar angle of $D\psi_{ij}$ (code: <code>EdgeData.rotation_inc</code>).</li>
+<li>$U_i,U_j$: ridge charts (code: <code>Ridge.chart_u</code>; left‑inverse on the plane: <code>Ridge.chart_ut</code>).</li>
+<li>$v_F=J n_F$: facet Reeb direction (code: <code>geom4::reeb_on_facets</code>).</li>
+<li>$A_i$: ridge polygon in chart $i$ (code: <code>Ridge.poly</code>).</li>
+</ul>
+<h3 id="worked-example-axisaligned-facet-in-the-4d-cube"><a class="header" href="#worked-example-axisaligned-facet-in-the-4d-cube">Worked Example (axis‑aligned facet in the 4D cube)</a></h3>
+<p>Consider $K=[-1,1]^4$ in coordinates $(x_1,x_2,y_1,y_2)$ with the standard $J$ (so $v=J n$). Take the facet
+$F={x_1=1}$ with outward normal $n_F=e_{x_1}$ and $b_F=1$, hence $v_F=J n_F = e_{y_1}$.</p>
+<ul>
+<li>Choose ridges $i = F\cap{y_1=-1}$ and $j = F\cap{y_1=+1}$. The co‑facet for $j$ is $H_{G(j,F)}:{y_1=1}$ with $n_{G(j,F)}=e_{y_1}$, $b_{G(j,F)}=1$.</li>
+<li>Then $d_j=\langle n_{G(j,F)}, v_F\rangle = \langle e_{y_1}, e_{y_1}\rangle = 1 &gt; 0$, and
+$$\tau_{ij}(x)=\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{d_j} = 1 - y_1.$$
+All other co‑facets $k$ with $\langle n_k, v_F\rangle\le 0$ are inadmissible, so $j$ is uniquely first exit.</li>
+<li>Charts: the ridge planes $R_i=R_j={x_1=\pm 1,\ y_1=\mp 1}$ are spanned by the $(x_2,y_2)$ axes, so we may take $\pi_i,\pi_j$ as identity on $(x_2,y_2)$. Thus $U_iU_j^\top=I$ and the push‑forward map $\psi_{ij}$ is the identity on $(x_2,y_2)$.</li>
+<li>Rotation increment: $D\psi_{ij}=I_2 \Rightarrow \rho_{ij}=0$.</li>
+<li>Action increment: $A_{ij}(x)=\tfrac{b_F}{2}\tau_{ij}(x)=\tfrac{1}{2}(1 - y_1)$, which is affine and, in the chart, constant with respect to $(x_2,y_2)$.</li>
+</ul>
+<h2 id="action-increment-per-edge-explicit-affine-form"><a class="header" href="#action-increment-per-edge-explicit-affine-form">Action Increment per Edge (explicit affine form)</a></h2>
+<p>For $x\in i$ that flows to $j$ across facet $F$, the action increment along the segment is
+$$
+A_{ij}(x);=;\int_0^{\tau_{ij}(x)} \lambda_0\bigl(\dot \gamma(t)\bigr),dt
+\quad\text{with}\ \gamma(t)=x+t,v_F.
+$$
+Using $\lambda_0(\dot\gamma)=\tfrac{1}{2}\langle J\gamma,\dot\gamma\rangle$ and $Jv_F=J(Jn_F)=-n_F$, we obtain the identity
+$$
+A_{ij}(x);=;\frac{1}{2},\langle x, n_F\rangle\ \tau_{ij}(x)\ =\ \frac{b_F}{2}\ \tau_{ij}(x),
+$$
+since $\langle x,n_F\rangle=b_F$ on the facet plane $H_F$. Therefore $A_{ij}$ is affine in $x$ on $\operatorname{dom}\psi_{ij}$ (because $\tau_{ij}$ is affine there).
+In ridge coordinates, we treat $A_{ij}$ as an affine functional on $\operatorname{dom}\psi_{ij}\subset A_i$.</p>
+<!-- Comment: This formula is independent of the speed choice for the Reeb flow; only directions matter. -->
+<h2 id="rotation-and-cz-index"><a class="header" href="#rotation-and-cz-index">Rotation and CZ index</a></h2>
+<ul>
+<li>See background: CZ Index and Rotation for 2D Return Maps (Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#cz-rotation).</li>
+<li>Ridge charts. For each ridge $i$, we fix once and for all an orthonormal Euclidean basis $(u_1,u_2)$ of the ridge plane with the canonical symplectic orientation $\omega_0(u_1,u_2)&gt;0$ (as implemented in code). Charts do not depend on which facet we arrive from.</li>
+<li>Rotation per edge. For the affine map $y_j = M_{ij} y_i + t_{ij}$ on charts, define the rotation increment by the orthogonal polar factor: write $M_{ij}=R_{ij}S_{ij}$ with $R_{ij}\in \mathrm{SO}(2)$ and $S_{ij}\succ 0$, and set $\rho_{ij} := \operatorname{arg}(R_{ij})/\pi \in [0,1]$. This is invariant under uniform scalings of $M_{ij}$ and does not require $\det M_{ij}\approx 1$ in Euclidean charts.</li>
+<li>Positivity of increments. In canonical charts the first‑hit map is orientation‑preserving on admissible domains, so $\rho_{ij}\ge 0$; we never subtract rotation along edges.</li>
+<li>Area preservation. The first‑hit map between transverse sections preserves the $d\alpha$‑area on facets. Our Euclidean orthonormal charts may scale $d\alpha$ by a positive constant per ridge, so $\det M_{ij}$ need not be exactly $1$ in these coordinates; this does not affect $\rho_{ij}$ computed via the polar factor.</li>
+<li>Accumulation and index. Along a closed cycle, let $\rho=\sum \rho_{ij}$. For generic (non‑degenerate) closures in 2D, the Conley–Zehnder index satisfies $\mu_{\mathrm{CZ}} = \lceil \rho\rceil + \lfloor \rho\rfloor$. In particular, an index‑$3$ minimizer has $\rho\in(1,2)$. We therefore prune whenever the accumulated $\rho$ exceeds $2$; this threshold is theory‑fixed (not tunable) and cannot be lowered without risking the loss of the true minimizer.</li>
+</ul>
+<h2 id="search-over-directed-cycles-push-forward-variant"><a class="header" href="#search-over-directed-cycles-push-forward-variant">Search Over Directed Cycles (push-forward variant)</a></h2>
+<p>We now describe the core enumeration and pruning in the 2-face digraph using push-forwards (no pull-backs of polytopes).</p>
+<p>Notation for a path $p=(i_1\xrightarrow{} i_2\xrightarrow{}\cdots\xrightarrow{} i_k)$:</p>
+<ul>
+<li>Candidate set (current ridge coordinates): $C_p\subset A_{i_k}$, a convex polygon.</li>
+<li>Accumulated action (affine functional on $A_{i_k}$): $A_p(z)$.</li>
+<li>Accumulated rotation (scalar): $\rho_p$.</li>
+<li>Accumulated map to the start chart: $\Psi_p := \psi_{i_1i_2}\circ\cdots\circ \psi_{i_{k-1}i_k}$ when needed to close a cycle.</li>
+</ul>
+<p>Initialization at a start ridge $i_1$:</p>
+<ul>
+<li>$C_{(i_1)} := A_{i_1}$,</li>
+<li>$A_{(i_1)}(z) := 0$,</li>
+<li>$\rho_{(i_1)} := 0$,</li>
+<li>$\Psi_{(i_1)} := \mathrm{Id}$.</li>
+</ul>
+<p>Path extension by an edge $i_k \xrightarrow{} i_{k+1}$:</p>
+<ol>
+<li>Push-forward candidates: $C' := \psi_{i_ki_{k+1}}( C_p \cap \operatorname{dom}\psi_{i_ki_{k+1}} ) \subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$. Reject if empty.</li>
+<li>Update action: $A'(z) := A_p\bigl(\psi_{i_ki_{k+1}}^{-1}(z)\bigr) + A_{i_ki_{k+1}}\bigl(\psi_{i_ki_{k+1}}^{-1}(z)\bigr)$ on $C'$.</li>
+<li>Prune by action budget: intersect $C' \leftarrow C' \cap {z:\ A'(z)\le A_{\mathrm{best}}}$. Reject if empty.</li>
+<li>Update rotation: $\rho' := \rho_p + \rho_{i_ki_{k+1}}$. Reject if $\rho'&gt;2$.</li>
+<li>Update map: $\Psi' := \Psi_p\circ \psi_{i_ki_{k+1}}$ if we plan to close at $i_1$ soon; otherwise we can maintain only the last few factors and recompute on demand.</li>
+<li>Continue DFS with the new state $(C',A',\rho',\Psi')$.</li>
+</ol>
+<p>Closing a cycle at $i_1$:</p>
+<ul>
+<li>When $i_{k+1}=i_1$, solve the fixed-point problem $\Psi_p(z)=z$ in $A_{i_1}$; keep any fixed point $z_\star\in C_p$; set $A_\star:=A_p(z_\star)$; if $A_\star&lt;A_{\mathrm{best}}$, update the incumbent $(A_{\mathrm{best}}, \text{cycle}, z_\star)$.</li>
+<li>If no eligible fixed point exists in $C_p$, discard the cycle.</li>
+</ul>
+<p>Heuristics and ordering:</p>
+<ul>
+<li>Prefer edges with small lower bounds on $A_{ij}$ (minimize the affine functional on $\operatorname{dom}\psi_{ij}$ via a tiny LP); break ties by smaller $\rho_{ij}$.</li>
+<li>Prefer short cycles first; try immediate back-edges that close at the start ridge early.</li>
+<li>Maintain a visited set of start ridges to avoid duplicate work; optionally restrict to simple cycles unless we decide otherwise (see Open Questions).</li>
+</ul>
+<h3 id="fixed-point-solver-deterministic-and-robust"><a class="header" href="#fixed-point-solver-deterministic-and-robust">Fixed-point solver (deterministic and robust)</a></h3>
+<ul>
+<li>Write $\Psi_p(z)=Mz+t$ in the start chart. Solve $(I-M)z=t$:
+<ul>
+<li>If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.</li>
+<li>If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.</li>
+</ul>
+</li>
+<li>Tolerances: treat $|\det(I-M)|&lt;\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.</li>
+</ul>
+<p>Symbol map (fixed‑point and tolerances)</p>
+<ul>
+<li>$M,t$: entries of the composed affine map $\Psi_p$ (code: <code>State.phi_start_to_current</code>).</li>
+<li>$z,z_\star$: points in the start ridge chart (code: <code>Vec2</code>; returned by <code>dfs_solve_with_fp</code> helpers).</li>
+<li>$C_p$: candidate polygon at the start ridge (code: <code>State.candidate</code> on closure).</li>
+<li>$A_p$: accumulated action on the start chart (code: <code>State.action</code>).</li>
+<li>$\varepsilon_{\det}$: determinant threshold (code: <code>GeomCfg.eps_det</code>).</li>
+<li>$\varepsilon_{\mathrm{feas}}$: feasibility/membership slack (code: <code>GeomCfg.eps_feas</code>).</li>
+<li>$\varepsilon_{\tau}$: tie‑breaking and admissibility slack (code: <code>GeomCfg.eps_tau</code>).</li>
+</ul>
+<!-- note: agents — fixed_point_in_poly implements the 2D/1D branches with these exact eps values. -->
+<ul>
+<li>Implementation guardrails:
+<ul>
+<li><code>fixed_point_in_poly</code> handles both branches and switches to a 1D LP when $(I-M)$ is nearly singular so that we never rely on unstable matrix inverses.</li>
+<li><code>rotation_angle</code> returns <code>None</code> only for orientation‑reversing maps; canonical chart construction rules those out, so failures signal numerical bugs instead of algorithmic cases.</li>
+</ul>
+</li>
+</ul>
+<h2 id="choosing-budgets-and-bounds"><a class="header" href="#choosing-budgets-and-bounds">Choosing Budgets and Bounds</a></h2>
+<ul>
+<li>Upper bound $A_{\mathrm{best}}$:
+<ul>
+<li>Practical: use that $K\subset B_R$ implies $c_{\mathrm{EHZ}}(K)\le c_{\mathrm{EHZ}}(B_R)=\pi R^2$. Compute $R$ from vertices or support data for a quick initial bound.</li>
+<li>Tighter: use the volume-capacity inequality documented in <code>Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#volume-upper-bounds</code> once we finalize the preferred constant $C_{\mathrm{vol}}$. Reference that doc (not this page) whenever we update $C_{\mathrm{vol}}$ so the inequality stays centralized.</li>
+</ul>
+</li>
+<li>Lower bound for progress reporting: $c_{\mathrm{EHZ}}(K)\ge \pi r^2$ if $B_r\subset K$ (inradius).</li>
+</ul>
+<h2 id="correctness-sketch-informal"><a class="header" href="#correctness-sketch-informal">Correctness Sketch (informal)</a></h2>
+<ol>
+<li>Every closed characteristic in the generic polytope case intersects ridges at isolated points and travels linearly on facets parallel to $v_f$.</li>
+<li>Such a trajectory maps to a directed cycle in the 2-face digraph; the per-edge maps and domains capture exactly the “first exit” geometry.</li>
+<li>The action along a cycle equals the sum of per-edge increments evaluated at the unique fixed point $z_\star$ of the composed affine map in the start chart.</li>
+<li>Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points.</li>
+<li>The push‑forward pruning is sound: removing paths with empty candidate sets, with $A&gt;A_{\mathrm{best}}$, or with $\rho&gt;2$ cannot delete the true minimizer (index‑3 implies $\rho\in(1,2)$).</li>
+</ol>
+<h3 id="orientation-lemma-canonical-charts"><a class="header" href="#orientation-lemma-canonical-charts">Orientation lemma (canonical charts)</a></h3>
+<p>Lemma. Let $i\subset F$ and $j\subset G$ be ridges such that $\omega_0|<em>{Ti}\ne 0$ and $\omega_0|</em>{Tj}\ne 0$. With our canonical 2‑face charts $U_i,U_j$ (orthonormal bases oriented by $\omega_0(u_1,u_2)&gt;0$), the Reeb first‑hit map $\psi_{ij}:U_i(i)\to U_j(j)$ is orientation‑preserving: $\det D\psi_{ij}&gt;0$ wherever defined.</p>
+<p>Proof (sketch). On each facet $F$, $\alpha:=\lambda_0|<em>F$ is a contact form and $R$ the Reeb vector field satisfies $\mathcal{L}<em>R\alpha=i_R d\alpha+d(\alpha(R))=0$, so the Reeb flow preserves both $\alpha$ and $d\alpha$.<sup class="footnote-reference" id="fr-PreserveAlpha-1"><a href="#footnote-PreserveAlpha">1</a></sup> A local surface of section $D\subset F$ transverse to $R$ inherits the positive area form $d\alpha|<em>D$; the Poincaré first‑hit map preserves $d\alpha|<em>D$ and hence orientation on $D$.<sup class="footnote-reference" id="fr-ReturnArea-1"><a href="#footnote-ReturnArea">2</a></sup> In our chart $U_i$, $d\alpha|</em>{Ti}=\omega_0|</em>{Ti}$ is $c,dy_1\wedge dy_2$ with $c&gt;0$ by construction; therefore $\det D\psi</em>{ij}&gt;0$ in $y$‑coordinates. The same holds at $j$, so $\psi</em>{ij}$ preserves the canonical $\mathbb{R}^2$ orientation.</p>
+<p>Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a transverse section and no return map is available. Our genericity excludes this case and matches the combinatorial Reeb model on 4D polytopes.<sup class="footnote-reference" id="fr-CH-1"><a href="#footnote-CH">3</a></sup></p>
+<h3 id="rotation-implementation-details-guards"><a class="header" href="#rotation-implementation-details-guards">Rotation implementation details (guards)</a></h3>
+<ul>
+<li>Numerical extraction. Compute the orthogonal polar factor via SVD ($M=U\Sigma V^\top$, $R=UV^\top$) and set $\operatorname{rot}(M)=\operatorname{atan2}(R_{12},R_{11})\in[-\pi,\pi]$, $\rho=|\operatorname{rot}|/\pi\in[0,1]$. Reject orientation‑reversing cases.</li>
+<li>Alternatives. Trace‑angle and eigen‑angle formulas are equivalent for orthogonal/elliptic cases but we prefer polar/SVD for robustness in floating point.</li>
+<li>Guards and tolerances. Clamp trigonometric arguments to $[-1,1]$; treat $|\operatorname{tr}(R)|\approx 2$ as a near‑identity degeneracy. With non‑Lagrangian ridges and canonical charts, $0&lt;\rho_{ij}&lt;1$ holds in practice, with $\rho_{ij}=0$ only in genuine symmetries (e.g., axis‑aligned cube faces).</li>
+</ul>
+<h2 id="complexity-and-practical-pruning"><a class="header" href="#complexity-and-practical-pruning">Complexity and Practical Pruning</a></h2>
+<ul>
+<li>Number of ridges and edges is polynomial in the input size, but cycle enumeration is exponential in worst case; pruning is essential.</li>
+<li>Fast rejections:
+<ul>
+<li>Precompute emptiness table for two-step patterns $(i\to j\to k)$ by checking whether $\psi_{ij}(\operatorname{dom}\psi_{ij})$ lies entirely outside $\operatorname{dom}\psi_{jk}$ (LP feasibility).</li>
+<li>Cache affine maps and half-space transforms to avoid recomputation.</li>
+<li>Early action lower bounds from per-edge minima give a Dijkstra-like ordering over partial paths.</li>
+<li>No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem (2019), there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2‑face), which sharply reduces the search.</li>
+</ul>
+</li>
+</ul>
+<h2 id="tie-breaking-deterministic-and-performant"><a class="header" href="#tie-breaking-deterministic-and-performant">Tie-breaking (deterministic and performant)</a></h2>
+<p>When exit times to multiple co-facets are equal within tolerance, we need a deterministic choice that does not affect results but impacts performance.</p>
+<ul>
+<li>Options:
+<ul>
+<li>Lexicographic: choose the co-facet with smallest global index among the minimizers. Deterministic, O(1) overhead after scanning candidates.</li>
+<li>Numeric ε‑slack: add a tiny $\varepsilon$ to denominators or RHS to break ties consistently (scale by facet norms to be dimensionless).</li>
+<li>Seeded randomized: break ties using a seeded RNG per facet, fixed across runs for reproducibility.</li>
+</ul>
+</li>
+<li>Implementation choice: Lexicographic with a symmetric tolerance window $|\tau_{ij}-\tau_{ik}|\le \varepsilon_\tau$. We set $\varepsilon_\tau = \varepsilon_{\mathrm{rel}}\cdot \max(1, \min(\tau_{ij},\tau_{ik})) + \varepsilon_{\mathrm{abs}}$ with small defaults (documented in code). <!-- Comment: deterministic, cheap, reproducible. --></li>
+</ul>
+<h2 id="implementation-plan-rust-with-pyo3-bindings-later"><a class="header" href="#implementation-plan-rust-with-pyo3-bindings-later">Implementation Plan (Rust, with PyO3 bindings later)</a></h2>
+<ul>
+<li>Geometry kernels (nalgebra):
+<ul>
+<li>Types for affine maps on $\mathbb{R}^2$ (<code>Mat2</code>, <code>Vec2</code>, offset), half-space representations in 2D, and simple 2D LP feasibility (or call out to a tiny solver).</li>
+<li>Builders for domains $\operatorname{dom}\psi_{ij}$ from facet normals $(n_f,b_f)$ via the exit-time inequalities.</li>
+</ul>
+</li>
+<li>Graphs:
+<ul>
+<li>Build 2-face digraph with per-edge data: $\operatorname{dom}\psi_{ij}$, $\psi_{ij}$, $\operatorname{im}\psi_{ij}$, $A_{ij}$, $\rho_{ij}$ (constant).</li>
+<li>Optional: boolean table for $(i,j,k)$ emptiness.</li>
+</ul>
+</li>
+<li>Search:
+<ul>
+<li>DFS with incumbent bound, candidate-set push-forward, action/rotation pruning, and fixed-point solve on closure.</li>
+<li>Deterministic ordering for reproducibility; debug counters for pruned branches, visited edges, cycle lengths, etc.</li>
+</ul>
+</li>
+<li>Output:
+<ul>
+<li>Best cycle, fixed point $z_\star$, action $A_\star$; lifted 4D polygonal curve via stored charts; provenance sidecar.</li>
+</ul>
+</li>
+</ul>
+<h2 id="type-coverage-and-assumptions"><a class="header" href="#type-coverage-and-assumptions">Type Coverage and Assumptions</a></h2>
+<ul>
+<li>We target Type 1 combinatorial orbits (segments inside facets; crossings at ridges) under the symplectic‑polytope assumption (no Lagrangian 2-faces). This aligns with the CH framework and the “simple loop” theorem in Haim–Kislev ensuring a minimizer visits each facet at most once.</li>
+</ul>
+<!-- Docs: thesis/bibliography.md entries “Chaidez–Hutchings 2020/21” and “Haim‑Kislev 2019”. -->
+<h2 id="pseudocode-rustish"><a class="header" href="#pseudocode-rustish">Pseudocode (Rust‑ish)</a></h2>
+<pre><code>struct RidgeId(u32);
+struct FacetId(u32);
+
+struct Aff2 { m: Mat2, t: Vec2 }  // z ↦ m*z + t
+struct Aff1 { a: Vec2, b: f64 }   // z ↦ a·z + b
+
+struct EdgeData {
+    from: RidgeId,
+    to: RidgeId,
+    facet: FacetId,
+    psi: Aff2,         // ψ_ij
+    A_inc: Aff1,       // A_ij on domain
+    rho_inc: f64,      // ρ_ij
+    dom_i: Poly2,      // dom ψ_ij ⊂ A_i
+    img_j: Poly2,      // im ψ_ij ⊂ A_j
+}
+
+struct State {
+    ridges: Vec&lt;RidgeId&gt;,  // path
+    facets_seen: BitSet,    // for no-revisit pruning
+    C: Poly2,               // candidate polygon in A_{last}
+    A: Aff1,                // accumulated action on A_{last}
+    rho: f64,               // accumulated rotation
+    Psi: Aff2,              // composed map to the start chart
+}
+
+fn extend(state: &amp;State, e: &amp;EdgeData, A_best: f64) -&gt; Option&lt;State&gt; {
+    if state.facets_seen.contains(e.facet) { return None; }
+    let C_dom = intersect_poly(&amp;state.C, &amp;e.dom_i)?;
+    let C1 = aff_image(&amp;e.psi, &amp;C_dom);
+    let rho1 = state.rho + e.rho_inc;
+    if rho1 &gt; 2.0 { return None; }
+    let A1 = compose_aff1(&amp;state.A, &amp;e.psi.inv()) + compose_aff1(&amp;e.A_inc, &amp;e.psi.inv());
+    let C2 = intersect_halfspace(&amp;C1, A1, A_best)?;  // { z : A1(z) ≤ A_best }
+    Some(State {
+        ridges: push(state.ridges, e.to),
+        facets_seen: add(state.facets_seen, e.facet),
+        C: C2, A: A1, rho: rho1,
+        Psi: compose_aff2(&amp;state.Psi, &amp;e.psi),
+    })
+}
+</code></pre>
+<!-- removed “Open Questions …” section; resolved rotation choice and scope in main text -->
+<h2 id="experiments-to-validate-design"><a class="header" href="#experiments-to-validate-design">Experiments To Validate Design</a></h2>
+<ul>
+<li>Sanity cases:
+<ul>
+<li>Polydisks and ellipsoids approximated by tight polytopes; check that results converge to the known $c_{\mathrm{EHZ}}$.</li>
+<li>Boxes and cross-polytopes in canonical positions; compare against literature/known inequalities for capacities and systolic ratio.</li>
+</ul>
+</li>
+<li>Ablations:
+<ul>
+<li>With/without $(i,j,k)$ precomputation; effect on pruning rates.</li>
+<li>Pull-back vs. push-forward candidate updates; wall time and numerical stability.</li>
+</ul>
+</li>
+<li>Scaling:
+<ul>
+<li>Random convex 4D polytopes with controlled facet counts; report cycles visited, pruned branches, and time-to-incumbent.</li>
+</ul>
+</li>
+</ul>
+<h2 id="notes-on-previous-draft"><a class="header" href="#notes-on-previous-draft">Notes on Previous Draft</a></h2>
+<!-- Comment: We have replaced the earlier mixed pull-back description with a single push-forward formulation (mutable in coordinates of the current ridge). This reduces repeated inverse-map applications and matches the “read ρ from ψ_ij” observation. -->
+<!-- Comment: We made action increment explicit via A_ij(x) = (b_F/2)*τ_ij(x). This is affine on regions of constant first-exit, giving simple LPs for minima and feasibility. -->
+<!-- Comment: Rotation is left as a one-number-per-edge choice; once fixed, we can implement it as a pure function of local facet/ridge frames. -->
+<h2 id="code-links"><a class="header" href="#code-links">Code Links</a></h2>
+<ul>
+<li>Rust workspace entry: <code>Cargo.toml</code></li>
+<li>Native library (algorithms): <code>crates/viterbo</code></li>
+<li>Python bindings (optional): <code>crates/viterbo-py</code></li>
+<li>Orchestrator/pipelines: <code>src/viterbo/</code></li>
+<li>Reproduction script: <code>scripts/reproduce.sh</code></li>
+</ul>
+<h2 id="reviewer-checklist-delete-after-use"><a class="header" href="#reviewer-checklist-delete-after-use">Reviewer Checklist (delete after use)</a></h2>
+<ul>
+<li>Assumptions match our intended class (non-Lagrangian 2-faces)?</li>
+<li>Rotation via polar factor and CZ relation stated?</li>
+<li>Numerical tolerances (ε_det, ε_feas, ε_τ) defaults acceptable?</li>
+<li>Default A_best strategy OK until volume-based constant is cited?</li>
+<li>“Simple loop” pruning enabled by default (per HK 2019)?</li>
+<li>Chart orientation convention acceptable for cross-ridge rotation sign?</li>
+</ul>
+<h2 id="clarifications-unstable-unsorted"><a class="header" href="#clarifications-unstable-unsorted">Clarifications (unstable, unsorted)</a></h2>
+<!-- Purpose: park quick notes about code/spec divergences or open questions so agents can proceed without blocking on full edits. Treat entries as provisional; once stabilized, fold them into the main text and remove from this list. -->
+<ul>
+<li>1-faces not needed: under the stated genericity assumptions, minimizing cycles do not traverse 1-faces; the algorithm uses flow on facets and crossings at ridges only. The helper <code>geom4::reeb_on_edges_stub()</code> remains intentionally unimplemented.</li>
+<li>Orientation convention: we adopt the unique “natural” convention induced by the ambient symplectic form (require the chart orientation to agree with ω₀|_{face}). The implementation enforces this choice; no runtime toggle exists.</li>
+<li>TODO (owner): write down the quick proof that Lagrangian 2-faces are never crossed in their interior, so omitting them from the graph is safe. Once captured, fold it into the “Setting and Assumptions” section and remove this reminder.</li>
+</ul>
+<hr>
+<ol class="footnote-definition"><li id="footnote-PreserveAlpha">
+<p>Standard fact in contact dynamics: for a contact form α with Reeb vector field R_α, the flow φ_t satisfies φ_t^*α=α and φ_t^*dα=dα since 𝓛_{R_α}α=i_{R_α}dα+d(α(R_α))=0. <a href="#fr-PreserveAlpha-1">↩</a></p>
+</li>
+<li id="footnote-ReturnArea">
+<p>Poincaré first‑return maps of Reeb flows on 3‑dimensional contact manifolds are area‑preserving with respect to dα on any transverse surface of section; see e.g. Albers–Geiges–Zehmisch (2018). <a href="#fr-ReturnArea-1">↩</a></p>
+</li>
+<li id="footnote-CH">
+<p>Chaidez–Hutchings (2021): “Computing Reeb dynamics on four‑dimensional convex polytopes”, J. Comput. Dyn. 8(4):403–445; arXiv:2008.10111. <a href="#fr-CH-1">↩</a></p>
+</li>
+</ol>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../thesis/Ekeland-Hofer-Zehnder-Capacity.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../thesis/capacity-algorithm-linear-program.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../thesis/Ekeland-Hofer-Zehnder-Capacity.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../thesis/capacity-algorithm-linear-program.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -1,0 +1,330 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Implementation Status FAQ - Probing Viterbo&#x27;s Conjecture (working title)</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Probing Viterbo&#x27;s Conjecture (working title)</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="status-math"><a class="header" href="#status-math">Implementation Status — Mathematician FAQ</a></h1>
+<!-- Ticket: 42ea0c15-7a3b-48ef-a17c-4ed08d35824a -->
+<!-- Docs: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md -->
+<p>This page wires the current code, tests, and benchmark assets to the concrete questions mathematicians keep asking about the project:</p>
+<ol>
+<li><em>What</em> mathematical structures do we already implement?</li>
+<li>How trustworthy are the numeric kernels today (order-of-magnitude error bounds, failure modes)?</li>
+<li>Which tests exercise the algebraic paths (as opposed to “it runs” tests)?</li>
+<li>Where do we already compute $c_{EHZ}$ and the systolic ratio against trusted values?</li>
+<li>How long does a full systolic-ratio evaluation take on typical inputs (e.g., nine facets)?</li>
+<li>Which polytope families are covered (Lagrangian products vs. generic/symmetric shapes)?</li>
+</ol>
+<p>Each section cross-references the relevant thesis pages, Rust modules, and benchmark snapshots so you can keep drilling down.</p>
+<h2 id="1-what-features-exist-today"><a class="header" href="#1-what-features-exist-today">1. What features exist today?</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Layer</th><th>What it implements</th><th>References</th></tr></thead><tbody>
+<tr><td>4D polytope core</td><td>Dual H/V representations, face lattice enumeration, Gram–Schmidt charts, Reeb directions on facets, symplectic checks, affine push-forwards.</td><td>Docs: <a href="./geom4d_polytopes.html">geom4d_polytopes</a>. Code: <code>crates/viterbo/src/geom4/{convert,faces,maps,types}.rs</code>.</td></tr>
+<tr><td>2D strict H-reps</td><td>Ordered half-spaces, exact half-plane intersection, affine push-forward, rotation bookkeeping, <code>GeomCfg</code> tolerances shared by all 2-face charts.</td><td>Docs: <a href="./geom2d_polytopes.html">geom2d_polytopes</a>. Code: <code>crates/viterbo/src/geom2</code>.</td></tr>
+<tr><td>Oriented-edge algorithm</td><td>Ridge graph builder, $\psi_{ij}$ push-forward maps, $\tau$-inequalities, per-edge lower bounds, DFS with rotation pruning and fixed-point closure.</td><td>Docs: <a href="./capacity-algorithm-oriented-edge-graph.html">capacity-algorithm-oriented-edge-graph</a>. Code: <code>crates/viterbo/src/oriented_edge/{build,dfs,types}.rs</code>.</td></tr>
+<tr><td>Volume + Jacobians</td><td>Facet-fan volume decomposition and affine-invariant determinants; wrapped in PyO3 for Python orchestration.</td><td>Docs: <a href="./geom4d_volume.html">geom4d_volume</a>. Code: <code>crates/viterbo/src/geom4/volume.rs</code>, <code>src/viterbo/rust/volume.py</code>.</td></tr>
+<tr><td>Random / enumerative inputs</td><td>Centrally symmetric halfspaces, Mahler products, random vertices/faces, regular polygon products (Lagrangian families), with replay tokens.</td><td>Docs: <a href="./random-polytopes.html">random-polytopes</a>. Code: <code>crates/viterbo/src/rand4</code>.</td></tr>
+<tr><td>Atlas stage</td><td>Dataset rows with provenance, Parquet + preview assets, and both volume <em>and</em> <code>capacity_ehz</code> filled via the native oriented-edge solver (NaN only when the solver reports no cycle).</td><td>Docs: <a href="./atlas-dataset.html">atlas-dataset</a>. Code: <code>src/viterbo/atlas/{dataset,types,stage_build}.py</code>.</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Summary:</strong> All math-facing layers (geometry, oriented-edge search, generators, atlas pipeline) now run off the same native solver; remaining work is about confidence (more fixtures, telemetry), not missing features.</p>
+</blockquote>
+<h2 id="2-correctness-levels-and-numerical-tolerances"><a class="header" href="#2-correctness-levels-and-numerical-tolerances">2. Correctness levels and numerical tolerances</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Component</th><th>Guarantees / limits</th><th>Tests &amp; tolerances</th></tr></thead><tbody>
+<tr><td><code>GeomCfg</code> (<code>eps_det=1e-12</code>, <code>eps_feas=eps_tau=1e-9</code>)</td><td>Shared across 2D fixed-point, $\tau$-inequalities, and admissibility checks; tuned so cubes/simplex fixtures stay well within machine precision.</td><td><code>crates/viterbo/src/oriented_edge/tests.rs::tau_domain_basic_properties_on_cube</code> verifies $\tau$ inequalities on sampled edges.</td></tr>
+<tr><td>Volume kernel</td><td>Deterministic facet-fan decomposition; invariant under determinant-1 linear maps; errors dominated by IEEE rounding (≈1e-12 relative).</td><td><code>tests/smoke/test_native.py::test_volume4_binding_matches_hypercube</code> and <code>tests/e2e/test_atlas_build.py</code> assert $[-1,1]^4$ volume $=16$ within $10^{-9}$.</td></tr>
+<tr><td>Oriented-edge DFS</td><td>Finds a cycle iff affine fixed point exists; rotation pruning enforces index-3 candidate set; rejects cycles when $\rho&gt;2$.</td><td><code>crates/viterbo/src/oriented_edge/tests.rs</code>: smoke DFS closure tests, fixed-point uniqueness, rotation pruning, push-forward pruning.</td></tr>
+<tr><td>Capacity golden values</td><td>Error budget $\le 5\times10^{-6}$ on normalized capacities; systolic ratio derived directly from computed volume.</td><td>See Section 4 for the golden fixtures.</td></tr>
+<tr><td>Random generators</td><td>Shape validity (bounded, star-shaped, interior origin) and replay fidelity.</td><td><code>crates/viterbo/src/rand4/mod.rs</code> unit + property tests (<code>symmetric_halfspaces_even_and_bounded</code>, <code>random_faces_facets_in_range</code>, etc.).</td></tr>
+<tr><td>Python bindings</td><td>Native <code>.so</code> loads, simple determinant helper works, dataset includes expected columns.</td><td><code>tests/smoke/test_imports.py</code>, <code>tests/smoke/test_native.py</code>, and the atlas E2E test.</td></tr>
+</tbody></table>
+</div>
+<p><strong>Expectation for large batches (1e6 polytopes).</strong> The geometry kernels (H/V conversions, volume, 2D push-forward) already run deterministically with stable tolerances, so we do not anticipate catastrophic drift at scale. The atlas builder now invokes the oriented-edge solver for every row; when the solver fails to find a minimizer the row is explicitly marked as <code>NaN</code>. Achieving “0 false systolic ratios” therefore boils down to tracking/understanding those fallbacks rather than wiring new features.</p>
+<h2 id="3-mathematically-meaningful-tests"><a class="header" href="#3-mathematically-meaningful-tests">3. Mathematically meaningful tests</a></h2>
+<ul>
+<li><strong>Graph construction &amp; $\tau$-domain sanity:</strong> <code>crates/viterbo/src/oriented_edge/tests.rs::smoke_graph_build_cube_edges_exist</code> and <code>::tau_domain_basic_properties_on_cube</code> show every ridge/facet pairing respects the analytic inequalities derived in the thesis.</li>
+<li><strong>Fixed-point closure:</strong> <code>::cycle_closure_unique_fixed_point_on_tiny_graph</code> constructs a contraction with known fixed point $z^*$ and verifies the recovered action matches zero.</li>
+<li><strong>Capacity invariants:</strong> <code>::golden_capacity_product_of_squares_matches_min_area</code>, <code>::golden_capacity_hypercube_minus1_1_pow4_is_4</code>, and <code>::invariance_under_block_rotation_symplectomorphism</code> compare against Siburg’s area formula and symplectic invariance, catching regressions in both graph building and DFS.</li>
+<li><strong>Non-product shapes:</strong> <code>::cross_polytope_and_simplex_smoke_capacities</code> exercises the solver on the $\ell_1$ ball and the orthogonal simplex (after H-rep conversion), ensuring we cover symmetric/non-generic catalogs.</li>
+<li><strong>Python orchestration:</strong> <code>tests/e2e/test_atlas_build.py</code> rebuilds a tiny atlas config, checks the hypercube row, and confirms the preview asset is non-empty—linking the native kernels to stage_save semantics.</li>
+<li><strong>Random generator replay:</strong> The <code>rand4</code> module replays every generated polytope via stored tokens so atlas provenance can be trusted.</li>
+</ul>
+<p>Together these tests cover every mathematical code path, from native solvers to the Python atlas orchestration.</p>
+<h2 id="4-where-we-already-compute-capacities"><a class="header" href="#4-where-we-already-compute-capacities">4. Where we already compute capacities</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Polytope</th><th>Expected $c_{EHZ}$ (theory)</th><th>Observed</th><th>Source</th></tr></thead><tbody>
+<tr><td>$K=[-1,1]^2$, $L=[-2,2]^2$, product $K\times L$</td><td>$\min(\text{area}(K), \text{area}(L)) = 4$ (Siburg ’93)</td><td>$4.000000 \pm 5\times10^{-6}$, systolic ratio $=4$</td><td><code>crates/viterbo/src/oriented_edge/tests.rs::golden_capacity_product_of_squares_matches_min_area</code></td></tr>
+<tr><td>Hypercube $[-1,1]^4$</td><td>Product of two unit squares $\Rightarrow c=4$</td><td>$4.000000 \pm 5\times10^{-6}$</td><td><code>::golden_capacity_hypercube_minus1_1_pow4_is_4</code></td></tr>
+<tr><td>Hypercube under block rotation $M=\text{diag}(R,R)$</td><td>$c$ invariant under symplectic maps</td><td>$</td><td>c(MK)-c(K)</td></tr>
+<tr><td>Cross-polytope ${|x|_1 \le 1}$</td><td>Positive finite capacity; sanity check for non-product symmetric bodies</td><td>Solver returns finite, positive value with rotation-pruning disabled</td><td><code>::cross_polytope_and_simplex_smoke_capacities</code></td></tr>
+</tbody></table>
+</div>
+<p>No published literature provides “trusted” values for generic random polytopes, so atlas now streams solver outputs directly from the native bindings; future work is to compare aggregates (e.g., by family) and watch for anomalous clusters.</p>
+<h2 id="5-performance-snapshots-including-nine-facets"><a class="header" href="#5-performance-snapshots-including-nine-facets">5. Performance snapshots (including nine facets)</a></h2>
+<p><strong>Volume scaling.</strong> Criterion benches on random H-reps highlight how 4D volume cost grows with facet count:</p>
+<div class="table-wrapper"><table><thead><tr><th>bench</th><th>parameter</th><th style="text-align: right">samples</th><th style="text-align: right">min (ns)</th><th style="text-align: right">mean (ns)</th><th style="text-align: right">stddev (ns)</th></tr></thead><tbody>
+<tr><td>geom4_volume</td><td>12</td><td style="text-align: right">50</td><td style="text-align: right">530979.123</td><td style="text-align: right">551555.466</td><td style="text-align: right">35825.600</td></tr>
+<tr><td>geom4_volume</td><td>24</td><td style="text-align: right">50</td><td style="text-align: right">1154035.167</td><td style="text-align: right">1164768.780</td><td style="text-align: right">7977.393</td></tr>
+<tr><td>geom4_volume</td><td>48</td><td style="text-align: right">50</td><td style="text-align: right">4352908.000</td><td style="text-align: right">4443786.840</td><td style="text-align: right">85842.830</td></tr>
+<tr><td>geom4_volume</td><td>72</td><td style="text-align: right">50</td><td style="text-align: right">13447109.000</td><td style="text-align: right">13902727.040</td><td style="text-align: right">556825.056</td></tr>
+</tbody></table>
+</div>
+<p><em>Updated 2025-11-11 01:41:11Z · commit 585a129 · host ab5b4864ef14 · rustc rustc 1.91.1 (ed61e7d7e 2025-11-07)</em></p>
+<p><strong>Oriented-edge internals.</strong> Microbenchmarks for the $\psi_{ij}$ push-forward, $\tau$ inequality, and per-edge lower bound kernels (derived from the cube fixture) show sub-millisecond latencies:</p>
+<div class="table-wrapper"><table><thead><tr><th>bench</th><th>parameter</th><th style="text-align: right">samples</th><th style="text-align: right">min (ns)</th><th style="text-align: right">mean (ns)</th><th style="text-align: right">stddev (ns)</th></tr></thead><tbody>
+<tr><td>oe4</td><td>edge_lb_action</td><td style="text-align: right">50</td><td style="text-align: right">1997.382</td><td style="text-align: right">2060.586</td><td style="text-align: right">39.313</td></tr>
+<tr><td>oe4</td><td>psi_push_forward</td><td style="text-align: right">50</td><td style="text-align: right">1639.126</td><td style="text-align: right">1899.370</td><td style="text-align: right">238.413</td></tr>
+<tr><td>oe4</td><td>tau_inequality_eval</td><td style="text-align: right">50</td><td style="text-align: right">2346.882</td><td style="text-align: right">2368.305</td><td style="text-align: right">15.083</td></tr>
+</tbody></table>
+</div>
+<p><em>Updated 2025-11-11 01:41:11Z · commit 585a129 · host ab5b4864ef14 · rustc rustc 1.91.1 (ed61e7d7e 2025-11-07)</em></p>
+<p><strong>End-to-end systolic ratio for nine facets.</strong> A deterministic “cube with an oblique cap” (eight axis-aligned halfspaces plus $ (1,1,1,1)/2 \cdot x \le 1.8$) gives us the requested data point:</p>
+<div class="table-wrapper"><table><thead><tr><th>polytope</th><th style="text-align: right">facets</th><th style="text-align: right">vertices</th><th style="text-align: right">capacity (time ms)</th><th style="text-align: right">volume (time ms)</th><th style="text-align: right">systolic ratio</th></tr></thead><tbody>
+<tr><td>cube with oblique cap (<code>Hs₊: (1,1,1,1)/2 · x ≤ 1.8</code>)</td><td style="text-align: right">9</td><td style="text-align: right">19</td><td style="text-align: right">4.000000000 (0.646)</td><td style="text-align: right">3.999966688 (0.075)</td><td style="text-align: right">0.500033336</td></tr>
+</tbody></table>
+</div>
+<p><em>Measured with <code>cargo run -p viterbo --example systolic_ratio --release</code> on 2025-11-08 16:34:12 UTC (commit 7bd6b64)</em></p>
+<p>Interpretation:</p>
+<ul>
+<li>Volume dominates only for very large facet counts (≥48); for nine facets, the facet-fan kernel finishes in ~0.08 ms.</li>
+<li>The oriented-edge solver spends ≈0.65 ms on the nine-facet sample (including graph build + DFS). Because both steps are deterministic, a full systolic ratio evaluation currently lands well under 1 ms on this hardware.</li>
+<li>The atlas builder uses this same native solver at dataset time; <code>tests/e2e/test_atlas_build.py</code> asserts the hypercube capacity ($4$) and systolic ratio ($0.5$) so regressions surface immediately.</li>
+</ul>
+<h2 id="6-supported-polytope-families"><a class="header" href="#6-supported-polytope-families">6. Supported polytope families</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Family</th><th>Coverage status</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Lagrangian products (e.g., $K\times L$)</td><td><strong>Fully supported.</strong> <code>RegularProductEnumerator</code> exhausts tuples of planar polygons; golden tests cover product-of-squares, and the solver respects symplectic invariance.</td><td><code>crates/viterbo/src/rand4/mod.rs</code> (<code>RegularProductEnumerator</code>), <code>crates/viterbo/src/oriented_edge/tests.rs</code>.</td></tr>
+<tr><td>Generic random polytopes</td><td><strong>Ready.</strong> <code>RandomFacesGenerator</code>, <code>RandomVerticesGenerator</code>, and symmetric halfspace samplers deliver bounded, star-shaped shapes with arbitrary facet counts; property tests enforce bounds and replay.</td><td>Docs: <a href="./random-polytopes.html">random-polytopes</a>. Code: <code>rand4::RandomFacesParams</code>, etc.</td></tr>
+<tr><td>Highly symmetric / non-generic bodies (cubes, cross-polytopes, orthogonal simplex)</td><td><strong>Catalogued.</strong> <code>geom4::special</code> builds these fixtures; oriented-edge tests already cover cube + cross-polytope; simplex hooks are ready once we feed them into DFS.</td><td><code>crates/viterbo/src/geom4/special.rs</code>, <code>crates/viterbo/src/oriented_edge/tests.rs</code>.</td></tr>
+<tr><td>Perturbed families / counterexamples</td><td><strong>Stubs.</strong> The thesis spec lists perturbation hooks; generators will add them once we finalize the desired symplectic/affine noise model.</td><td>Docs: <a href="./viterbo-conjecture-counterexample.html">viterbo-conjecture-counterexample</a>; <code>rand4</code> “Perturbed Special Polytopes” section.</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Bottom line:</strong> We already support both Lagrangian product families and the generic “atlas background” polytopes. Symmetric shapes are part of the fixture catalog, the solver has dedicated tests for them, and atlas rows now carry finite <code>capacity_ehz</code> / <code>systolic_ratio</code> values unless the solver reports “no cycle”.</p>
+</blockquote>
+<h2 id="7-outstanding-gaps--next-steps"><a class="header" href="#7-outstanding-gaps--next-steps">7. Outstanding gaps &amp; next steps</a></h2>
+<ol>
+<li><strong>Instrument solver fallbacks</strong>: record how many atlas rows return <code>None</code> (degeneracies, rotation budget hits) and surface that statistic next to dataset summaries.</li>
+<li><strong>Expand golden fixtures</strong> beyond products/symmetric bodies (e.g., orthogonal simplex values, Chaidez–Hutchings counterexample) once their analytic capacities are derived in the thesis.</li>
+<li><strong>Document failure budgets</strong>: classify the fallback causes (e.g., canonicalization errors vs. true absence of admissible cycles) so mathematicians know what “NaN” means operationally.</li>
+</ol>
+<p>Keeping this page updated whenever a new generator, test, or visualization lands will make it trivial to answer “are we ready?” the next time the conjecture discussion resurfaces.</p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../thesis/random-polytopes.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../thesis/random-polytopes.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

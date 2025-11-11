@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Meta - Probing Viterbo&#x27;s Conjecture (working title)</title>
+        <title>2D Polytopes (H-rep) - Probing Viterbo&#x27;s Conjecture (working title)</title>
 
 
         <!-- Custom HTML head -->
@@ -177,23 +177,90 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="meta-documentation"><a class="header" href="#meta-documentation">Meta Documentation</a></h1>
-<p>This section hosts documentation about meta-level development workflows (not object-level content).</p>
+                        <h1 id="geom2d"><a class="header" href="#geom2d">2D Convex Polytopes — Design Notes</a></h1>
+<!-- Ticket: 372a-create-libraries -->
+<!-- Code: crates/viterbo/src/poly2.rs::Poly2 -->
+<p>Goal: extremely fast, robust‑enough 2D routines for half‑space polytopes used at scale (≈1e9 instances) in oriented‑edge DFS. We bias for simple data layout and branch‑light code. Degeneracy handling is intentionally minimal per ticket.</p>
+<h2 id="representation"><a class="header" href="#representation">Representation</a></h2>
 <ul>
-<li>Agent onboarding and always-relevant rules: see <code>AGENTS.md</code> at the workspace root.</li>
-<li>Topic-specific meta docs that only some tickets need live here (e.g., data IO, CI/tooling).</li>
-<li>Paper + helper scripts: see <code>docs/src/meta/misc-tools.md</code> when you need local copies of bibliography items.</li>
+<li>Two-tier 2D H-rep:
+<ul>
+<li>Loose (<code>HPoly2</code>): bag of half‑spaces <code>n·x &lt;= c</code>; no guarantees on order, normalization, or redundancy. Fast to build/compose.</li>
+<li>Strict (<code>HPoly2Ordered</code>): unit normals, angle‑sorted by <code>atan2</code>, and parallels coalesced (keep most restrictive <code>c</code>). Preserves invariants on insert/merge and after push‑forward.</li>
+</ul>
+</li>
+<li>Keep vectors contiguous; strict form is cache‑friendly and enables adjacency‑based algorithms.</li>
+</ul>
+<h2 id="core-ops-hot-path"><a class="header" href="#core-ops-hot-path">Core Ops (hot path)</a></h2>
+<ul>
+<li>Push‑forward under affine map <code>y = Mx + t</code> (M invertible): <code>A' = A M^{-1}</code>, <code>b' = b - A' t</code>. Pure algebra; no vertex construction.
+<ul>
+<li>Code: <code>HPoly2::push_forward</code>, <code>HPoly2Ordered::push_forward</code>, <code>Affine2</code>.</li>
+</ul>
+</li>
+<li>Intersect with a half‑space / polytope: append (<code>HPoly2</code>) or ordered insert/merge (<code>HPoly2Ordered</code>).</li>
+<li>Membership: <code>n·x &lt;= c + eps</code> for all rows.</li>
+<li>Emptiness:
+<ul>
+<li>Loose (generic heuristic): test pairwise boundary intersections + probes (<code>HPoly2::is_empty</code>).</li>
+<li>Strict (exact via HPI): classical half‑plane intersection with deque; includes a quick contradictory‑pares check for opposite parallels (<code>HPoly2Ordered::hpi</code>).</li>
+</ul>
+</li>
+</ul>
+<h2 id="lessfrequent-ops"><a class="header" href="#lessfrequent-ops">Less‑frequent Ops</a></h2>
+<ul>
+<li>Extremal value of an affine functional <code>f(x)=w·x+a</code>: compute on discovered boundary vertices (same candidate set as emptiness). Returns <code>(min, argmin, max, argmax)</code> or <code>None</code> if no finite vertex is found.</li>
+<li>Affine utilities: inverse, composition, fixed point.</li>
+<li>CZ‑index related rotation of an orientation‑preserving map: stub (<code>cz_index_rotation_stub</code>) until specified in thesis math section.</li>
+</ul>
+<h2 id="interop-and-helpers"><a class="header" href="#interop-and-helpers">Interop and Helpers</a></h2>
+<ul>
+<li>Build from 2D points by convex hull (Andrew’s monotone chain) → outward half‑spaces. Useful when projecting 4D faces to 2D.
+<ul>
+<li>Code: <code>Poly2::from_points_convex_hull</code>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="random-2d-polygons"><a class="header" href="#random-2d-polygons">Random 2D Polygons</a></h2>
+<ul>
+<li>Purpose: provide small, deterministic test instances for Mahler‑product experiments and algorithm smoke tests.</li>
+<li>Location: <code>crates/viterbo/src/geom2/rand.rs</code> (module <code>geom2::rand</code>).</li>
+<li>API:
+<ul>
+<li><code>draw_polygon_radial(cfg, token) -&gt; Poly2</code>: radial jitter model over <code>n</code> equally spaced angles with bounded angular (<code>angle_jitter_frac</code>) and radial (<code>radial_jitter</code>) noise.</li>
+<li><code>recenter_rescale(poly, Bounds2) -&gt; (Poly2, r_in, r_out)</code>: translate to the area‑centroid and scale about the origin to satisfy in‑/out‑radius bounds when consistent.</li>
+<li><code>polar(poly) -&gt; Poly2</code>: compute the polar polygon <code>K^\\circ</code> in H‑rep (requires origin in the interior).</li>
+</ul>
+</li>
+<li>Replay tokens: <code>(seed: u64, index: u64)</code>. The sampler uses <code>StdRng::seed_from_u64(mix(seed,index))</code> so that:
+<ul>
+<li>Same <code>(seed,index)</code> → same polygon.</li>
+<li>Different <code>index</code> values partition the stream reproducibly, independent of call order.</li>
+</ul>
+</li>
+</ul>
+<h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
+<ul>
+<li>Tolerance: <code>eps = 1e-9</code> for predicates; scale‑agnostic inputs preferred.</li>
+<li>Orientation: standard 2D orientation; outward normal constructed by 90° CCW rotation of hull edges.</li>
+<li>Style: small, explicit functions; explain the “why” in file headers; property tests optional (smoke tests suffice here).</li>
+</ul>
+<h2 id="rationale-and-tradeoffs"><a class="header" href="#rationale-and-tradeoffs">Rationale and Trade‑offs</a></h2>
+<ul>
+<li>H‑rep keeps push‑forwards and intersections O(m) without hulls/vertices.</li>
+<li>Strict vs loose split makes invariants explicit: algorithms that rely on angle order and adjacency run in O(m) after a one‑time O(m log m) normalization; loose remains flexible for fast construction and composition.</li>
+<li>Degenerate cases (parallel strips, nearly co‑incident lines) are rare on hot paths; when needed, strict HPI resolves edge cases.</li>
 </ul>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../thesis/visualization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../meta/protocol-2025-11-04.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../meta/benchmarks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../thesis/geom4d_polytopes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -203,11 +270,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../thesis/visualization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../meta/protocol-2025-11-04.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../meta/benchmarks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../thesis/geom4d_polytopes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>

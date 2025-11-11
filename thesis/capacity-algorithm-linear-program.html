@@ -1,0 +1,407 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>LP/QP Programs for c_EHZ - Probing Viterbo&#x27;s Conjecture (working title)</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Probing Viterbo&#x27;s Conjecture (working title)</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <!-- Ticket: <slug> -->
+<!-- Why: Specify an implementer‑ready LP/QP pathway for computing/estimating c_EHZ of 4D convex polytopes from facet data. Complements the oriented‑edge graph search and the Minkowski billiard chapter. -->
+<!-- Editing notes: Keep statements precise; equations KaTeX‑safe; footnotes author–year. Cross‑link to sibling chapters. -->
+<h1 id="lpqp-programs-for-c_ehz-on-convex-polytopes-in-r4"><a class="header" href="#lpqp-programs-for-c_ehz-on-convex-polytopes-in-r4">LP/QP Programs for c_EHZ on Convex Polytopes in R^4</a></h1>
+<p>Purpose. This chapter turns the Haim–Kislev combinatorial formula for the Ekeland–Hofer–Zehnder capacity into optimization programs that an implementer can assemble from facet data. We give the exact nonconvex QP arising from the formula, practically useful convex relaxations (LP/SDP) that certify bounds, and an implementation and validation plan that integrates with the oriented‑edge and billiard solvers.</p>
+<p>Scope. Convex, star‑shaped, non‑degenerate polytopes in (R^4, ω_0). Inputs are in H‑representation with outward unit facet normals and support numbers. See the background on c_EHZ and Reeb dynamics in Ekeland‑Hofer‑Zehnder‑Capacity.md and the oriented‑edge and billiard algorithm chapters:</p>
+<ul>
+<li>Docs: thesis/capacity-algorithm-oriented-edge-graph.md</li>
+<li>Docs: thesis/capacity-algorithm-minkowski-billiard.md</li>
+</ul>
+<h2 id="setting-and-notation"><a class="header" href="#setting-and-notation">Setting and Notation</a></h2>
+<ul>
+<li>Fix the standard symplectic form ω(u,v) = u^T J v on R^4 with
+J = [[0, I_2], [-I_2, 0]].</li>
+<li>Let K ⊂ R^4 be a convex polytope with 0 ∈ int K and H‑representation
+K = { x ∈ R^4 : ⟨a_i, x⟩ ≤ h_i, i = 1,…,m },
+where each a_i ∈ R^4 is the outward unit normal of facet i and h_i = h_K(a_i) &gt; 0 is the (oriented) support number.</li>
+<li>Stack A ∈ R^{m×4} with rows a_i^T, h ∈ R^m with entries h_i. Define W := A J A^T ∈ R^{m×m} with entries W_{ij} = ω(a_i,a_j).</li>
+</ul>
+<p>Remark (translation/scaling invariance). c_EHZ is translation invariant and 2‑homogeneous under scaling. If 0 ∉ int K, translate once to put 0 inside and recompute h_i; if K is scaled by s&gt;0, then h_i ← s h_i and c_EHZ(sK) = s^2 c_EHZ(K).<sup class="footnote-reference" id="fr-HK19-1"><a href="#footnote-HK19">1</a></sup></p>
+<h2 id="literature-exact-combinatorial-program-and-simple-loop"><a class="header" href="#literature-exact-combinatorial-program-and-simple-loop">Literature: exact combinatorial program and “simple loop”</a></h2>
+<p>Haim–Kislev give a finite‑dimensional, implementable formula for polytopes; it rests on a “simple loop” property: there exists a minimal‑action generalized closed characteristic that visits the interior of each facet at most once (no facet revisits).<sup class="footnote-reference" id="fr-HK19-2"><a href="#footnote-HK19">1</a></sup> In particular:</p>
+<ul>
+<li>Define the feasible weight polytope
+B_K := { β ∈ R_+^m : A^T β = 0, h^T β = 1 }.</li>
+<li>Then the EHZ capacity of K is
+c_EHZ(K) = 1 / (2· M_K),
+where
+M_K := max_{β ∈ B_K, σ ∈ S_m}  Σ_{1 ≤ j &lt; i ≤ m} β_{σ(i)} β_{σ(j)} · ω(a_{σ(i)}, a_{σ(j)}).</li>
+</ul>
+<p>This is Equation (1) in Haim–Kislev’s result, restated explicitly also in Leipold–Vallentin (their Eq. (1)) in the P(A,b) convention.[^HK19]<sup class="footnote-reference" id="fr-LV24-1"><a href="#footnote-LV24">2</a></sup> The permutation σ encodes the (single‑visit) order in which the minimizing loop traverses the facets. A reduction narrows σ to cycles of a directed graph built from facet adjacencies, which is useful algorithmically and connects to our oriented‑edge search.[^HK19, Remark 3.11]</p>
+<p>Complexity. Computing c_EHZ of polytopes is NP‑hard (even for simplices) by reduction to a quadratic assignment structure hidden in M_K.<sup class="footnote-reference" id="fr-LV24-2"><a href="#footnote-LV24">2</a></sup> Practical algorithms therefore combine exact solves on small/structured inputs with certified convex bounds and specialized search.</p>
+<h2 id="exact-nonconvex-qp-fixed-order-and-global-mixed-qpqap"><a class="header" href="#exact-nonconvex-qp-fixed-order-and-global-mixed-qpqap">Exact nonconvex QP (fixed order) and global mixed QP/QAP</a></h2>
+<p>We separate the permutation (order) and the nonnegative weights β.</p>
+<h3 id="program-a--nonconvex-qp-for-a-fixed-order"><a class="header" href="#program-a--nonconvex-qp-for-a-fixed-order">Program A — nonconvex QP for a fixed order</a></h3>
+<p>Inputs: A ∈ R^{m×4}, h ∈ R^m, W = A J A^T, an index order σ of a subset S ⊆ {1,…,m}. Entries with i ∉ S are allowed but will get β_i=0.</p>
+<p>Decision variables:</p>
+<ul>
+<li>β ∈ R_+^m (nonnegative facet weights).</li>
+</ul>
+<p>Constraints:</p>
+<ul>
+<li>A^T β = 0  (four linear equalities; closure)</li>
+<li>h^T β = 1  (normalization)</li>
+<li>β_i = 0 for i ∉ S (if restricting to a chosen subset/order).</li>
+</ul>
+<p>Objective (maximize):</p>
+<ul>
+<li>Q(β;σ) := Σ_{1 ≤ j &lt; i ≤ m} β_{σ(i)} β_{σ(j)} · W_{σ(i),σ(j)}.</li>
+</ul>
+<p>Return c(σ) := 1/(2· Q*(σ)) with Q*(σ) the optimal objective value. The exact capacity is c_EHZ(K) = min_σ c(σ) when σ ranges over all orders allowed by the simple‑loop theorem; in practice, restrict σ as in the “Permutation pruning” note below.</p>
+<p>Notes:</p>
+<ul>
+<li>This QP is in general indefinite (nonconvex) because W is skew‑symmetric and the lower‑triangular selection depends on σ. Modern global solvers (e.g., Gurobi/CPLEX/SCIP) accept such QPs and solve them via spatial branch‑and‑bound with McCormick relaxations and cuts. Provide and record a global optimality certificate (gap ≤ ε_gap).<sup class="footnote-reference" id="fr-Krupp20-1"><a href="#footnote-Krupp20">3</a></sup></li>
+<li>The four equalities A^T β = 0 enforce the vector equilibrium Σ β_i a_i = 0 which encodes closedness; h^T β = 1 pins the scale (action normalization).</li>
+</ul>
+<h3 id="program-b--unified-mixed-qpqap-optional-small-m"><a class="header" href="#program-b--unified-mixed-qpqap-optional-small-m">Program B — unified mixed QP/QAP (optional, small m)</a></h3>
+<p>Let P ∈ {0,1}^{m×m} be a permutation matrix (P e = e, P^T e = e) and define the strictly lower‑triangular mask L ∈ {0,1}^{m×m} with L_{ij}=1 for i&gt;j and 0 otherwise. Then the objective can be written as
+Q(β,P) = ⟨ L ∘ (P W P^T), β β^T ⟩,
+where ∘ is the Hadamard product and ⟨·,·⟩ the Frobenius inner product. This yields a compact mixed 0–1 nonconvex quadratic program over (β,P). It is exact but only practical for very small m due to the QAP‑type combinatorics.[^LV24]<sup class="footnote-reference" id="fr-Krupp20-2"><a href="#footnote-Krupp20">3</a></sup></p>
+<p>Permutation pruning. Use Haim–Kislev’s reduction to cycles of a directed graph on facets (edge i→j present when the Reeb velocity can switch from facet i to j) to shrink σ to “combinatorially allowed” orders; this is exactly the graph our oriented‑edge chapter builds on (2‑faces drive feasible switches).<sup class="footnote-reference" id="fr-HK19-3"><a href="#footnote-HK19">1</a></sup> In practice we enumerate simple cycles up to a cutoff length L (≤ m), set β_i=0 for i outside the cycle, and run Program A per cycle.</p>
+<h2 id="convex-relaxations-and-bounds-lpsdp"><a class="header" href="#convex-relaxations-and-bounds-lpsdp">Convex relaxations and bounds (LP/SDP)</a></h2>
+<p>Because M_K is a maximum of a bilinear form over a polytope, convex outer approximations in the lifted space give certified bounds. Let y_{ij} ≈ β_i β_j. The constraints A^T β=0, h^T β=1, β ≥ 0 define a compact polytope B_K with explicit upper bounds 0 ≤ β_i ≤ 1/ min(h_i,1e9) since h_i&gt;0 and h^T β=1.</p>
+<ul>
+<li>
+<p>LP (McCormick) relaxation — lower bound on c_EHZ:</p>
+<ul>
+<li>For a fixed σ define y_{ij} for i&gt;j and enforce McCormick envelopes over boxes [0,U_i]×[0,U_j]:
+y_{ij} ≥ 0; y_{ij} ≤ U_i β_j; y_{ij} ≤ U_j β_i; y_{ij} ≥ β_i + β_j − U_i − U_j,
+with U_i := 1/h_i.</li>
+<li>Maximize Σ_{i&gt;j} W_{σ(i),σ(j)} y_{σ(i)σ(j)} subject to β ∈ B_K and the envelopes.</li>
+<li>Call the optimum \hat M_σ ≥ M_σ (outer relaxation). Then
+c_EHZ(K) ≥ 1/(2· max_σ \hat M_σ).</li>
+<li>This is fast (HiGHS/CP‑SAT) and scales; it certifies a rigorous lower bound on c_EHZ.</li>
+</ul>
+</li>
+<li>
+<p>SDP (Shor/CP) relaxations — stronger lower bounds:</p>
+<ul>
+<li>Lift to Y ≽ 0 with Y_{ij} ≈ β_i β_j, add linear side constraints Y e = β, diag(Y) ≤ U ∘ β, β ≥ 0, A^T β = 0, h^T β = 1, and maximize ⟨S_σ, Y⟩ with S_σ := L ∘ (P_σ W P_σ^T).</li>
+<li>Replacing the completely positive cone by the PSD cone gives a tractable SDP; multiple SDP rounds over selected σ produce tight certified lower bounds.<sup class="footnote-reference" id="fr-Krupp20-3"><a href="#footnote-Krupp20">3</a></sup></li>
+</ul>
+</li>
+</ul>
+<p>Upper bounds on c_EHZ. Any feasible (β,σ) yields M ≤ M_K and thus c_EHZ(K) ≤ 1/(2M). Heuristics (local ascent for β on each σ, greedy σ from W’s positive entries, or rounding from relaxations) produce candidates; we then reconstruct a closed polygonal orbit and measure its action (next section), also cross‑checking with the oriented‑edge solver.</p>
+<h2 id="reconstructing-a-polygonal-certificate-from-βσ"><a class="header" href="#reconstructing-a-polygonal-certificate-from-βσ">Reconstructing a polygonal certificate from (β,σ)</a></h2>
+<p>Given a feasible (β,σ), define segment directions v_i := J a_{σ(i)} and positive times t_i := λ β_{σ(i)} for some λ&gt;0. Choose λ so that Σ t_i h_{σ(i)} = 1 (normalization). The closure condition A^T β = 0 implies Σ t_i v_i = 0, so the concatenation gives a closed polygonal loop on ∂K with edges parallel to v_i. Its action equals
+A = 1 / (2· Σ_{j&lt;i} β_{σ(i)} β_{σ(j)} ω(a_{σ(i)}, a_{σ(j)})) = 1/(2·Q(β;σ)),
+matching the program’s value; this is the certificate we store (order, nonzero facets, times t_i, action).[^HK19]<sup class="footnote-reference" id="fr-Krupp20-4"><a href="#footnote-Krupp20">3</a></sup></p>
+<p>Numerical tolerances for the certificate:</p>
+<ul>
+<li>Closure residual: ||Σ t_i v_i||_2 ≤ τ_close (default 1e−10 · Σ t_i).</li>
+<li>Facet support consistency: |⟨a_{σ(i)}, x⟩ − h_{σ(i)}| ≤ τ_face when sampling a point x on each segment (diagnostic only).</li>
+<li>Action check: recompute polygonal action directly from vertices; relative mismatch ≤ 5e−9.</li>
+</ul>
+<h2 id="implementation-plan"><a class="header" href="#implementation-plan">Implementation Plan</a></h2>
+<p>Data plumbing.</p>
+<ul>
+<li>Accept H‑rep with unit normals: A ∈ R^{m×4}, h ∈ R^m, 0 ∈ int K. If normals are not unit, renormalize a_i ← a_i/||a_i||, h_i ← h_i·||a_i||.</li>
+<li>Build W = A J A^T once. Precompute facet graph used by the oriented‑edge chapter; reuse its cycle enumeration to prune σ.</li>
+</ul>
+<p>Solvers.</p>
+<ul>
+<li>Exact/upper‑bound candidates: Program A with a global nonconvex QP solver (Gurobi/CPLEX/SCIP). Keep ε_gap ≤ 1e−6 and record solver’s optimality certificate (gap, best bound, node count, time).</li>
+<li>Lower‑bound certificates: LP McCormick (HiGHS) by default; optional SDP (MOSEK/SDPA) for tighter bounds on small m.</li>
+<li>Optional unified Program B for tiny m (≤ 14) to cross‑check reductions.</li>
+</ul>
+<p>Assembly details.</p>
+<ul>
+<li>Rust: create <code>crates/viterbo/src/capacity/lpqp.rs</code> with:
+<ul>
+<li><code>build_data(hrep: &amp;HPoly4) -&gt; (A: DMatrix&lt;f64&gt;, h: DVector&lt;f64&gt;, W: DMatrix&lt;f64&gt;)</code></li>
+<li><code>enumerate_cycles(g: &amp;FacetGraph, max_len: usize) -&gt; impl Iterator&lt;Item=Vec&lt;usize&gt;&gt;</code></li>
+<li><code>solve_qp_fixed_order(W, A, h, order) -&gt; QpResult { beta, q_value, action, cert }</code></li>
+<li><code>relax_lp_mccormick(...) -&gt; LpBound { m_hat }</code></li>
+</ul>
+</li>
+<li>Python: thin wrappers in <code>src/viterbo/rust/</code> and a stage module <code>src/viterbo/capacity.stage_lpqp.py</code> to drive experiments and write provenance sidecars (<code>viterbo.provenance.write(...)</code>).</li>
+<li>Expose a unified <code>compute_capacity_lpqp(K)</code> that returns:
+<ul>
+<li>action estimate(s) with certificate(s),</li>
+<li>lower bound (LP/SDP) and any exact matches,</li>
+<li>solver logs (gap/time) for reproducibility.</li>
+</ul>
+</li>
+</ul>
+<p>Defaults and budgets (safe wrapper).</p>
+<ul>
+<li>LP/graph enumeration: 10 s budget for m ≤ 80.</li>
+<li>Exact QP per order: 1–5 s; stop after best‑so‑far is within factor 1.02 of LP lower bound or after 120 s total.</li>
+<li>SDP (optional): 60–180 s small‑m runs only.</li>
+</ul>
+<h2 id="validation-plan"><a class="header" href="#validation-plan">Validation Plan</a></h2>
+<p>Against oriented‑edge algorithm (general polytopes).</p>
+<ul>
+<li>On each test polytope, run the oriented‑edge solver to get an action candidate A_oe. From LP/QP, collect:
+<ul>
+<li>an upper‑bound candidate A_up (from a feasible (β,σ)),</li>
+<li>a lower bound A_low (from convex relaxation).</li>
+</ul>
+</li>
+<li>Validate: A_low ≤ c_EHZ(K) ≤ min(A_oe, A_up) and, when oriented‑edge feasibility gives a simple loop, min(A_oe, A_up) agrees with A_low within tolerance.</li>
+</ul>
+<p>Against Minkowski billiard (Lagrangian products).</p>
+<ul>
+<li>For K×T ⊂ R^4, run the billiard algorithm; the returned action must match the LP/QP result (best feasible candidate) within 1e−7 when both are exact.<sup class="footnote-reference" id="fr-Rudolf24-1"><a href="#footnote-Rudolf24">4</a></sup></li>
+</ul>
+<p>Sanity set.</p>
+<ul>
+<li>Balls/ellipsoids approximated by tight polytopes (convergence to π r^2).</li>
+<li>Centrally symmetric polytopes with symmetry pairs (use Haim–Kislev’s symmetric simplification).<sup class="footnote-reference" id="fr-HK19-4"><a href="#footnote-HK19">1</a></sup></li>
+<li>Small simplices (compare with values obtained in NP‑hardness constructions for cross‑checks).<sup class="footnote-reference" id="fr-LV24-3"><a href="#footnote-LV24">2</a></sup></li>
+</ul>
+<h2 id="guarantees-tolerances-and-failure-modes"><a class="header" href="#guarantees-tolerances-and-failure-modes">Guarantees, Tolerances, and Failure Modes</a></h2>
+<ul>
+<li>Correctness (exact run). If Program A is solved globally for a σ that belongs to the reduced set covering all simple loops, the produced action equals c_EHZ(K). The certificate is the polygonal loop reconstructed above.</li>
+<li>Bounds. For any σ, LP/SDP relaxations certify c_EHZ(K) ≥ 1/(2·\hat M_σ). Any feasible (β,σ) yields c_EHZ(K) ≤ 1/(2·Q(β;σ)).</li>
+<li>Numerics. Use absolute tolerance 1e−9 on linear equalities, 1e−12 clipping for β ≥ 0, and a solver relative gap ≤ 1e−6 for declaring “exact”.</li>
+<li>Degeneracies. If some facets are nearly parallel or h_i very small, rescale K to unit inradius∈[0.5,2] before assembly; undo scaling on output. Fall back to oriented‑edge feasibility if β concentrates on &lt;3 facets (degenerate paths).</li>
+</ul>
+<h2 id="references-footnotes"><a class="header" href="#references-footnotes">References (footnotes)</a></h2>
+<p>512b964 (Done. Canonical 2‑face orientation is now enforced everywhere; the knob is gone.)</p>
+<hr>
+<ol class="footnote-definition"><li id="footnote-HK19">
+<p>Haim‑Kislev, P. On the Symplectic Size of Convex Polytopes. Geom. Funct. Anal. 29 (2019) 440–463; arXiv:1712.03494. Key results: simple‑loop theorem; combinatorial formula (their Eq. (1)); permutation reduction via a facet graph. Also see the arXiv version for a complete statement. <a href="#fr-HK19-1">↩</a> <a href="#fr-HK19-2">↩2</a> <a href="#fr-HK19-3">↩3</a> <a href="#fr-HK19-4">↩4</a></p>
+</li>
+<li id="footnote-LV24">
+<p>Leipold, K., Vallentin, F. Computing the EHZ capacity is NP‑hard. Proc. Amer. Math. Soc. Ser. B 11 (2024), 603–611; arXiv:2402.09914. Restates the Haim–Kislev formula in P(A,b) form and proves NP‑hardness via reduction to a maximum acyclic subgraph/QAP. <a href="#fr-LV24-1">↩</a> <a href="#fr-LV24-2">↩2</a> <a href="#fr-LV24-3">↩3</a></p>
+</li>
+<li id="footnote-Krupp20">
+<p>Krupp, S. Calculating the EHZ Capacity of Polytopes. PhD thesis, Univ. Köln (2020). Chapter 5 formulates the maximization, QAP view, and convex (CP/SDP) relaxations that yield strong certified bounds and often exact optima on small instances. <a href="#fr-Krupp20-1">↩</a> <a href="#fr-Krupp20-2">↩2</a> <a href="#fr-Krupp20-3">↩3</a> <a href="#fr-Krupp20-4">↩4</a></p>
+</li>
+<li id="footnote-Rudolf24">
+<p>Rudolf, D. The Minkowski billiard characterization of the EHZ‑capacity of convex Lagrangian products. J. Dyn. Diff. Eq. (2024); arXiv:2203.01718. Used for cross‑validation on product‑structured examples. <a href="#fr-Rudolf24-1">↩</a></p>
+</li>
+</ol>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../thesis/capacity-algorithm-oriented-edge-graph.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../thesis/visualization.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../thesis/capacity-algorithm-oriented-edge-graph.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../thesis/visualization.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

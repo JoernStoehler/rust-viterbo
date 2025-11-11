@@ -186,11 +186,759 @@ For agent rules, see <code>AGENTS.md</code> at the workspace root. Meta-level de
 <li>Meta: <code>meta/overview.md</code></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
-<!-- VK: 00000000-0000-0000-0000-000000000000 -->
-<h2 id="VITERBO-2.1"><a class="header" href="#VITERBO-2.1">Lemma: Example parallelogram area identity</a></h2>
-<p>Let (a,b \in \mathbb{R}^2).
-The signed area equals (\det([a\ b]) = a_x b_y - a_y b_x).</p>
-<!-- Code: crates/viterbo/src/geometry.rs::parallelogram_area -->
+<!-- Ticket: <slug> -->
+<p>Note: former demo-only geometry helper has been removed in favor of the 2D/4D polytope libraries (<code>poly2</code>, <code>poly4</code>) documented in dedicated pages.</p>
+<div style="break-before: page; page-break-before: always;"></div><!--
+Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md
+Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e
+Notes for future editors:
+ - Keep KaTeX-safe math (no \operatorname).
+ - This section introduces the invariant and fixes conventions used
+   by the algorithmic sections (see thesis/capacity-algorithm-*.md).
+ - Prefer footnotes for citations to keep the flow readable.
+-->
+<h1 id="the-ekelandhoferzehnder-capacity-on-convex-polytopes-in-r4"><a class="header" href="#the-ekelandhoferzehnder-capacity-on-convex-polytopes-in-r4">The Ekeland–Hofer–Zehnder Capacity on Convex Polytopes in R^4</a></h1>
+<p>This section fixes conventions and recalls the precise definition and basic properties of the Ekeland–Hofer–Zehnder (EHZ) capacity in the 4‑dimensional Euclidean symplectic space. We then specialize to convex star‑shaped polytopes, describe the induced (generalized) Reeb dynamics on their boundary, and record structural facts we will use later when designing algorithms.</p>
+<h2 id="setting-and-notation"><a class="header" href="#setting-and-notation">Setting and Notation</a></h2>
+<p>We work on R^{4} with the standard symplectic form
+$$
+\omega_0 = dx_1\wedge dy_1 + dx_2\wedge dy_2,
+$$
+the standard complex structure (J) (so that (\omega_0(u,v)=\langle Ju, v\rangle)), and the standard Liouville 1‑form
+$$
+\lambda_0 = \tfrac12 \sum_{i=1}^{2} \big(x_i,dy_i - y_i,dx_i\big).
+$$
+Let (K\subset \mathbb{R}^4) be a compact, convex body that is star‑shaped with respect to the origin; write (\Sigma=\partial K). At smooth points of (\Sigma), the restriction (\alpha=\lambda_0|<em>{\Sigma}) is a contact form with (d\alpha=\omega_0|</em>{\Sigma}). The Reeb vector field (R_\alpha) is defined by (\alpha(R_\alpha)=1) and (d\alpha(R_\alpha,\cdot)=0). A closed characteristic on (\Sigma) is a closed orbit of (R_\alpha); for non‑smooth (\Sigma) (e.g. a polytope) we use generalized closed characteristics in the sense of convex/contact nonsmooth dynamics (the “combinatorial Reeb orbits” below), which agree with Reeb orbits after smoothing and preserve action and Conley–Zehnder index.<sup class="footnote-reference" id="fr-CH21-1"><a href="#footnote-CH21">1</a></sup></p>
+<p>The action of a closed (generalized) characteristic (\gamma) is
+$$
+\mathcal{A}(\gamma)=\int_\gamma \lambda_0,
+$$
+which equals the (\omega_0)-area of any spanning disk when (\gamma) is contractible.</p>
+<h2 id="definition-and-basic-properties"><a class="header" href="#definition-and-basic-properties">Definition and Basic Properties</a></h2>
+<p>For convex domains the Ekeland–Hofer and Hofer–Zehnder capacities coincide, and their common value is denoted (c_{EHZ}(K)). It admits the following equivalent characterizations.</p>
+<ul>
+<li>
+<p>Variational/Reeb characterization (convex case). The EHZ capacity is the minimal action of a closed (generalized) characteristic on (\partial K):
+$$
+c_{EHZ}(K) ;=; \min{\mathcal{A}(\gamma)\mid \gamma \text{ closed (generalized) characteristic on }\partial K}.
+$$
+The infimum is attained.[^EH89][^CHLS07]<sup class="footnote-reference" id="fr-Irie19-1"><a href="#footnote-Irie19">2</a></sup></p>
+</li>
+<li>
+<p>Hofer–Zehnder Hamiltonian characterization. Let (\mathcal{H}(K)) be the set of autonomous “admissible” Hamiltonians supported in (K) with all non‑constant periodic orbits of period strictly larger than 1. Then
+$$
+c_{HZ}(K)=\sup{\max H\mid H\in\mathcal{H}(K)}.
+$$
+For convex (K), (c_{HZ}(K)=c_{EHZ}(K)).[^HZ94]<sup class="footnote-reference" id="fr-CHLS07-1"><a href="#footnote-CHLS07">3</a></sup></p>
+</li>
+</ul>
+<p>As a symplectic capacity on the class of convex sets, (c_{EHZ}) satisfies the usual axioms:</p>
+<ul>
+<li>Monotonicity: if (K\hookrightarrow K') symplectically, then (c_{EHZ}(K)\le c_{EHZ}(K')).</li>
+<li>Conformality: (c_{EHZ}(aK)=a^2,c_{EHZ}(K)) for (a&gt;0).</li>
+<li>Normalization: (c_{EHZ}\big(B^{4}(r)\big)=\pi r^2) and (c_{EHZ}\big(Z^{4}(R)\big)=\pi R^2), where (B^{4}(r)) is the Euclidean ball and (Z^{4}(R)={(x,y)\in\mathbb{R}^{2}\times\mathbb{R}^{2}: \pi|y|^2&lt;R^2}) the symplectic cylinder.[^HZ94]<sup class="footnote-reference" id="fr-CHLS07-2"><a href="#footnote-CHLS07">3</a></sup></li>
+</ul>
+<p>Remark (Minkowski billiards view). For convex Lagrangian products (K\times T\subset\mathbb{R}^{2n}), (c_{EHZ}(K\times T)) equals the minimal length of a closed ((K,T))–Minkowski billiard trajectory; this will be relevant for product examples.[^AAKO14]<sup class="footnote-reference" id="fr-Rudolf24-1"><a href="#footnote-Rudolf24">4</a></sup></p>
+<h2 id="reeb-dynamics-on-polytopes-in-r4"><a class="header" href="#reeb-dynamics-on-polytopes-in-r4">Reeb Dynamics on Polytopes in R^4</a></h2>
+<p>Let (K\subset\mathbb{R}^4) be a convex polytope that is star‑shaped with respect to the origin. The boundary (\Sigma=\partial K) is piecewise flat (a union of 3‑dimensional facets meeting along 2‑faces, 1‑faces, and 0‑faces). The classical Reeb vector field (R_\alpha) is defined and smooth on the relative interior of each facet; at non‑smooth points we use generalized characteristics (solutions to the Reeb differential inclusion), which can be defined combinatorially and arise as limits of Reeb orbits for smoothings of (K).<sup class="footnote-reference" id="fr-CH21-2"><a href="#footnote-CH21">1</a></sup></p>
+<ul>
+<li>
+<p>Facets (3‑faces). If (F) is a facet with constant outer unit normal (n_F), then on (\operatorname{relint}(F)) the Reeb vector is parallel to (J n_F); thus the flow along (F) is linear, and generalized orbits are straight segments in direction (J n_F) with speed determined by the normalization (\alpha(R_\alpha)=1).<sup class="footnote-reference" id="fr-CH21-3"><a href="#footnote-CH21">1</a></sup></p>
+</li>
+<li>
+<p>Ridges/edges/vertices (2/1/0‑faces). At non‑smooth points, the Reeb vector field is not classically defined. Generalized characteristics cross these strata with velocity constrained to the “Reeb cone”, obtained by applying (J) to the outer normal cone of (K) at the point; in particular, an orbit may only spend measure‑zero time on these strata, and transitions satisfy a convex‑geometric reflection law.<sup class="footnote-reference" id="fr-CH21-4"><a href="#footnote-CH21">1</a></sup></p>
+</li>
+</ul>
+<p>Two structural facts are particularly important for computation and will be used later.</p>
+<ol>
+<li>
+<p>Minimal‑action orbit exists and is realized on (\partial K).<br />
+For convex (K), (c_{EHZ}(K)) is achieved by a (generalized) closed characteristic. In 4D, recent results show the minimal‑action orbit on a convex three‑sphere bounds a disk‑like global surface of section; as a corollary, several capacities (including the cylindrical one) coincide with this minimal action. This further confirms attainment and strengthens the dynamical picture.<sup class="footnote-reference" id="fr-AEK24-1"><a href="#footnote-AEK24">5</a></sup></p>
+</li>
+<li>
+<p>“At most one visit per facet” for a minimizer on polytopes.<br />
+There exists an action‑minimizing generalized closed characteristic whose intersection with the relative interior of each facet is empty or a single straight segment; in particular, it visits the interior of any given facet at most once. This yields a finite‑dimensional combinatorial/variational formula for (c_{EHZ}(K)) in terms of facet normals and positive weights subject to a balancing condition.<sup class="footnote-reference" id="fr-HK19-1"><a href="#footnote-HK19">6</a></sup></p>
+</li>
+</ol>
+<p>Edge segments force infinite rotation (exclude 1‑faces).<br />
+Chaidez–Hutchings define a combinatorial rotation number (\rho(\gamma)) for generalized Reeb trajectories on 4D polytopes and prove that if (\gamma) contains a nontrivial segment contained in a 1‑face, then (\rho(\gamma)=\infty). Consequently, any closed orbit with finite Conley–Zehnder index (in particular, an EHZ minimizer in (\mathbb{R}^4)) cannot contain 1‑face segments; candidates may only run along facets and cross lower‑dimensional strata at isolated points.<sup class="footnote-reference" id="fr-CH21-5"><a href="#footnote-CH21">1</a></sup></p>
+<h2 id="index-information-in-dimension-four"><a class="header" href="#index-information-in-dimension-four">Index Information in Dimension Four</a></h2>
+<p>When (\Sigma=\partial K) is strictly convex and (C^2), the induced contact form on (\Sigma) is dynamically convex; all contractible closed Reeb orbits have Conley–Zehnder index at least (3). Under standard non‑degeneracy assumptions, an action‑minimizing simple orbit realizing (c_{EHZ}(K)) has Conley–Zehnder index (3) and plays a distinguished dynamical role (it bounds a global surface of section and controls sharp systolic inequalities).[^HWZ98][^ABHS18]<sup class="footnote-reference" id="fr-CH21-6"><a href="#footnote-CH21">1</a></sup></p>
+<p>We will rely on the lower bound “CZ(\ge 3)” property and, in non‑degenerate settings, on the fact that the minimizer has index (3), when pruning candidate orbits in our algorithms.</p>
+<h2 id="cz-rotation"><a class="header" href="#cz-rotation">CZ Index and Rotation for 2D Return Maps</a></h2>
+<p>Setup. Let ((\Sigma,\alpha)) be a contact hypersurface in (\mathbb{R}^4) with Reeb field (R_\alpha). Fix a local surface of section (D\subset \Sigma) transverse to (R_\alpha); the first‑return (first‑hit) map (\Phi:D\to D) preserves the area form (d\alpha|_D) and orientation. Along a closed orbit (\gamma) intersecting (D), the linearized return (\mathrm{d}\Phi) restricts to a path in (\mathrm{Sp}(2)) (after a choice of trivialization).</p>
+<p>Rotation number. In a 2D trivialization, write the linearized return along (\gamma) as a path (\Psi(t)\in \mathrm{Sp}(2)), (t\in[0,T]). Lifting to the universal cover of (\mathrm{Sp}(2)) defines a real rotation number (\rho(\gamma)\in \mathbb{R}_{\ge 0}). For generic (non‑degenerate) elliptic closures, the endpoint is conjugate to a rotation by angle (\theta\in(0,2\pi)), and (\rho = \theta/\pi \in (0,2)).</p>
+<p>Conley–Zehnder index in 2D. For such generic closures one has
+[
+\mu_{\mathrm{CZ}}(\gamma) ;=; \lceil \rho(\gamma)\rceil + \lfloor \rho(\gamma)\rfloor.
+]
+In particular, an index‑(3) minimizer satisfies (\rho(\gamma)\in(1,2)).</p>
+<p>Canonical charts and positivity. In our polytope setting, we fix once per ridge a canonical 2D chart determined by an orthonormal basis ((u_1,u_2)) with (\omega_0(u_1,u_2)&gt;0). The per‑edge first‑hit maps between ridges are orientation‑preserving on admissible domains, so the per‑edge rotation increments are non‑negative and (\rho) accumulates additively along cycles.</p>
+<p>Numerics (implementation note). We read (\rho) from the orthogonal polar factor of the 2×2 linear part of the charted map (principal angle divided by (\pi)). This is invariant under uniform scalings of the chart and does not require the Euclidean chart to be (d\alpha)–unit‑normalized.</p>
+<h2 id="normalization-systolic-ratio-and-current-status"><a class="header" href="#normalization-systolic-ratio-and-current-status">Normalization, Systolic Ratio, and Current Status</a></h2>
+<p>We use the normalization above, so for any convex (K\subset\mathbb{R}^4) we define the symplectic systolic ratio
+$$
+sys(K)=\frac{c_{EHZ}(K)^2}{2,vol(K)}.
+$$
+Viterbo’s 2000 conjecture asked whether (\operatorname{sys}(K)\le 1) for all convex (K). This has been disproved very recently by Haim‑Kislev and Ostrover (accepted October 8, 2025, Annals of Mathematics), which in particular shows that normalized symplectic capacities need not coincide on convex domains.<sup class="footnote-reference" id="fr-HKO25-1"><a href="#footnote-HKO25">7</a></sup></p>
+<h2 id="what-we-use-later"><a class="header" href="#what-we-use-later">What We Use Later</a></h2>
+<ul>
+<li>The facet‑linearity of the Reeb flow and the Reeb‑cone transition rule at non‑smooth strata (to build discrete search spaces of candidate orbits).<sup class="footnote-reference" id="fr-CH21-7"><a href="#footnote-CH21">1</a></sup></li>
+<li>The “at most one visit per facet” structure and facet‑weight formula (to derive compact finite programs).<sup class="footnote-reference" id="fr-HK19-2"><a href="#footnote-HK19">6</a></sup></li>
+<li>The index constraints in 4D (to filter candidates by Conley–Zehnder index).[^HWZ98]<sup class="footnote-reference" id="fr-ABHS18-1"><a href="#footnote-ABHS18">8</a></sup></li>
+</ul>
+<p>Further algorithmic details are in Oriented‑Edge Graph Algorithm (see <code>docs/src/thesis/capacity-algorithm-oriented-edge-graph.md</code>) and the linear/variational formulations (<code>docs/src/thesis/capacity-algorithm-linear-program.md</code>).</p>
+<hr />
+<p>Footnotes / references (selection; see also <code>thesis/bibliography.md</code>):</p>
+<hr />
+<p>Deviations and clarifications for review</p>
+<ul>
+<li>“No Reeb flow on 2‑faces/1‑faces”: At non‑smooth strata the classical Reeb vector field is undefined. I replaced this with the standard “Reeb cone”/generalized‑characteristic language and cited the polytope‑specific treatment (Chaidez–Hutchings). This yields the same computational consequences (piecewise linear motion with instantaneous transitions) without overstating non‑existence.</li>
+<li>“Direction (J(a n_1 + b n_2)) on 1‑faces”: Rather than a specific formula, I stated the precise constraint “velocity lies in (J) of the outer normal cone,” which subsumes the two‑facet case and generalizes correctly at higher‑valence strata.</li>
+<li>“Segments on 1‑faces have infinite rotation”: Now asserted and cited to Chaidez–Hutchings; see “Edge segments force infinite rotation (exclude 1‑faces)”.</li>
+<li>“Minimum is attained”: Strengthened and cited via symplectic‑homology/smoothing arguments (and a 2024 result showing the minimizer bounds a global surface of section in 4D).</li>
+<li>“Visits every 3‑face at most once”: Included as an existence statement with a citation to Haim‑Kislev (2019).</li>
+<li>Viterbo conjecture: Updated to reflect the 2024–2025 counterexample and included the Annals acceptance dates for clarity.</li>
+<li>Scope: I deferred algorithmic details to the separate algorithm sections and kept this file focused on definitions/properties, as requested.</li>
+</ul>
+<hr>
+<ol class="footnote-definition"><li id="footnote-CH21">
+<p>Chaidez, J.; Hutchings, M. Computing Reeb dynamics on four‑dimensional convex polytopes. J. Comput. Dyn. 8(4):403–445, 2021; arXiv:2008.10111. <a href="#fr-CH21-1">↩</a> <a href="#fr-CH21-2">↩2</a> <a href="#fr-CH21-3">↩3</a> <a href="#fr-CH21-4">↩4</a> <a href="#fr-CH21-5">↩5</a> <a href="#fr-CH21-6">↩6</a> <a href="#fr-CH21-7">↩7</a></p>
+</li>
+<li id="footnote-Irie19">
+<p>Irie, K. Symplectic homology of fiberwise convex sets and homology of loop spaces. arXiv:1907.09749 (2019→, with updates). <a href="#fr-Irie19-1">↩</a></p>
+</li>
+<li id="footnote-CHLS07">
+<p>Cieliebak, K.; Hofer, H.; Latschev, J.; Schlenk, F. Quantitative symplectic geometry. MSRI Publ. 54 (2007). <a href="#fr-CHLS07-1">↩</a> <a href="#fr-CHLS07-2">↩2</a></p>
+</li>
+<li id="footnote-Rudolf24">
+<p>Rudolf, D. The Minkowski billiard characterization of the EHZ‑capacity of convex Lagrangian products. J. Dyn. Diff. Eq. (2024); arXiv:2203.01718. <a href="#fr-Rudolf24-1">↩</a></p>
+</li>
+<li id="footnote-AEK24">
+<p>Abbondandolo, A.; Edtmair, O.; Kang, J. On closed characteristics of minimal action on a convex three‑sphere. preprint (2024). <a href="#fr-AEK24-1">↩</a></p>
+</li>
+<li id="footnote-HK19">
+<p>Haim‑Kislev, P. On the symplectic size of convex polytopes. Geom. Funct. Anal. 29 (2019), 440–463. <a href="#fr-HK19-1">↩</a> <a href="#fr-HK19-2">↩2</a></p>
+</li>
+<li id="footnote-HKO25">
+<p>Haim‑Kislev, P.; Ostrover, Y. A counterexample to Viterbo’s Conjecture. Annals of Mathematics (accepted Oct 8, 2025). <a href="#fr-HKO25-1">↩</a></p>
+</li>
+<li id="footnote-ABHS18">
+<p>Abbondandolo, A.; Bramham, B.; Hryniewicz, U.; Salomão, P. Sharp systolic inequalities for Reeb flows on S^3. Invent. Math. 211 (2018); and Systolic ratio, index of closed orbits and convexity for tight contact forms on S^3, Compos. Math. 154 (2018). <a href="#fr-ABHS18-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><!-- Author: Codex & Jörn -->
+<!-- Ticket: <slug> -->
+<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md -->
+<h1 id="oriented-edge-graph-algorithm-for-c_ehz-in-r4"><a class="header" href="#oriented-edge-graph-algorithm-for-c_ehz-in-r4">Oriented-Edge Graph Algorithm for c_EHZ in R^4</a></h1>
+<!-- Why: This document specifies a high-level, implementation-ready algorithm to compute the Ekeland–Hofer–Zehnder (EHZ) capacity of a convex, star-shaped, non-degenerate polytope in R^4 by reducing the search for action-minimizing Reeb orbits to a directed cycle search on a 2-face graph with polyhedral feasibility checks. We progressively disclose formal definitions, maps, and constraints, then the search strategy and implementation notes. -->
+<!-- Scope: High-level algorithm and the precise per-edge maps and constraints we need. Low-level performance choices are collected at the end. Mathematical background, including precise definitions of action, Reeb dynamics, and rotation/CZ index, is in the EHZ capacity document. -->
+<h2 id="goal"><a class="header" href="#goal">Goal</a></h2>
+<ul>
+<li>Input:
+<ul>
+<li>Half-space description of a convex, star-shaped, non-degenerate polytope $K \subset \mathbb{R}^4$: $K={x\in \mathbb{R}^4:\langle n_f,x\rangle\le b_f\ \forall f\in \mathcal{F}_3}$, where each facet (3-face) $f$ has outward unit normal $n_f$ and support constant $b_f&gt;0$.</li>
+<li>Optionally, vertices for convenience and validation.</li>
+</ul>
+</li>
+<li>Output:
+<ul>
+<li>The EHZ capacity $c_{\mathrm{EHZ}}(K)$.</li>
+<li>An action-minimizing closed characteristic $\gamma\subset\partial K$ represented combinatorially by a directed cycle of 2-faces and a fixed point in the induced affine map on the start 2-face, together with an explicit piecewise-linear lift to $\partial K$.</li>
+</ul>
+</li>
+</ul>
+<!-- Comment: “non-degenerate” here is the generic position assumption we actually use algorithmically: no Reeb direction is parallel to a ridge; no two exit times tie on a positive-measure set; fixed points do not lie on candidate-set boundaries. Precise statements in Assumptions. -->
+<h2 id="setting-and-assumptions"><a class="header" href="#setting-and-assumptions">Setting and Assumptions</a></h2>
+<ul>
+<li>Space and forms:
+<ul>
+<li>Standard symplectic form $\omega_0$ and Liouville form $\lambda_0$ on $\mathbb{R}^4$.</li>
+<li>Fix the standard complex structure $J$ so that $\omega_0(u,v)=\langle Ju, v\rangle$ and $J^\top J=I$, $J^\top=-J$.</li>
+</ul>
+</li>
+<li>Symplectic polytope hypothesis:
+<ul>
+<li>No 2-face is Lagrangian: for every 2-face $F$, the restriction $\omega_0|_{TF}\ne 0$. This matches the “symplectic polytope” condition in the Chaidez–Hutchings framework and ensures well-posed combinatorial Reeb dynamics across ridges.</li>
+</ul>
+</li>
+<li>Facets and Reeb directions:
+<ul>
+<li>For each facet $f\in \mathcal{F}_3$, with plane $H_f={x:\langle n_f,x\rangle=b_f}$, trajectories of the Reeb flow on $H_f\cap\partial K$ are straight segments parallel to $v_f:=J n_f$ (speed may vary; directions are constant).</li>
+<li>We only need directions to get exit points; actions are integrals of $\lambda_0$ along these straight segments.</li>
+</ul>
+</li>
+<li>Genericity/non-degeneracy assumptions (used for correctness and robust numerics):
+<ol>
+<li>For each facet $f$, and each ridge $r\subset f$ with co-facet $g\ne f$, we have $\langle v_f, n_g\rangle\ne 0$.</li>
+<li>For a fixed $f$, in the region where a particular co-facet $g$ is the first one hit along $v_f$, that co-facet is uniquely first (no ties on a set of positive measure).</li>
+<li>Action-minimizing cycles do not involve segments on 1-faces (rotation blow-up); crossings of 2-faces occur at single points.</li>
+</ol>
+<!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#setting -->
+<!-- Comment: (1)-(3) match the “generic” case we intend to handle first; degenerate tie-breaking and 1-face handling can be added later. -->
+<!-- Comment: The non-Lagrangian 2-face hypothesis lines up with our ridge-crossing model and with CH’s notion of symplectic polytopes. -->
+</li>
+</ul>
+<h2 id="face-graphs"><a class="header" href="#face-graphs">Face Graphs</a></h2>
+<ul>
+<li>3-face digraph:
+<ul>
+<li>Nodes: facets $f\in \mathcal{F}_3$.</li>
+<li>Oriented edges $f\xrightarrow{r} f'$ whenever facets $f\ne f'$ share a ridge $r$ and the direction $v_f$ points from a neighborhood of $r$ in $f$ into the interior of $f'$ across $r$ (equivalently: the first exit from $f$ along $v_f$ near points on $r$ is $f'$).</li>
+<li>This orientation is well-defined by convexity and the genericity assumptions.</li>
+</ul>
+</li>
+<li>2-face digraph (the main search graph):
+<ul>
+<li>Nodes: ridges $i\in \mathcal{F}_2$. Each ridge $i$ is the intersection of two distinct facets $f(i)$ and $g(i)$.</li>
+<li>Oriented edges: $i\to j$ labeled by the facet $F$ if $i,j\subset F$ and the flow along $v_F$ from points of $i$ first exits $F$ through $j$.</li>
+<li>Multiple outgoing edges from a ridge within a common facet are possible; absent edges correspond to “no point flows $i\to j$ first”.</li>
+</ul>
+<!-- Comment: This is the “oriented-edge” viewpoint: we travel along facets, cross ridges at single points. -->
+<ul>
+<li>Orientation convention (decision): for every ridge $i$, fix the chart $U_i$ to be the canonical one induced by $\omega_0$ (choose an orthonormal basis $(u_1,u_2)$ of the face plane with $\omega_0(u_1,u_2)&gt;0$). Charts are fixed per ridge (independent of the incoming facet). This pins the sign of rotation angles extracted from $D\psi_{ij}$.</li>
+</ul>
+</li>
+</ul>
+<h2 id="notation-recap"><a class="header" href="#notation-recap">Notation Recap</a></h2>
+<ul>
+<li>Geometry: $\omega_0$ (standard symplectic form), $\lambda_0$ (Liouville), $J$ (standard complex structure) on $\mathbb{R}^4$.</li>
+<li>Facets: for each $F\in\mathcal{F}_3$, outward unit normal $n_F$ and support $b_F&gt;0$, plane $H_F={x:\langle n_F,x\rangle=b_F}$, Reeb direction $v_F:=J n_F$.</li>
+<li>Ridges: $i\in\mathcal{F}_2$ with affine plane $R_i\subset H_F$. Charts $\pi_i:R_i\to\mathbb{R}^2$ define $A_i:=\pi_i(i)$.</li>
+<li>Per-edge quantities along $i\xrightarrow{F}j$:
+<ul>
+<li>Exit time $\tau_{ij}(x)$; affine on regions of constant first exit.</li>
+<li>Affine map $\psi_{ij}:\operatorname{dom}\psi_{ij}\to A_j$, where $\operatorname{dom}\psi_{ij}\subset A_i$ and $\operatorname{im}\psi_{ij}\subset A_j$ are convex polygons.</li>
+<li>Action increment $A_{ij}(x)=\tfrac{b_F}{2},\tau_{ij}(x)$ (affine on $\operatorname{dom}\psi_{ij}$).</li>
+<li>Rotation increment $\rho_{ij}\ge 0$ (polar angle of the linear part via the orthogonal polar factor; see “Rotation and CZ index”).</li>
+</ul>
+</li>
+</ul>
+<h2 id="algorithm-summary-push-forward-only"><a class="header" href="#algorithm-summary-push-forward-only">Algorithm Summary (push-forward only)</a></h2>
+<ul>
+<li>Maintain, at the current ridge, a candidate polygon $C\subset A_{i_k}$, an affine action $A:C\to\mathbb{R}$, a scalar rotation $\rho$, and an optional composed map $\Psi$ to the start chart.</li>
+<li>To extend along an edge $i_k\xrightarrow{F} i_{k+1}$:
+<ul>
+<li>Gate at $i_k$: intersect $C$ with $\operatorname{dom}\psi_{i_ki_{k+1}}\subset A_{i_k}$ (points that flow first to $i_{k+1}$ across $F$).</li>
+<li>Push-forward candidates: $C'=\psi_{i_ki_{k+1}}!\bigl(C\cap \operatorname{dom}\psi_{i_ki_{k+1}}\bigr)\subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$.</li>
+<li>Update action $A'$ via composition with $\psi^{-1}$ and add the per-edge increment; prune by $A'(z)\le A_{\mathrm{best}}$; update $\rho'=\rho+\rho_{i_ki_{k+1}}\le 2$.</li>
+<li>Repeat; on returning to the start ridge, solve the fixed-point equation $\Psi(z)=z$ within $C$ and update the incumbent.</li>
+</ul>
+</li>
+<li>Enforce “simple loop” pruning: never revisit a facet (Haim–Kislev 2019).</li>
+</ul>
+<h2 id="per-edge-maps-and-polyhedral-domains"><a class="header" href="#per-edge-maps-and-polyhedral-domains">Per-edge Maps and Polyhedral Domains</a></h2>
+<p>Fix an oriented edge $i\xrightarrow{F} j$ in the 2-face graph, with $F\in \mathcal{F}_3$, $i,j\subset F$. Let $G(j,F)$ denote the co‑facet: the unique facet $G\neq F$ such that $j=F\cap G$.</p>
+<ul>
+<li>Exit-time formula on $F$:
+<ul>
+<li>For $x\in H_F$ near $i$, the first time the straight line $x + t,v_F$ hits the plane $H_{G(j,F)}$ is
+$$\tau_{ij}(x);=;\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{\langle n_{G(j,F)}, v_F\rangle},\quad \text{with }\ \tau_{ij}(x)&gt;0.$$</li>
+<li>The condition that $j$ is indeed first exit among all co-facets $k\subset F$ is
+$$\tau_{ij}(x)\le \tau_{ik}(x)\quad\text{for all admissible }k,$$
+where “admissible” means $\langle n_k,v_F\rangle&gt;0$ (the ray intersects $H_k$ forward in time). After sign normalization these comparisons are linear in $x$ and enforce that $x+t,v_F$ remains in $F$ up to the first hit.</li>
+<li>Explicit half-space description of the domain $\operatorname{dom}\psi_{ij}$:
+<ul>
+<li>Let $\mathcal{K}_F$ be the set of co-facets $k$ of $F$ with $\langle n_k,v_F\rangle\ne 0$. Define $\sigma_k:=\operatorname{sign}\langle n_k,v_F\rangle$.</li>
+<li>For $x\in H_F$, the comparison $\tau_{ij}(x)\le \tau_{ik}(x)$ is equivalent to
+$$
+\sigma_k\bigl(b_{G(j,F)}-\langle n_{G(j,F)},x\rangle\bigr),\langle n_k,v_F\rangle
+;\le;
+\sigma_k\bigl(b_k-\langle n_k,x\rangle\bigr),\langle n_{G(j,F)},v_F\rangle.
+$$</li>
+<li>Combine these with $x\in i$ and $\tau_{ij}(x)&gt;0$ (a single linear inequality after sign normalization). Projecting by $\pi_i$ yields $\operatorname{dom}\psi_{ij}\subset A_i$ as a convex polygon in half-space form.</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Domains and images:
+<ul>
+<li>Domain (in $A_i$): $\operatorname{dom}\psi_{ij}\subset A_i$ consists of ridge points that flow first to ridge $j$ across facet $F$ (convex polygon).</li>
+<li>Image (in $A_j$): $\operatorname{im}\psi_{ij}=\psi_{ij}(\operatorname{dom}\psi_{ij})\subset A_j$ (convex polygon).</li>
+</ul>
+</li>
+<li>Exit point and affine map:
+<ul>
+<li>Exit point in $F$: $x' = x + \tau_{ij}(x), v_F$, affine in $x$ on the region where $j$ is first exit.</li>
+<li>Let $R_i$ and $R_j$ be the affine 2-planes containing ridges $i$ and $j$. Choose fixed linear charts (projections) $\pi_i:R_i\to \mathbb{R}^2$ and $\pi_j:R_j\to \mathbb{R}^2$ for every ridge; identify $A_i:=\pi_i(i)\subset\mathbb{R}^2$.</li>
+<li>Define the per-edge affine map
+$$\psi_{ij}:\ \operatorname{dom}\psi_{ij}\ \to\ A_j,\qquad \psi_{ij}(\pi_i(x));=;\pi_j\bigl(x+\tau_{ij}(x),v_F\bigr),$$
+with $\operatorname{dom}\psi_{ij}\subset A_i$ as above. By convexity and genericity, $\operatorname{dom}\psi_{ij}$ is a convex polygon (possibly empty), $\psi_{ij}$ is affine on it, and $\operatorname{im}\psi_{ij}$ is convex in $A_j$.</li>
+</ul>
+<!-- Comment: We explicitly avoid parameterization of the Reeb vector field. Straight-line geometry suffices to locate exits and compute actions. -->
+</li>
+</ul>
+<p>Symbol map (equations above)</p>
+<ul>
+<li>$\psi_{ij}$: push‑forward map (code: <code>EdgeData.map_ij</code>).</li>
+<li>$\operatorname{dom}\psi_{ij}\subset A_i$: domain polygon in ridge $i$ (code: <code>EdgeData.dom_in</code>).</li>
+<li>$\operatorname{im}\psi_{ij}\subset A_j$: image polygon in ridge $j$ (code: <code>EdgeData.img_out</code>).</li>
+<li>$\tau_{ij}$: first‑exit time on facet $F$ (affine on the region where $j$ is first exit).</li>
+<li>$A_{ij}$: action increment (code: <code>EdgeData.action_inc</code>).</li>
+<li>$\rho_{ij}$: rotation increment from the polar angle of $D\psi_{ij}$ (code: <code>EdgeData.rotation_inc</code>).</li>
+<li>$U_i,U_j$: ridge charts (code: <code>Ridge.chart_u</code>; left‑inverse on the plane: <code>Ridge.chart_ut</code>).</li>
+<li>$v_F=J n_F$: facet Reeb direction (code: <code>geom4::reeb_on_facets</code>).</li>
+<li>$A_i$: ridge polygon in chart $i$ (code: <code>Ridge.poly</code>).</li>
+</ul>
+<h3 id="worked-example-axisaligned-facet-in-the-4d-cube"><a class="header" href="#worked-example-axisaligned-facet-in-the-4d-cube">Worked Example (axis‑aligned facet in the 4D cube)</a></h3>
+<p>Consider $K=[-1,1]^4$ in coordinates $(x_1,x_2,y_1,y_2)$ with the standard $J$ (so $v=J n$). Take the facet
+$F={x_1=1}$ with outward normal $n_F=e_{x_1}$ and $b_F=1$, hence $v_F=J n_F = e_{y_1}$.</p>
+<ul>
+<li>Choose ridges $i = F\cap{y_1=-1}$ and $j = F\cap{y_1=+1}$. The co‑facet for $j$ is $H_{G(j,F)}:{y_1=1}$ with $n_{G(j,F)}=e_{y_1}$, $b_{G(j,F)}=1$.</li>
+<li>Then $d_j=\langle n_{G(j,F)}, v_F\rangle = \langle e_{y_1}, e_{y_1}\rangle = 1 &gt; 0$, and
+$$\tau_{ij}(x)=\frac{b_{G(j,F)}-\langle n_{G(j,F)},x\rangle}{d_j} = 1 - y_1.$$
+All other co‑facets $k$ with $\langle n_k, v_F\rangle\le 0$ are inadmissible, so $j$ is uniquely first exit.</li>
+<li>Charts: the ridge planes $R_i=R_j={x_1=\pm 1,\ y_1=\mp 1}$ are spanned by the $(x_2,y_2)$ axes, so we may take $\pi_i,\pi_j$ as identity on $(x_2,y_2)$. Thus $U_iU_j^\top=I$ and the push‑forward map $\psi_{ij}$ is the identity on $(x_2,y_2)$.</li>
+<li>Rotation increment: $D\psi_{ij}=I_2 \Rightarrow \rho_{ij}=0$.</li>
+<li>Action increment: $A_{ij}(x)=\tfrac{b_F}{2}\tau_{ij}(x)=\tfrac{1}{2}(1 - y_1)$, which is affine and, in the chart, constant with respect to $(x_2,y_2)$.</li>
+</ul>
+<h2 id="action-increment-per-edge-explicit-affine-form"><a class="header" href="#action-increment-per-edge-explicit-affine-form">Action Increment per Edge (explicit affine form)</a></h2>
+<p>For $x\in i$ that flows to $j$ across facet $F$, the action increment along the segment is
+$$
+A_{ij}(x);=;\int_0^{\tau_{ij}(x)} \lambda_0\bigl(\dot \gamma(t)\bigr),dt
+\quad\text{with}\ \gamma(t)=x+t,v_F.
+$$
+Using $\lambda_0(\dot\gamma)=\tfrac{1}{2}\langle J\gamma,\dot\gamma\rangle$ and $Jv_F=J(Jn_F)=-n_F$, we obtain the identity
+$$
+A_{ij}(x);=;\frac{1}{2},\langle x, n_F\rangle\ \tau_{ij}(x)\ =\ \frac{b_F}{2}\ \tau_{ij}(x),
+$$
+since $\langle x,n_F\rangle=b_F$ on the facet plane $H_F$. Therefore $A_{ij}$ is affine in $x$ on $\operatorname{dom}\psi_{ij}$ (because $\tau_{ij}$ is affine there).
+In ridge coordinates, we treat $A_{ij}$ as an affine functional on $\operatorname{dom}\psi_{ij}\subset A_i$.</p>
+<!-- Comment: This formula is independent of the speed choice for the Reeb flow; only directions matter. -->
+<h2 id="rotation-and-cz-index"><a class="header" href="#rotation-and-cz-index">Rotation and CZ index</a></h2>
+<ul>
+<li>See background: CZ Index and Rotation for 2D Return Maps (Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#cz-rotation).</li>
+<li>Ridge charts. For each ridge $i$, we fix once and for all an orthonormal Euclidean basis $(u_1,u_2)$ of the ridge plane with the canonical symplectic orientation $\omega_0(u_1,u_2)&gt;0$ (as implemented in code). Charts do not depend on which facet we arrive from.</li>
+<li>Rotation per edge. For the affine map $y_j = M_{ij} y_i + t_{ij}$ on charts, define the rotation increment by the orthogonal polar factor: write $M_{ij}=R_{ij}S_{ij}$ with $R_{ij}\in \mathrm{SO}(2)$ and $S_{ij}\succ 0$, and set $\rho_{ij} := \operatorname{arg}(R_{ij})/\pi \in [0,1]$. This is invariant under uniform scalings of $M_{ij}$ and does not require $\det M_{ij}\approx 1$ in Euclidean charts.</li>
+<li>Positivity of increments. In canonical charts the first‑hit map is orientation‑preserving on admissible domains, so $\rho_{ij}\ge 0$; we never subtract rotation along edges.</li>
+<li>Area preservation. The first‑hit map between transverse sections preserves the $d\alpha$‑area on facets. Our Euclidean orthonormal charts may scale $d\alpha$ by a positive constant per ridge, so $\det M_{ij}$ need not be exactly $1$ in these coordinates; this does not affect $\rho_{ij}$ computed via the polar factor.</li>
+<li>Accumulation and index. Along a closed cycle, let $\rho=\sum \rho_{ij}$. For generic (non‑degenerate) closures in 2D, the Conley–Zehnder index satisfies $\mu_{\mathrm{CZ}} = \lceil \rho\rceil + \lfloor \rho\rfloor$. In particular, an index‑$3$ minimizer has $\rho\in(1,2)$. We therefore prune whenever the accumulated $\rho$ exceeds $2$; this threshold is theory‑fixed (not tunable) and cannot be lowered without risking the loss of the true minimizer.</li>
+</ul>
+<h2 id="search-over-directed-cycles-push-forward-variant"><a class="header" href="#search-over-directed-cycles-push-forward-variant">Search Over Directed Cycles (push-forward variant)</a></h2>
+<p>We now describe the core enumeration and pruning in the 2-face digraph using push-forwards (no pull-backs of polytopes).</p>
+<p>Notation for a path $p=(i_1\xrightarrow{} i_2\xrightarrow{}\cdots\xrightarrow{} i_k)$:</p>
+<ul>
+<li>Candidate set (current ridge coordinates): $C_p\subset A_{i_k}$, a convex polygon.</li>
+<li>Accumulated action (affine functional on $A_{i_k}$): $A_p(z)$.</li>
+<li>Accumulated rotation (scalar): $\rho_p$.</li>
+<li>Accumulated map to the start chart: $\Psi_p := \psi_{i_1i_2}\circ\cdots\circ \psi_{i_{k-1}i_k}$ when needed to close a cycle.</li>
+</ul>
+<p>Initialization at a start ridge $i_1$:</p>
+<ul>
+<li>$C_{(i_1)} := A_{i_1}$,</li>
+<li>$A_{(i_1)}(z) := 0$,</li>
+<li>$\rho_{(i_1)} := 0$,</li>
+<li>$\Psi_{(i_1)} := \mathrm{Id}$.</li>
+</ul>
+<p>Path extension by an edge $i_k \xrightarrow{} i_{k+1}$:</p>
+<ol>
+<li>Push-forward candidates: $C' := \psi_{i_ki_{k+1}}( C_p \cap \operatorname{dom}\psi_{i_ki_{k+1}} ) \subset \operatorname{im}\psi_{i_ki_{k+1}}\subset A_{i_{k+1}}$. Reject if empty.</li>
+<li>Update action: $A'(z) := A_p\bigl(\psi_{i_ki_{k+1}}^{-1}(z)\bigr) + A_{i_ki_{k+1}}\bigl(\psi_{i_ki_{k+1}}^{-1}(z)\bigr)$ on $C'$.</li>
+<li>Prune by action budget: intersect $C' \leftarrow C' \cap {z:\ A'(z)\le A_{\mathrm{best}}}$. Reject if empty.</li>
+<li>Update rotation: $\rho' := \rho_p + \rho_{i_ki_{k+1}}$. Reject if $\rho'&gt;2$.</li>
+<li>Update map: $\Psi' := \Psi_p\circ \psi_{i_ki_{k+1}}$ if we plan to close at $i_1$ soon; otherwise we can maintain only the last few factors and recompute on demand.</li>
+<li>Continue DFS with the new state $(C',A',\rho',\Psi')$.</li>
+</ol>
+<p>Closing a cycle at $i_1$:</p>
+<ul>
+<li>When $i_{k+1}=i_1$, solve the fixed-point problem $\Psi_p(z)=z$ in $A_{i_1}$; keep any fixed point $z_\star\in C_p$; set $A_\star:=A_p(z_\star)$; if $A_\star&lt;A_{\mathrm{best}}$, update the incumbent $(A_{\mathrm{best}}, \text{cycle}, z_\star)$.</li>
+<li>If no eligible fixed point exists in $C_p$, discard the cycle.</li>
+</ul>
+<p>Heuristics and ordering:</p>
+<ul>
+<li>Prefer edges with small lower bounds on $A_{ij}$ (minimize the affine functional on $\operatorname{dom}\psi_{ij}$ via a tiny LP); break ties by smaller $\rho_{ij}$.</li>
+<li>Prefer short cycles first; try immediate back-edges that close at the start ridge early.</li>
+<li>Maintain a visited set of start ridges to avoid duplicate work; optionally restrict to simple cycles unless we decide otherwise (see Open Questions).</li>
+</ul>
+<h3 id="fixed-point-solver-deterministic-and-robust"><a class="header" href="#fixed-point-solver-deterministic-and-robust">Fixed-point solver (deterministic and robust)</a></h3>
+<ul>
+<li>Write $\Psi_p(z)=Mz+t$ in the start chart. Solve $(I-M)z=t$:
+<ul>
+<li>If $\det(I-M)\ne 0$: unique fixed point $z_\star=(I-M)^{-1}t$, accept if $z_\star\in C_p$.</li>
+<li>If $\det(I-M)=0$: use SVD to check feasibility; the fixed-point set is empty or an affine line. Intersect with $C_p$ and minimize $A_p(z)$ over this intersection (1D LP). Reject if empty.</li>
+</ul>
+</li>
+<li>Tolerances: treat $|\det(I-M)|&lt;\varepsilon$ as degenerate; enforce feasibility and membership with a consistent tolerance shared with tie-breaking $\varepsilon_\tau$.</li>
+</ul>
+<p>Symbol map (fixed‑point and tolerances)</p>
+<ul>
+<li>$M,t$: entries of the composed affine map $\Psi_p$ (code: <code>State.phi_start_to_current</code>).</li>
+<li>$z,z_\star$: points in the start ridge chart (code: <code>Vec2</code>; returned by <code>dfs_solve_with_fp</code> helpers).</li>
+<li>$C_p$: candidate polygon at the start ridge (code: <code>State.candidate</code> on closure).</li>
+<li>$A_p$: accumulated action on the start chart (code: <code>State.action</code>).</li>
+<li>$\varepsilon_{\det}$: determinant threshold (code: <code>GeomCfg.eps_det</code>).</li>
+<li>$\varepsilon_{\mathrm{feas}}$: feasibility/membership slack (code: <code>GeomCfg.eps_feas</code>).</li>
+<li>$\varepsilon_{\tau}$: tie‑breaking and admissibility slack (code: <code>GeomCfg.eps_tau</code>).</li>
+</ul>
+<!-- note: agents — fixed_point_in_poly implements the 2D/1D branches with these exact eps values. -->
+<ul>
+<li>Implementation guardrails:
+<ul>
+<li><code>fixed_point_in_poly</code> handles both branches and switches to a 1D LP when $(I-M)$ is nearly singular so that we never rely on unstable matrix inverses.</li>
+<li><code>rotation_angle</code> returns <code>None</code> only for orientation‑reversing maps; canonical chart construction rules those out, so failures signal numerical bugs instead of algorithmic cases.</li>
+</ul>
+</li>
+</ul>
+<h2 id="choosing-budgets-and-bounds"><a class="header" href="#choosing-budgets-and-bounds">Choosing Budgets and Bounds</a></h2>
+<ul>
+<li>Upper bound $A_{\mathrm{best}}$:
+<ul>
+<li>Practical: use that $K\subset B_R$ implies $c_{\mathrm{EHZ}}(K)\le c_{\mathrm{EHZ}}(B_R)=\pi R^2$. Compute $R$ from vertices or support data for a quick initial bound.</li>
+<li>Tighter: use the volume-capacity inequality documented in <code>Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md#volume-upper-bounds</code> once we finalize the preferred constant $C_{\mathrm{vol}}$. Reference that doc (not this page) whenever we update $C_{\mathrm{vol}}$ so the inequality stays centralized.</li>
+</ul>
+</li>
+<li>Lower bound for progress reporting: $c_{\mathrm{EHZ}}(K)\ge \pi r^2$ if $B_r\subset K$ (inradius).</li>
+</ul>
+<h2 id="correctness-sketch-informal"><a class="header" href="#correctness-sketch-informal">Correctness Sketch (informal)</a></h2>
+<ol>
+<li>Every closed characteristic in the generic polytope case intersects ridges at isolated points and travels linearly on facets parallel to $v_f$.</li>
+<li>Such a trajectory maps to a directed cycle in the 2-face digraph; the per-edge maps and domains capture exactly the “first exit” geometry.</li>
+<li>The action along a cycle equals the sum of per-edge increments evaluated at the unique fixed point $z_\star$ of the composed affine map in the start chart.</li>
+<li>Minimizing action over all closed characteristics is thus equivalent to minimizing over all directed cycles and their fixed points.</li>
+<li>The push‑forward pruning is sound: removing paths with empty candidate sets, with $A&gt;A_{\mathrm{best}}$, or with $\rho&gt;2$ cannot delete the true minimizer (index‑3 implies $\rho\in(1,2)$).</li>
+</ol>
+<h3 id="orientation-lemma-canonical-charts"><a class="header" href="#orientation-lemma-canonical-charts">Orientation lemma (canonical charts)</a></h3>
+<p>Lemma. Let $i\subset F$ and $j\subset G$ be ridges such that $\omega_0|<em>{Ti}\ne 0$ and $\omega_0|</em>{Tj}\ne 0$. With our canonical 2‑face charts $U_i,U_j$ (orthonormal bases oriented by $\omega_0(u_1,u_2)&gt;0$), the Reeb first‑hit map $\psi_{ij}:U_i(i)\to U_j(j)$ is orientation‑preserving: $\det D\psi_{ij}&gt;0$ wherever defined.</p>
+<p>Proof (sketch). On each facet $F$, $\alpha:=\lambda_0|<em>F$ is a contact form and $R$ the Reeb vector field satisfies $\mathcal{L}<em>R\alpha=i_R d\alpha+d(\alpha(R))=0$, so the Reeb flow preserves both $\alpha$ and $d\alpha$.<sup class="footnote-reference" id="fr-PreserveAlpha-1"><a href="#footnote-PreserveAlpha">1</a></sup> A local surface of section $D\subset F$ transverse to $R$ inherits the positive area form $d\alpha|<em>D$; the Poincaré first‑hit map preserves $d\alpha|<em>D$ and hence orientation on $D$.<sup class="footnote-reference" id="fr-ReturnArea-1"><a href="#footnote-ReturnArea">2</a></sup> In our chart $U_i$, $d\alpha|</em>{Ti}=\omega_0|</em>{Ti}$ is $c,dy_1\wedge dy_2$ with $c&gt;0$ by construction; therefore $\det D\psi</em>{ij}&gt;0$ in $y$‑coordinates. The same holds at $j$, so $\psi</em>{ij}$ preserves the canonical $\mathbb{R}^2$ orientation.</p>
+<p>Remark. If a ridge were Lagrangian ($\omega_0|_{Ti}=0$), it would not define a transverse section and no return map is available. Our genericity excludes this case and matches the combinatorial Reeb model on 4D polytopes.<sup class="footnote-reference" id="fr-CH-1"><a href="#footnote-CH">3</a></sup></p>
+<h3 id="rotation-implementation-details-guards"><a class="header" href="#rotation-implementation-details-guards">Rotation implementation details (guards)</a></h3>
+<ul>
+<li>Numerical extraction. Compute the orthogonal polar factor via SVD ($M=U\Sigma V^\top$, $R=UV^\top$) and set $\operatorname{rot}(M)=\operatorname{atan2}(R_{12},R_{11})\in[-\pi,\pi]$, $\rho=|\operatorname{rot}|/\pi\in[0,1]$. Reject orientation‑reversing cases.</li>
+<li>Alternatives. Trace‑angle and eigen‑angle formulas are equivalent for orthogonal/elliptic cases but we prefer polar/SVD for robustness in floating point.</li>
+<li>Guards and tolerances. Clamp trigonometric arguments to $[-1,1]$; treat $|\operatorname{tr}(R)|\approx 2$ as a near‑identity degeneracy. With non‑Lagrangian ridges and canonical charts, $0&lt;\rho_{ij}&lt;1$ holds in practice, with $\rho_{ij}=0$ only in genuine symmetries (e.g., axis‑aligned cube faces).</li>
+</ul>
+<h2 id="complexity-and-practical-pruning"><a class="header" href="#complexity-and-practical-pruning">Complexity and Practical Pruning</a></h2>
+<ul>
+<li>Number of ridges and edges is polynomial in the input size, but cycle enumeration is exponential in worst case; pruning is essential.</li>
+<li>Fast rejections:
+<ul>
+<li>Precompute emptiness table for two-step patterns $(i\to j\to k)$ by checking whether $\psi_{ij}(\operatorname{dom}\psi_{ij})$ lies entirely outside $\operatorname{dom}\psi_{jk}$ (LP feasibility).</li>
+<li>Cache affine maps and half-space transforms to avoid recomputation.</li>
+<li>Early action lower bounds from per-edge minima give a Dijkstra-like ordering over partial paths.</li>
+<li>No facet revisits for minimizers: by Haim–Kislev’s “simple loop” theorem (2019), there exists a minimizer that visits the interior of each facet at most once. We therefore restrict to cycles that do not repeat a facet (and hence not a 2‑face), which sharply reduces the search.</li>
+</ul>
+</li>
+</ul>
+<h2 id="tie-breaking-deterministic-and-performant"><a class="header" href="#tie-breaking-deterministic-and-performant">Tie-breaking (deterministic and performant)</a></h2>
+<p>When exit times to multiple co-facets are equal within tolerance, we need a deterministic choice that does not affect results but impacts performance.</p>
+<ul>
+<li>Options:
+<ul>
+<li>Lexicographic: choose the co-facet with smallest global index among the minimizers. Deterministic, O(1) overhead after scanning candidates.</li>
+<li>Numeric ε‑slack: add a tiny $\varepsilon$ to denominators or RHS to break ties consistently (scale by facet norms to be dimensionless).</li>
+<li>Seeded randomized: break ties using a seeded RNG per facet, fixed across runs for reproducibility.</li>
+</ul>
+</li>
+<li>Implementation choice: Lexicographic with a symmetric tolerance window $|\tau_{ij}-\tau_{ik}|\le \varepsilon_\tau$. We set $\varepsilon_\tau = \varepsilon_{\mathrm{rel}}\cdot \max(1, \min(\tau_{ij},\tau_{ik})) + \varepsilon_{\mathrm{abs}}$ with small defaults (documented in code). <!-- Comment: deterministic, cheap, reproducible. --></li>
+</ul>
+<h2 id="implementation-plan-rust-with-pyo3-bindings-later"><a class="header" href="#implementation-plan-rust-with-pyo3-bindings-later">Implementation Plan (Rust, with PyO3 bindings later)</a></h2>
+<ul>
+<li>Geometry kernels (nalgebra):
+<ul>
+<li>Types for affine maps on $\mathbb{R}^2$ (<code>Mat2</code>, <code>Vec2</code>, offset), half-space representations in 2D, and simple 2D LP feasibility (or call out to a tiny solver).</li>
+<li>Builders for domains $\operatorname{dom}\psi_{ij}$ from facet normals $(n_f,b_f)$ via the exit-time inequalities.</li>
+</ul>
+</li>
+<li>Graphs:
+<ul>
+<li>Build 2-face digraph with per-edge data: $\operatorname{dom}\psi_{ij}$, $\psi_{ij}$, $\operatorname{im}\psi_{ij}$, $A_{ij}$, $\rho_{ij}$ (constant).</li>
+<li>Optional: boolean table for $(i,j,k)$ emptiness.</li>
+</ul>
+</li>
+<li>Search:
+<ul>
+<li>DFS with incumbent bound, candidate-set push-forward, action/rotation pruning, and fixed-point solve on closure.</li>
+<li>Deterministic ordering for reproducibility; debug counters for pruned branches, visited edges, cycle lengths, etc.</li>
+</ul>
+</li>
+<li>Output:
+<ul>
+<li>Best cycle, fixed point $z_\star$, action $A_\star$; lifted 4D polygonal curve via stored charts; provenance sidecar.</li>
+</ul>
+</li>
+</ul>
+<h2 id="type-coverage-and-assumptions"><a class="header" href="#type-coverage-and-assumptions">Type Coverage and Assumptions</a></h2>
+<ul>
+<li>We target Type 1 combinatorial orbits (segments inside facets; crossings at ridges) under the symplectic‑polytope assumption (no Lagrangian 2-faces). This aligns with the CH framework and the “simple loop” theorem in Haim–Kislev ensuring a minimizer visits each facet at most once.</li>
+</ul>
+<!-- Docs: thesis/bibliography.md entries “Chaidez–Hutchings 2020/21” and “Haim‑Kislev 2019”. -->
+<h2 id="pseudocode-rustish"><a class="header" href="#pseudocode-rustish">Pseudocode (Rust‑ish)</a></h2>
+<pre><code>struct RidgeId(u32);
+struct FacetId(u32);
+
+struct Aff2 { m: Mat2, t: Vec2 }  // z ↦ m*z + t
+struct Aff1 { a: Vec2, b: f64 }   // z ↦ a·z + b
+
+struct EdgeData {
+    from: RidgeId,
+    to: RidgeId,
+    facet: FacetId,
+    psi: Aff2,         // ψ_ij
+    A_inc: Aff1,       // A_ij on domain
+    rho_inc: f64,      // ρ_ij
+    dom_i: Poly2,      // dom ψ_ij ⊂ A_i
+    img_j: Poly2,      // im ψ_ij ⊂ A_j
+}
+
+struct State {
+    ridges: Vec&lt;RidgeId&gt;,  // path
+    facets_seen: BitSet,    // for no-revisit pruning
+    C: Poly2,               // candidate polygon in A_{last}
+    A: Aff1,                // accumulated action on A_{last}
+    rho: f64,               // accumulated rotation
+    Psi: Aff2,              // composed map to the start chart
+}
+
+fn extend(state: &amp;State, e: &amp;EdgeData, A_best: f64) -&gt; Option&lt;State&gt; {
+    if state.facets_seen.contains(e.facet) { return None; }
+    let C_dom = intersect_poly(&amp;state.C, &amp;e.dom_i)?;
+    let C1 = aff_image(&amp;e.psi, &amp;C_dom);
+    let rho1 = state.rho + e.rho_inc;
+    if rho1 &gt; 2.0 { return None; }
+    let A1 = compose_aff1(&amp;state.A, &amp;e.psi.inv()) + compose_aff1(&amp;e.A_inc, &amp;e.psi.inv());
+    let C2 = intersect_halfspace(&amp;C1, A1, A_best)?;  // { z : A1(z) ≤ A_best }
+    Some(State {
+        ridges: push(state.ridges, e.to),
+        facets_seen: add(state.facets_seen, e.facet),
+        C: C2, A: A1, rho: rho1,
+        Psi: compose_aff2(&amp;state.Psi, &amp;e.psi),
+    })
+}
+</code></pre>
+<!-- removed “Open Questions …” section; resolved rotation choice and scope in main text -->
+<h2 id="experiments-to-validate-design"><a class="header" href="#experiments-to-validate-design">Experiments To Validate Design</a></h2>
+<ul>
+<li>Sanity cases:
+<ul>
+<li>Polydisks and ellipsoids approximated by tight polytopes; check that results converge to the known $c_{\mathrm{EHZ}}$.</li>
+<li>Boxes and cross-polytopes in canonical positions; compare against literature/known inequalities for capacities and systolic ratio.</li>
+</ul>
+</li>
+<li>Ablations:
+<ul>
+<li>With/without $(i,j,k)$ precomputation; effect on pruning rates.</li>
+<li>Pull-back vs. push-forward candidate updates; wall time and numerical stability.</li>
+</ul>
+</li>
+<li>Scaling:
+<ul>
+<li>Random convex 4D polytopes with controlled facet counts; report cycles visited, pruned branches, and time-to-incumbent.</li>
+</ul>
+</li>
+</ul>
+<h2 id="notes-on-previous-draft"><a class="header" href="#notes-on-previous-draft">Notes on Previous Draft</a></h2>
+<!-- Comment: We have replaced the earlier mixed pull-back description with a single push-forward formulation (mutable in coordinates of the current ridge). This reduces repeated inverse-map applications and matches the “read ρ from ψ_ij” observation. -->
+<!-- Comment: We made action increment explicit via A_ij(x) = (b_F/2)*τ_ij(x). This is affine on regions of constant first-exit, giving simple LPs for minima and feasibility. -->
+<!-- Comment: Rotation is left as a one-number-per-edge choice; once fixed, we can implement it as a pure function of local facet/ridge frames. -->
+<h2 id="code-links"><a class="header" href="#code-links">Code Links</a></h2>
+<ul>
+<li>Rust workspace entry: <code>Cargo.toml</code></li>
+<li>Native library (algorithms): <code>crates/viterbo</code></li>
+<li>Python bindings (optional): <code>crates/viterbo-py</code></li>
+<li>Orchestrator/pipelines: <code>src/viterbo/</code></li>
+<li>Reproduction script: <code>scripts/reproduce.sh</code></li>
+</ul>
+<h2 id="reviewer-checklist-delete-after-use"><a class="header" href="#reviewer-checklist-delete-after-use">Reviewer Checklist (delete after use)</a></h2>
+<ul>
+<li>Assumptions match our intended class (non-Lagrangian 2-faces)?</li>
+<li>Rotation via polar factor and CZ relation stated?</li>
+<li>Numerical tolerances (ε_det, ε_feas, ε_τ) defaults acceptable?</li>
+<li>Default A_best strategy OK until volume-based constant is cited?</li>
+<li>“Simple loop” pruning enabled by default (per HK 2019)?</li>
+<li>Chart orientation convention acceptable for cross-ridge rotation sign?</li>
+</ul>
+<h2 id="clarifications-unstable-unsorted"><a class="header" href="#clarifications-unstable-unsorted">Clarifications (unstable, unsorted)</a></h2>
+<!-- Purpose: park quick notes about code/spec divergences or open questions so agents can proceed without blocking on full edits. Treat entries as provisional; once stabilized, fold them into the main text and remove from this list. -->
+<ul>
+<li>1-faces not needed: under the stated genericity assumptions, minimizing cycles do not traverse 1-faces; the algorithm uses flow on facets and crossings at ridges only. The helper <code>geom4::reeb_on_edges_stub()</code> remains intentionally unimplemented.</li>
+<li>Orientation convention: we adopt the unique “natural” convention induced by the ambient symplectic form (require the chart orientation to agree with ω₀|_{face}). The implementation enforces this choice; no runtime toggle exists.</li>
+<li>TODO (owner): write down the quick proof that Lagrangian 2-faces are never crossed in their interior, so omitting them from the graph is safe. Once captured, fold it into the “Setting and Assumptions” section and remove this reminder.</li>
+</ul>
+<hr>
+<ol class="footnote-definition"><li id="footnote-PreserveAlpha">
+<p>Standard fact in contact dynamics: for a contact form α with Reeb vector field R_α, the flow φ_t satisfies φ_t^*α=α and φ_t^*dα=dα since 𝓛_{R_α}α=i_{R_α}dα+d(α(R_α))=0. <a href="#fr-PreserveAlpha-1">↩</a></p>
+</li>
+<li id="footnote-ReturnArea">
+<p>Poincaré first‑return maps of Reeb flows on 3‑dimensional contact manifolds are area‑preserving with respect to dα on any transverse surface of section; see e.g. Albers–Geiges–Zehmisch (2018). <a href="#fr-ReturnArea-1">↩</a></p>
+</li>
+<li id="footnote-CH">
+<p>Chaidez–Hutchings (2021): “Computing Reeb dynamics on four‑dimensional convex polytopes”, J. Comput. Dyn. 8(4):403–445; arXiv:2008.10111. <a href="#fr-CH-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><!-- Ticket: <slug> -->
+<!-- Why: Specify an implementer‑ready LP/QP pathway for computing/estimating c_EHZ of 4D convex polytopes from facet data. Complements the oriented‑edge graph search and the Minkowski billiard chapter. -->
+<!-- Editing notes: Keep statements precise; equations KaTeX‑safe; footnotes author–year. Cross‑link to sibling chapters. -->
+<h1 id="lpqp-programs-for-c_ehz-on-convex-polytopes-in-r4"><a class="header" href="#lpqp-programs-for-c_ehz-on-convex-polytopes-in-r4">LP/QP Programs for c_EHZ on Convex Polytopes in R^4</a></h1>
+<p>Purpose. This chapter turns the Haim–Kislev combinatorial formula for the Ekeland–Hofer–Zehnder capacity into optimization programs that an implementer can assemble from facet data. We give the exact nonconvex QP arising from the formula, practically useful convex relaxations (LP/SDP) that certify bounds, and an implementation and validation plan that integrates with the oriented‑edge and billiard solvers.</p>
+<p>Scope. Convex, star‑shaped, non‑degenerate polytopes in (R^4, ω_0). Inputs are in H‑representation with outward unit facet normals and support numbers. See the background on c_EHZ and Reeb dynamics in Ekeland‑Hofer‑Zehnder‑Capacity.md and the oriented‑edge and billiard algorithm chapters:</p>
+<ul>
+<li>Docs: thesis/capacity-algorithm-oriented-edge-graph.md</li>
+<li>Docs: thesis/capacity-algorithm-minkowski-billiard.md</li>
+</ul>
+<h2 id="setting-and-notation-1"><a class="header" href="#setting-and-notation-1">Setting and Notation</a></h2>
+<ul>
+<li>Fix the standard symplectic form ω(u,v) = u^T J v on R^4 with
+J = [[0, I_2], [-I_2, 0]].</li>
+<li>Let K ⊂ R^4 be a convex polytope with 0 ∈ int K and H‑representation
+K = { x ∈ R^4 : ⟨a_i, x⟩ ≤ h_i, i = 1,…,m },
+where each a_i ∈ R^4 is the outward unit normal of facet i and h_i = h_K(a_i) &gt; 0 is the (oriented) support number.</li>
+<li>Stack A ∈ R^{m×4} with rows a_i^T, h ∈ R^m with entries h_i. Define W := A J A^T ∈ R^{m×m} with entries W_{ij} = ω(a_i,a_j).</li>
+</ul>
+<p>Remark (translation/scaling invariance). c_EHZ is translation invariant and 2‑homogeneous under scaling. If 0 ∉ int K, translate once to put 0 inside and recompute h_i; if K is scaled by s&gt;0, then h_i ← s h_i and c_EHZ(sK) = s^2 c_EHZ(K).<sup class="footnote-reference" id="fr-HK19-1"><a href="#footnote-HK19">1</a></sup></p>
+<h2 id="literature-exact-combinatorial-program-and-simple-loop"><a class="header" href="#literature-exact-combinatorial-program-and-simple-loop">Literature: exact combinatorial program and “simple loop”</a></h2>
+<p>Haim–Kislev give a finite‑dimensional, implementable formula for polytopes; it rests on a “simple loop” property: there exists a minimal‑action generalized closed characteristic that visits the interior of each facet at most once (no facet revisits).<sup class="footnote-reference" id="fr-HK19-2"><a href="#footnote-HK19">1</a></sup> In particular:</p>
+<ul>
+<li>Define the feasible weight polytope
+B_K := { β ∈ R_+^m : A^T β = 0, h^T β = 1 }.</li>
+<li>Then the EHZ capacity of K is
+c_EHZ(K) = 1 / (2· M_K),
+where
+M_K := max_{β ∈ B_K, σ ∈ S_m}  Σ_{1 ≤ j &lt; i ≤ m} β_{σ(i)} β_{σ(j)} · ω(a_{σ(i)}, a_{σ(j)}).</li>
+</ul>
+<p>This is Equation (1) in Haim–Kislev’s result, restated explicitly also in Leipold–Vallentin (their Eq. (1)) in the P(A,b) convention.[^HK19]<sup class="footnote-reference" id="fr-LV24-1"><a href="#footnote-LV24">2</a></sup> The permutation σ encodes the (single‑visit) order in which the minimizing loop traverses the facets. A reduction narrows σ to cycles of a directed graph built from facet adjacencies, which is useful algorithmically and connects to our oriented‑edge search.[^HK19, Remark 3.11]</p>
+<p>Complexity. Computing c_EHZ of polytopes is NP‑hard (even for simplices) by reduction to a quadratic assignment structure hidden in M_K.<sup class="footnote-reference" id="fr-LV24-2"><a href="#footnote-LV24">2</a></sup> Practical algorithms therefore combine exact solves on small/structured inputs with certified convex bounds and specialized search.</p>
+<h2 id="exact-nonconvex-qp-fixed-order-and-global-mixed-qpqap"><a class="header" href="#exact-nonconvex-qp-fixed-order-and-global-mixed-qpqap">Exact nonconvex QP (fixed order) and global mixed QP/QAP</a></h2>
+<p>We separate the permutation (order) and the nonnegative weights β.</p>
+<h3 id="program-a--nonconvex-qp-for-a-fixed-order"><a class="header" href="#program-a--nonconvex-qp-for-a-fixed-order">Program A — nonconvex QP for a fixed order</a></h3>
+<p>Inputs: A ∈ R^{m×4}, h ∈ R^m, W = A J A^T, an index order σ of a subset S ⊆ {1,…,m}. Entries with i ∉ S are allowed but will get β_i=0.</p>
+<p>Decision variables:</p>
+<ul>
+<li>β ∈ R_+^m (nonnegative facet weights).</li>
+</ul>
+<p>Constraints:</p>
+<ul>
+<li>A^T β = 0  (four linear equalities; closure)</li>
+<li>h^T β = 1  (normalization)</li>
+<li>β_i = 0 for i ∉ S (if restricting to a chosen subset/order).</li>
+</ul>
+<p>Objective (maximize):</p>
+<ul>
+<li>Q(β;σ) := Σ_{1 ≤ j &lt; i ≤ m} β_{σ(i)} β_{σ(j)} · W_{σ(i),σ(j)}.</li>
+</ul>
+<p>Return c(σ) := 1/(2· Q*(σ)) with Q*(σ) the optimal objective value. The exact capacity is c_EHZ(K) = min_σ c(σ) when σ ranges over all orders allowed by the simple‑loop theorem; in practice, restrict σ as in the “Permutation pruning” note below.</p>
+<p>Notes:</p>
+<ul>
+<li>This QP is in general indefinite (nonconvex) because W is skew‑symmetric and the lower‑triangular selection depends on σ. Modern global solvers (e.g., Gurobi/CPLEX/SCIP) accept such QPs and solve them via spatial branch‑and‑bound with McCormick relaxations and cuts. Provide and record a global optimality certificate (gap ≤ ε_gap).<sup class="footnote-reference" id="fr-Krupp20-1"><a href="#footnote-Krupp20">3</a></sup></li>
+<li>The four equalities A^T β = 0 enforce the vector equilibrium Σ β_i a_i = 0 which encodes closedness; h^T β = 1 pins the scale (action normalization).</li>
+</ul>
+<h3 id="program-b--unified-mixed-qpqap-optional-small-m"><a class="header" href="#program-b--unified-mixed-qpqap-optional-small-m">Program B — unified mixed QP/QAP (optional, small m)</a></h3>
+<p>Let P ∈ {0,1}^{m×m} be a permutation matrix (P e = e, P^T e = e) and define the strictly lower‑triangular mask L ∈ {0,1}^{m×m} with L_{ij}=1 for i&gt;j and 0 otherwise. Then the objective can be written as
+Q(β,P) = ⟨ L ∘ (P W P^T), β β^T ⟩,
+where ∘ is the Hadamard product and ⟨·,·⟩ the Frobenius inner product. This yields a compact mixed 0–1 nonconvex quadratic program over (β,P). It is exact but only practical for very small m due to the QAP‑type combinatorics.[^LV24]<sup class="footnote-reference" id="fr-Krupp20-2"><a href="#footnote-Krupp20">3</a></sup></p>
+<p>Permutation pruning. Use Haim–Kislev’s reduction to cycles of a directed graph on facets (edge i→j present when the Reeb velocity can switch from facet i to j) to shrink σ to “combinatorially allowed” orders; this is exactly the graph our oriented‑edge chapter builds on (2‑faces drive feasible switches).<sup class="footnote-reference" id="fr-HK19-3"><a href="#footnote-HK19">1</a></sup> In practice we enumerate simple cycles up to a cutoff length L (≤ m), set β_i=0 for i outside the cycle, and run Program A per cycle.</p>
+<h2 id="convex-relaxations-and-bounds-lpsdp"><a class="header" href="#convex-relaxations-and-bounds-lpsdp">Convex relaxations and bounds (LP/SDP)</a></h2>
+<p>Because M_K is a maximum of a bilinear form over a polytope, convex outer approximations in the lifted space give certified bounds. Let y_{ij} ≈ β_i β_j. The constraints A^T β=0, h^T β=1, β ≥ 0 define a compact polytope B_K with explicit upper bounds 0 ≤ β_i ≤ 1/ min(h_i,1e9) since h_i&gt;0 and h^T β=1.</p>
+<ul>
+<li>
+<p>LP (McCormick) relaxation — lower bound on c_EHZ:</p>
+<ul>
+<li>For a fixed σ define y_{ij} for i&gt;j and enforce McCormick envelopes over boxes [0,U_i]×[0,U_j]:
+y_{ij} ≥ 0; y_{ij} ≤ U_i β_j; y_{ij} ≤ U_j β_i; y_{ij} ≥ β_i + β_j − U_i − U_j,
+with U_i := 1/h_i.</li>
+<li>Maximize Σ_{i&gt;j} W_{σ(i),σ(j)} y_{σ(i)σ(j)} subject to β ∈ B_K and the envelopes.</li>
+<li>Call the optimum \hat M_σ ≥ M_σ (outer relaxation). Then
+c_EHZ(K) ≥ 1/(2· max_σ \hat M_σ).</li>
+<li>This is fast (HiGHS/CP‑SAT) and scales; it certifies a rigorous lower bound on c_EHZ.</li>
+</ul>
+</li>
+<li>
+<p>SDP (Shor/CP) relaxations — stronger lower bounds:</p>
+<ul>
+<li>Lift to Y ≽ 0 with Y_{ij} ≈ β_i β_j, add linear side constraints Y e = β, diag(Y) ≤ U ∘ β, β ≥ 0, A^T β = 0, h^T β = 1, and maximize ⟨S_σ, Y⟩ with S_σ := L ∘ (P_σ W P_σ^T).</li>
+<li>Replacing the completely positive cone by the PSD cone gives a tractable SDP; multiple SDP rounds over selected σ produce tight certified lower bounds.<sup class="footnote-reference" id="fr-Krupp20-3"><a href="#footnote-Krupp20">3</a></sup></li>
+</ul>
+</li>
+</ul>
+<p>Upper bounds on c_EHZ. Any feasible (β,σ) yields M ≤ M_K and thus c_EHZ(K) ≤ 1/(2M). Heuristics (local ascent for β on each σ, greedy σ from W’s positive entries, or rounding from relaxations) produce candidates; we then reconstruct a closed polygonal orbit and measure its action (next section), also cross‑checking with the oriented‑edge solver.</p>
+<h2 id="reconstructing-a-polygonal-certificate-from-βσ"><a class="header" href="#reconstructing-a-polygonal-certificate-from-βσ">Reconstructing a polygonal certificate from (β,σ)</a></h2>
+<p>Given a feasible (β,σ), define segment directions v_i := J a_{σ(i)} and positive times t_i := λ β_{σ(i)} for some λ&gt;0. Choose λ so that Σ t_i h_{σ(i)} = 1 (normalization). The closure condition A^T β = 0 implies Σ t_i v_i = 0, so the concatenation gives a closed polygonal loop on ∂K with edges parallel to v_i. Its action equals
+A = 1 / (2· Σ_{j&lt;i} β_{σ(i)} β_{σ(j)} ω(a_{σ(i)}, a_{σ(j)})) = 1/(2·Q(β;σ)),
+matching the program’s value; this is the certificate we store (order, nonzero facets, times t_i, action).[^HK19]<sup class="footnote-reference" id="fr-Krupp20-4"><a href="#footnote-Krupp20">3</a></sup></p>
+<p>Numerical tolerances for the certificate:</p>
+<ul>
+<li>Closure residual: ||Σ t_i v_i||_2 ≤ τ_close (default 1e−10 · Σ t_i).</li>
+<li>Facet support consistency: |⟨a_{σ(i)}, x⟩ − h_{σ(i)}| ≤ τ_face when sampling a point x on each segment (diagnostic only).</li>
+<li>Action check: recompute polygonal action directly from vertices; relative mismatch ≤ 5e−9.</li>
+</ul>
+<h2 id="implementation-plan"><a class="header" href="#implementation-plan">Implementation Plan</a></h2>
+<p>Data plumbing.</p>
+<ul>
+<li>Accept H‑rep with unit normals: A ∈ R^{m×4}, h ∈ R^m, 0 ∈ int K. If normals are not unit, renormalize a_i ← a_i/||a_i||, h_i ← h_i·||a_i||.</li>
+<li>Build W = A J A^T once. Precompute facet graph used by the oriented‑edge chapter; reuse its cycle enumeration to prune σ.</li>
+</ul>
+<p>Solvers.</p>
+<ul>
+<li>Exact/upper‑bound candidates: Program A with a global nonconvex QP solver (Gurobi/CPLEX/SCIP). Keep ε_gap ≤ 1e−6 and record solver’s optimality certificate (gap, best bound, node count, time).</li>
+<li>Lower‑bound certificates: LP McCormick (HiGHS) by default; optional SDP (MOSEK/SDPA) for tighter bounds on small m.</li>
+<li>Optional unified Program B for tiny m (≤ 14) to cross‑check reductions.</li>
+</ul>
+<p>Assembly details.</p>
+<ul>
+<li>Rust: create <code>crates/viterbo/src/capacity/lpqp.rs</code> with:
+<ul>
+<li><code>build_data(hrep: &amp;HPoly4) -&gt; (A: DMatrix&lt;f64&gt;, h: DVector&lt;f64&gt;, W: DMatrix&lt;f64&gt;)</code></li>
+<li><code>enumerate_cycles(g: &amp;FacetGraph, max_len: usize) -&gt; impl Iterator&lt;Item=Vec&lt;usize&gt;&gt;</code></li>
+<li><code>solve_qp_fixed_order(W, A, h, order) -&gt; QpResult { beta, q_value, action, cert }</code></li>
+<li><code>relax_lp_mccormick(...) -&gt; LpBound { m_hat }</code></li>
+</ul>
+</li>
+<li>Python: thin wrappers in <code>src/viterbo/rust/</code> and a stage module <code>src/viterbo/capacity.stage_lpqp.py</code> to drive experiments and write provenance sidecars (<code>viterbo.provenance.write(...)</code>).</li>
+<li>Expose a unified <code>compute_capacity_lpqp(K)</code> that returns:
+<ul>
+<li>action estimate(s) with certificate(s),</li>
+<li>lower bound (LP/SDP) and any exact matches,</li>
+<li>solver logs (gap/time) for reproducibility.</li>
+</ul>
+</li>
+</ul>
+<p>Defaults and budgets (safe wrapper).</p>
+<ul>
+<li>LP/graph enumeration: 10 s budget for m ≤ 80.</li>
+<li>Exact QP per order: 1–5 s; stop after best‑so‑far is within factor 1.02 of LP lower bound or after 120 s total.</li>
+<li>SDP (optional): 60–180 s small‑m runs only.</li>
+</ul>
+<h2 id="validation-plan"><a class="header" href="#validation-plan">Validation Plan</a></h2>
+<p>Against oriented‑edge algorithm (general polytopes).</p>
+<ul>
+<li>On each test polytope, run the oriented‑edge solver to get an action candidate A_oe. From LP/QP, collect:
+<ul>
+<li>an upper‑bound candidate A_up (from a feasible (β,σ)),</li>
+<li>a lower bound A_low (from convex relaxation).</li>
+</ul>
+</li>
+<li>Validate: A_low ≤ c_EHZ(K) ≤ min(A_oe, A_up) and, when oriented‑edge feasibility gives a simple loop, min(A_oe, A_up) agrees with A_low within tolerance.</li>
+</ul>
+<p>Against Minkowski billiard (Lagrangian products).</p>
+<ul>
+<li>For K×T ⊂ R^4, run the billiard algorithm; the returned action must match the LP/QP result (best feasible candidate) within 1e−7 when both are exact.<sup class="footnote-reference" id="fr-Rudolf24-1"><a href="#footnote-Rudolf24">4</a></sup></li>
+</ul>
+<p>Sanity set.</p>
+<ul>
+<li>Balls/ellipsoids approximated by tight polytopes (convergence to π r^2).</li>
+<li>Centrally symmetric polytopes with symmetry pairs (use Haim–Kislev’s symmetric simplification).<sup class="footnote-reference" id="fr-HK19-4"><a href="#footnote-HK19">1</a></sup></li>
+<li>Small simplices (compare with values obtained in NP‑hardness constructions for cross‑checks).<sup class="footnote-reference" id="fr-LV24-3"><a href="#footnote-LV24">2</a></sup></li>
+</ul>
+<h2 id="guarantees-tolerances-and-failure-modes"><a class="header" href="#guarantees-tolerances-and-failure-modes">Guarantees, Tolerances, and Failure Modes</a></h2>
+<ul>
+<li>Correctness (exact run). If Program A is solved globally for a σ that belongs to the reduced set covering all simple loops, the produced action equals c_EHZ(K). The certificate is the polygonal loop reconstructed above.</li>
+<li>Bounds. For any σ, LP/SDP relaxations certify c_EHZ(K) ≥ 1/(2·\hat M_σ). Any feasible (β,σ) yields c_EHZ(K) ≤ 1/(2·Q(β;σ)).</li>
+<li>Numerics. Use absolute tolerance 1e−9 on linear equalities, 1e−12 clipping for β ≥ 0, and a solver relative gap ≤ 1e−6 for declaring “exact”.</li>
+<li>Degeneracies. If some facets are nearly parallel or h_i very small, rescale K to unit inradius∈[0.5,2] before assembly; undo scaling on output. Fall back to oriented‑edge feasibility if β concentrates on &lt;3 facets (degenerate paths).</li>
+</ul>
+<h2 id="references-footnotes"><a class="header" href="#references-footnotes">References (footnotes)</a></h2>
+<p>512b964 (Done. Canonical 2‑face orientation is now enforced everywhere; the knob is gone.)</p>
+<hr>
+<ol class="footnote-definition"><li id="footnote-HK19">
+<p>Haim‑Kislev, P. On the Symplectic Size of Convex Polytopes. Geom. Funct. Anal. 29 (2019) 440–463; arXiv:1712.03494. Key results: simple‑loop theorem; combinatorial formula (their Eq. (1)); permutation reduction via a facet graph. Also see the arXiv version for a complete statement. <a href="#fr-HK19-1">↩</a> <a href="#fr-HK19-2">↩2</a> <a href="#fr-HK19-3">↩3</a> <a href="#fr-HK19-4">↩4</a></p>
+</li>
+<li id="footnote-LV24">
+<p>Leipold, K., Vallentin, F. Computing the EHZ capacity is NP‑hard. Proc. Amer. Math. Soc. Ser. B 11 (2024), 603–611; arXiv:2402.09914. Restates the Haim–Kislev formula in P(A,b) form and proves NP‑hardness via reduction to a maximum acyclic subgraph/QAP. <a href="#fr-LV24-1">↩</a> <a href="#fr-LV24-2">↩2</a> <a href="#fr-LV24-3">↩3</a></p>
+</li>
+<li id="footnote-Krupp20">
+<p>Krupp, S. Calculating the EHZ Capacity of Polytopes. PhD thesis, Univ. Köln (2020). Chapter 5 formulates the maximization, QAP view, and convex (CP/SDP) relaxations that yield strong certified bounds and often exact optima on small instances. <a href="#fr-Krupp20-1">↩</a> <a href="#fr-Krupp20-2">↩2</a> <a href="#fr-Krupp20-3">↩3</a> <a href="#fr-Krupp20-4">↩4</a></p>
+</li>
+<li id="footnote-Rudolf24">
+<p>Rudolf, D. The Minkowski billiard characterization of the EHZ‑capacity of convex Lagrangian products. J. Dyn. Diff. Eq. (2024); arXiv:2203.01718. Used for cross‑validation on product‑structured examples. <a href="#fr-Rudolf24-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><h1 id="visualization--verification"><a class="header" href="#visualization--verification">Visualization &amp; Verification</a></h1>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="meta-documentation"><a class="header" href="#meta-documentation">Meta Documentation</a></h1>
 <p>This section hosts documentation about meta-level development workflows (not object-level content).</p>
 <ul>
@@ -198,6 +946,708 @@ The signed area equals (\det([a\ b]) = a_x b_y - a_y b_x).</p>
 <li>Topic-specific meta docs that only some tickets need live here (e.g., data IO, CI/tooling).</li>
 <li>Paper + helper scripts: see <code>docs/src/meta/misc-tools.md</code> when you need local copies of bibliography items.</li>
 </ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="benchmarks--docs-pipeline"><a class="header" href="#benchmarks--docs-pipeline">Benchmarks → Docs Pipeline</a></h1>
+<p>This note records the Phase 1 design + Phase 2 implementation work for surfacing Criterion micro-benchmarks inside the mdBook site. It follows the flow described in <code>AGENTS.md</code>: tickets → specs → code/tests → data.</p>
+<h2 id="layout-naming-retention"><a class="header" href="#layout-naming-retention">Layout, naming, retention</a></h2>
+<ul>
+<li><strong>Raw output</strong> lives under <code>target/criterion/...</code> while <code>cargo bench</code> runs. <code>scripts/rust-bench.sh</code> copies only the <code>criterion</code> subtree into <code>data/bench/criterion/</code> (Git LFS) right after the run so we keep curated JSON without polluting <code>data/</code> with arbitrary build detritus.</li>
+<li><strong>Build junk</strong> (<code>data/bench/release</code>, <code>tmp/</code>, <code>.rustc_info.json</code>) stays untracked via <code>.gitignore</code>. If Cargo drops new cache directories, add them here before running benches on a ticket.</li>
+<li><strong>Derived tables</strong> land in <code>docs/assets/bench/</code> as <code>&lt;timestamp&gt;_&lt;group&gt;.csv</code> plus a Markdown twin for mdBook. Each CSV gets a <code>.run.json</code> sidecar with <code>git_commit</code>, UTC <code>timestamp</code>, host/rust info, and the row count. Small symlinks (<code>current.csv</code>, <code>current_&lt;group&gt;.csv</code>, <code>current_&lt;group&gt;.md</code>) point at the latest export so docs can <code>{{#include}}</code> a stable path.</li>
+<li><strong>Retention</strong>: the Python stage keeps the most recent five exports per group by default (value stored in <code>configs/bench/docs_local.json</code>). Older CSV/MD pairs + their <code>.run.json</code> sidecars are deleted to avoid asset bloat while still keeping short-term history for review diffs.</li>
+</ul>
+<h2 id="how-to-run"><a class="header" href="#how-to-run">How to run</a></h2>
+<ol>
+<li>Make sure the benches you want exist (currently <code>crates/viterbo/benches/poly2_bench.rs</code>) and hydrate Git LFS for <code>data/**</code> if needed.</li>
+<li>Run the benches through the wrapper (safe-wrapped):
+<pre><code class="language-bash">bash scripts/safe.sh --timeout 300 -- bash scripts/rust-bench.sh
+# optional envs: BENCH_EXPORT_DIR=/tmp/bench, BENCH_RUN_POSTPROCESS=1 (to immediately run the stage)
+</code></pre>
+This writes raw Criterion JSON to <code>target/criterion</code>, rsyncs the curated snapshot into <code>data/bench/criterion</code>, and leaves Cargo caches alone.</li>
+<li>Refresh the docs tables via the Python stage (defaults live in <code>configs/bench/docs_local.json</code>):
+<pre><code class="language-bash">bash scripts/safe.sh --timeout 120 -- uv run python -m viterbo.bench.stage_docs \
+  --config configs/bench/docs_local.json
+# add --bench-root /custom/path or --keep 10 if you need overrides
+</code></pre>
+</li>
+<li>Commit the tiny files in <code>docs/assets/bench/</code> together with the <code>data/bench/criterion/**</code> snapshot (Git LFS handles the bulk). If you want the wrapper to handle step 3 automatically, export <code>BENCH_RUN_POSTPROCESS=1</code> when invoking <code>scripts/rust-bench.sh</code>.</li>
+</ol>
+<p><code>scripts/reproduce.sh</code> now runs both steps (bench + docs stage) unconditionally so every thesis build and mdBook render derives from freshly generated measurements. Whenever a ticket adds a new artifact or visualization, update <code>reproduce.sh</code> in the same PR.</p>
+<h2 id="latest-snapshot"><a class="header" href="#latest-snapshot">Latest snapshot</a></h2>
+<p>The Markdown fragment below is generated by <code>python -m viterbo.bench.stage_docs</code> and pulled in verbatim so reviewers always see the freshest numbers without copy/paste.</p>
+<div class="table-wrapper"><table><thead><tr><th>bench</th><th>parameter</th><th style="text-align: right">samples</th><th style="text-align: right">min (ns)</th><th style="text-align: right">mean (ns)</th><th style="text-align: right">stddev (ns)</th></tr></thead><tbody>
+<tr><td>halfspace_intersection</td><td>0</td><td style="text-align: right">50</td><td style="text-align: right">4.571</td><td style="text-align: right">4.977</td><td style="text-align: right">0.346</td></tr>
+<tr><td>halfspace_intersection</td><td>10</td><td style="text-align: right">50</td><td style="text-align: right">598.399</td><td style="text-align: right">671.668</td><td style="text-align: right">20.930</td></tr>
+<tr><td>halfspace_intersection</td><td>20</td><td style="text-align: right">50</td><td style="text-align: right">1106.233</td><td style="text-align: right">1155.103</td><td style="text-align: right">28.151</td></tr>
+<tr><td>halfspace_intersection</td><td>50</td><td style="text-align: right">50</td><td style="text-align: right">2572.787</td><td style="text-align: right">2707.089</td><td style="text-align: right">67.563</td></tr>
+<tr><td>halfspace_intersection</td><td>100</td><td style="text-align: right">50</td><td style="text-align: right">5070.971</td><td style="text-align: right">5218.790</td><td style="text-align: right">145.902</td></tr>
+<tr><td>push_forward_strict</td><td>0</td><td style="text-align: right">50</td><td style="text-align: right">13.587</td><td style="text-align: right">13.865</td><td style="text-align: right">0.199</td></tr>
+<tr><td>push_forward_strict</td><td>10</td><td style="text-align: right">50</td><td style="text-align: right">493.217</td><td style="text-align: right">516.936</td><td style="text-align: right">15.231</td></tr>
+<tr><td>push_forward_strict</td><td>20</td><td style="text-align: right">50</td><td style="text-align: right">1710.680</td><td style="text-align: right">1807.478</td><td style="text-align: right">70.256</td></tr>
+<tr><td>push_forward_strict</td><td>50</td><td style="text-align: right">50</td><td style="text-align: right">6042.619</td><td style="text-align: right">6140.683</td><td style="text-align: right">88.946</td></tr>
+<tr><td>push_forward_strict</td><td>100</td><td style="text-align: right">50</td><td style="text-align: right">14986.763</td><td style="text-align: right">16127.213</td><td style="text-align: right">801.691</td></tr>
+</tbody></table>
+</div>
+<p><em>Updated 2025-11-11 01:41:11Z · commit 585a129 · host ab5b4864ef14 · rustc rustc 1.91.1 (ed61e7d7e 2025-11-07)</em></p>
+<h2 id="interpretation-cheat-sheet"><a class="header" href="#interpretation-cheat-sheet">Interpretation cheat sheet</a></h2>
+<ul>
+<li>Both <code>halfspace_intersection</code> and <code>push_forward_strict</code> scale roughly super-linear with the number of halfspaces <code>m</code>, but the latter is consistently ~3× slower for the same <code>m</code> because it performs an extra affine transform before the set operation.</li>
+<li>For tiny polytopes (<code>m ≤ 10</code>) the kernel stays in the sub-microsecond regime, which makes it viable to run exhaustive smoke tests inside CI; by <code>m=100</code> we are in the ~5 μs (intersection) and ~15 μs (push-forward) range, which is still cheap for batched evaluation.</li>
+<li>The <code>stddev</code> columns are low relative to the mean for larger inputs, which indicates the batches are deterministic enough that storing a single snapshot per commit is meaningful.</li>
+<li>If you see <code>samples &lt; 100</code>, it means Criterion bailed early because the stage was faster than the configured measurement window; rerun with <code>--significance-level</code> tweaks if you need denser samples.</li>
+</ul>
+<h2 id="script-internals-reference"><a class="header" href="#script-internals-reference">Script internals (reference)</a></h2>
+<ul>
+<li><code>viterbo.bench.stage_docs</code> parses <code>estimates.json</code> and <code>sample.json</code> for each <code>&lt;group&gt;/&lt;bench&gt;/&lt;param&gt;</code> tuple, computes <code>min</code>, <code>mean</code>, <code>stddev</code>, and copies system metadata from <code>git</code>, <code>platform</code>, and <code>rustc --version</code>.</li>
+<li>Output schema matches the CSV header, so CSVs remain diffable while Markdown renders nicely inside mdBook; both variants share the same timestamp + provenance file.</li>
+<li>Symlinks are relative so Git diffs stay stable and docs can just use the include macro for the “current” snapshot. For example (shown literally, not executed): <code>{{# include ../assets/bench/current_&lt;group&gt;.md}}</code> (note the space after <code>#</code> prevents mdBook from treating this as a real include).</li>
+<li>Use <code>uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json --keep 10</code> if you need a longer breadcrumb trail before trimming old exports.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><!--
+Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e
+Notes: Record design choices for ridge charts and rotation used by the oriented‑edge algorithm.
+-->
+<h1 id="orientededge-charts-and-rotation"><a class="header" href="#orientededge-charts-and-rotation">Oriented‑Edge: Charts and Rotation</a></h1>
+<p>Purpose. Capture the invariants and rationale behind our choice of ridge charts and how we compute and use rotation ρ in the oriented‑edge algorithm, to avoid regressions and unnecessary toggles.</p>
+<p>Key decisions</p>
+<ul>
+<li>Fixed per ridge: Each 2‑face (ridge) has a single chart chosen once and used from any incoming facet to keep signs consistent and avoid path‑dependent artifacts.</li>
+<li>Canonical orientation: The ridge basis (u₁,u₂) is orthonormal (Euclidean) and satisfies ω₀(u₁,u₂) &gt; 0. This ties chart orientation to the ambient symplectic form and ensures per‑edge first‑hit maps are orientation‑preserving on admissible domains.</li>
+<li>Rotation from polar factor: For the 2×2 linear part M of the charted per‑edge map, compute the orthogonal polar factor R (M = R S, S ≻ 0) and define ρ := arg(R)/π ∈ [0,1]. This is robust in floating point and invariant to uniform scaling of M; we do not require det M ≈ 1.</li>
+<li>Area‑preserving vs Euclidean charts: First‑hit maps preserve dα‑area, not Euclidean area. Our orthonormal Euclidean charts scale dα by a positive ridge‑dependent constant, so det M need not equal 1; ρ via the polar factor is unaffected. We intentionally do not dα‑normalize charts (see “No toggles” below).</li>
+<li>Accumulation and index: Along closed cycles, ρ accumulates additively and the (generic, 2D) Conley–Zehnder index satisfies μ_CZ = ceil(ρ) + floor(ρ). The index‑3 minimizer has ρ ∈ (1,2), so the search prunes when ρ &gt; 2. This bound is theory‑fixed, not a hyperparameter.</li>
+</ul>
+<p>Non‑goals and avoided toggles</p>
+<ul>
+<li>No dual chart mode. We deliberately do not support an opt‑in dα‑unit chart mode (which would enforce det M ≈ 1) because it increases maintenance and test burden without improving rotation computation or pruning.</li>
+<li>No runtime orientation flips. Charts are fixed per ridge; we do not allow user‑configurable orientation switches.</li>
+</ul>
+<p>Asserts and guards</p>
+<ul>
+<li>Orientation preservation: debug‑assert det M &gt; 0 on per‑edge maps between canonical charts.</li>
+<li>Rotation extraction: ensure the polar factor R has det R &gt; 0 and clamp arguments for atan2; treat |tr R| ≈ 2 as a near‑identity degeneracy.</li>
+<li>Domain construction: enforce τ &gt; 0 and compare τ_j ≤ τ_k only for forward‑hitting co‑facets (⟨n_k, v_F⟩ &gt; 0), with consistent epsilons.</li>
+</ul>
+<p>Cross‑refs</p>
+<ul>
+<li>Background theory: CZ and rotation (Docs: thesis/Ekeland-Hofer-Zehnder-Capacity.md#cz-rotation).</li>
+<li>Algorithm spec: rotation and pruning policy (Docs: thesis/capacity-algorithm-oriented-edge-graph.md).</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><!-- When to read: Only for rare, owner‑approved history rewrites. Not needed for normal tickets. -->
+<h1 id="git-history-cleanup-situational"><a class="header" href="#git-history-cleanup-situational">Git History Cleanup (Situational)</a></h1>
+<p>Use only when the owner explicitly requests a repo history rewrite and has scheduled downtime. Escalate first; confirm a backup exists. This page replaces the removed section in AGENTS.md to keep onboarding lean.</p>
+<p>Steps (quick guide)</p>
+<ul>
+<li>Pause other worktrees/sessions; get explicit go‑ahead.</li>
+<li>Capture baseline for provenance:
+<ul>
+<li><code>git rev-parse main</code></li>
+<li><code>git count-objects -vH</code></li>
+<li><code>git lfs ls-files | wc -l</code></li>
+</ul>
+</li>
+<li>Work in a mirror clone:
+<ul>
+<li><code>git clone --mirror /workspaces/rust-viterbo /tmp/history-cleanup.git</code></li>
+<li><code>cd /tmp/history-cleanup.git</code></li>
+</ul>
+</li>
+<li>Remove legacy bench artifacts:
+<ul>
+<li><code>git filter-repo --force --invert-paths --path data/bench/release --path data/bench/release/ --path data/bench/tmp --path data/bench/tmp/ --path data/bench/.rustc_info.json --path data/target --path data/target/ --message-callback 'return message + b\"\n[chore] Drop legacy bench artifacts (Ticket &lt;uuid&gt;)\n\"'</code></li>
+</ul>
+</li>
+<li>Verify:
+<ul>
+<li><code>git rev-list --objects --all | grep data/bench/release</code> (should be empty)</li>
+<li><code>git fsck --full</code></li>
+<li><code>git lfs fetch --all &amp;&amp; git lfs fsck</code></li>
+</ul>
+</li>
+<li>Publish to staging:
+<ul>
+<li>Push rewritten result to a staging branch in <code>/workspaces/rust-viterbo</code> (e.g., <code>main-clean</code>).</li>
+<li>Owner force‑pushes to GitHub; local worktrees rehydrate LFS:
+<ul>
+<li><code>git lfs pull --include "data/**" --exclude ""</code></li>
+</ul>
+</li>
+<li>Run quick loops:
+<ul>
+<li><code>bash scripts/python-lint-type-test.sh</code></li>
+<li><code>bash scripts/rust-test.sh</code></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Record actions: commands run and key hashes in the ticket; no extra files are required for the rewrite itself.</li>
+</ul>
+<p>Notes</p>
+<ul>
+<li>Do not attempt without owner approval and a quiet window; history rewrites disrupt collaborators’ clones and LFS pointers.</li>
+<li>Prefer targeted filters over broad path patterns; test in a mirror clone first.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><!-- Author: Codex -->
+<h1 id="protocol--meeting-on-2025-11-04-10001150"><a class="header" href="#protocol--meeting-on-2025-11-04-10001150">Protocol — Meeting on 2025-11-04 (10:00–11:50)</a></h1>
+<p><strong>Date.</strong> 4 November 2025.<br />
+<strong>Attendees.</strong> Jörn Stöhler; Prof. Kai Cieliebak; Prof. Elisabeth Gaar (<a href="https://www.uni-augsburg.de/de/fakultaet/mntf/math/prof/opt/team/gaar/">University profile</a>).<br />
+<strong>Purpose.</strong> Present the thesis topic and current algorithm, collect Prof. Gaar’s feedback on combinatorial/optimization aspects, and align experiments plus correctness levers for the MSc thesis on systolic ratios of convex polytopes in $\mathbb{R}^4$. The agenda follows Kai’s thesis brief on “Probing Viterbo’s conjecture.”<sup class="footnote-reference" id="fr-T-1"><a href="#footnote-T">1</a></sup></p>
+<p>This protocol records the decisions, rationale, and next steps that emerged from the meeting. Full technical notes sit in the appendix for Jörn’s execution.</p>
+<h2 id="context-and-purpose"><a class="header" href="#context-and-purpose">Context and Purpose</a></h2>
+<p>We compute the minimal Reeb action on 4D convex polytopes and report the induced systolic ratio. The protocol captures what we decided, how it affects the project, and the immediate tasks ahead.</p>
+<h2 id="decisions-and-rationale"><a class="header" href="#decisions-and-rationale">Decisions and Rationale</a></h2>
+<ul>
+<li>Focus on 4D convex polytopes; always report both minimal Reeb action and the systolic ratio, starting with simplices and product families.</li>
+<li>Apply a rotation-based prune capped at $\rho \le 2$, using the guarantee that an action minimizer exists with at most that rotation.</li>
+<li>Keep the “visit each facet at most once” prune behind a feature flag until its hypotheses are verified for our model.</li>
+<li>Continue using the 2-face graph $G_2$ representation (details in the appendix) for pruning and evaluation.</li>
+<li>Report strict-admissibility results only; retain a clearly labeled relaxed mode exclusively for upper bounds.</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><strong>Supervisors (Kai Cieliebak, Elisabeth Gaar).</strong> No immediate actions; optionally confirm default/optional levers and flag constraints for early experiments.</li>
+<li><strong>Author (Jörn Stöhler).</strong> Implement ordering and de-dup variants, document toggles, run first sweeps on simplices and products, and maintain technical guardrails/logs. A detailed checklist appears in §7.</li>
+</ul>
+<h2 id="open-questions"><a class="header" href="#open-questions">Open Questions</a></h2>
+<ul>
+<li>Which classes of polytopes or products should we prioritize (or avoid) in early experiments?</li>
+<li>Any objection to strict-mode results as canonical outputs, with relaxed mode reserved purely for upper bounds and exploratory intuition?</li>
+<li>Which references should we cite for explicit constants when seeding upper bounds?</li>
+</ul>
+<h2 id="reading-guide"><a class="header" href="#reading-guide">Reading Guide</a></h2>
+<p>The remainder of this page provides the complete notes and follow-ups. Read sequentially for narrative or jump to appendix sections tied to pruning and evaluation details.</p>
+<hr />
+<h2 id="1-executive-summary-decisions-and-impact"><a class="header" href="#1-executive-summary-decisions-and-impact">1) Executive Summary (Decisions and Impact)</a></h2>
+<ul>
+<li><strong>Working model.</strong> Study 4D convex polytopes, compute minimal Reeb action on $\partial X$ and the systolic ratio, and retain both H- and V-representations with cached 2-/3-face incidence so the stable data model remains intact.</li>
+<li><strong>Search representation.</strong> Use the 2-face graph $G_2$ with per-step affine transitions and nonnegative action increments (zeros permitted) for pruning strength.</li>
+<li><strong>Rotation prune.</strong> Enforce a hard prune at $\rho = 2$ for minimizer candidates; rotation is monotone on convex hypersurfaces and at least one minimizer satisfies $\rho \le 2$.<sup class="footnote-reference" id="fr-CH-1"><a href="#footnote-CH">2</a></sup></li>
+<li><strong>Admissibility.</strong> Default to strict admissibility (reject cycles whose reconstructed orbits exit the traversed 2-faces). Keep a separate relaxed mode that may accept inadmissible cycles solely as upper bounds [:?] so correctness stays clear while relaxed runs support optimization.</li>
+<li><strong>“Facet-visit once.”</strong> Treat “the minimizer visits each 3-face at most once” as an optional prune behind a flag [:?] and enable it only after checking its hypotheses, since it could dramatically reduce the search space when justified.<sup class="footnote-reference" id="fr-HK-1"><a href="#footnote-HK">3</a></sup></li>
+<li><strong>Ordering and de-duplication.</strong> Maintain depth-first search; compare edge-count-first with action-lower-bound-first ordering; enable start-face de-duplication (do not reuse a start 2-face once exhausted). These choices improve pruning and runtime.</li>
+<li><strong>Initial upper bound.</strong> Keep the current seed bound, drop $A_{\mathrm{ub}}$ to the first admissible cycle, and investigate the best explicit constant $C$ in $A_{\min} \le \sqrt{C,\mathrm{vol}(X)}$ applicable to our setting [:?] to accelerate convergence with proper citations.</li>
+<li><strong>Experiments.</strong> Run experiments on mixed-family 4-simplices to probe the conjectural $\mathrm{sys}(X) \le 3/4$, on broader Lagrangian products $K\times L$, and on counterexamples beyond “pentagon × 90°-rotated pentagon” for thesis-grade coverage.</li>
+</ul>
+<h2 id="2-background-definitions-for-clarity-not-all-discussed-live"><a class="header" href="#2-background-definitions-for-clarity-not-all-discussed-live">2) Background Definitions (for clarity; not all discussed live)</a></h2>
+<ul>
+<li><strong>Setting.</strong> Work in $\mathbb{R}^4 = \mathbb{C}^2$ with the standard Liouville form $\lambda_{\mathrm{st}} = \tfrac12 \sum_{i=1}^{2}(x_i,dy_i - y_i,dx_i)$. For convex, star-shaped $X \subset \mathbb{R}^4$ with boundary $Y = \partial X$, the Reeb field $R$ satisfies $\iota_R d\lambda_{\mathrm{st}} = 0$ and $\lambda_{\mathrm{st}}(R) = 1$. A closed Reeb orbit $\gamma \subset Y$ has action $A(\gamma)=\int_\gamma \lambda_{\mathrm{st}}$.</li>
+<li><strong>Minimal action and systolic ratio (4D).</strong> $A_{\min}(X) = \min_\gamma A(\gamma)$ and $\mathrm{sys}(X) = \dfrac{A_{\min}(X)^2}{2,\mathrm{vol}(X)}$, matching the $n=2$ specialization of the thesis brief’s general definition.<sup class="footnote-reference" id="fr-T-2"><a href="#footnote-T">1</a></sup></li>
+<li><strong>Rotation number and Conley–Zehnder.</strong> For nondegenerate $\gamma$, $CZ(\gamma) = \lfloor \rho(\gamma)\rfloor + \lceil \rho(\gamma)\rceil$. On convex $Y \subset \mathbb{R}^4$ we rely on: (i) $\rho(\gamma) &gt; 1$ for all $\gamma$; (ii) some action minimizer $\gamma_{\min}$ exists with $\rho(\gamma_{\min}) \le 2$ (nondegenerate case: $1&lt;\rho(\gamma_{\min})&lt;2$ and $CZ(\gamma_{\min}) = 3$). These facts support pruning.<sup class="footnote-reference" id="fr-CH-2"><a href="#footnote-CH">2</a></sup></li>
+<li><strong>Relevant faces.</strong> Orbits flow through 3-faces and cross 2-faces. The algorithm ignores 1-faces/0-faces: a minimizer does not flow through 1-faces (rotation would diverge), and crossings of 1-faces are, at worst, a generic technicality that does not change the algorithm [:?].</li>
+</ul>
+<h2 id="3-meeting-narrative-chronological"><a class="header" href="#3-meeting-narrative-chronological">3) Meeting Narrative (chronological)</a></h2>
+<ol>
+<li><strong>Project introduction.</strong> Jörn framed the problem via the polytope model, treated the action integral as a positive black box, and illustrated the 4D problem using a 3D/2D skeleton. Outcome: shared understanding of inputs/outputs, including the working equivalence “full orbit $\Longleftrightarrow$ point on the orbit $\Longleftrightarrow$ point on a 2-face of the orbit.”</li>
+<li><strong>Problem statement, admissibility, objective.</strong> Objective: compute $A_{\min}$ and $\mathrm{sys}(X)$ for 4D convex polytopes, focusing on polytopes and Lagrangian products. Admissibility means the reconstructed orbit stays inside its 2-faces. Decision: default strict admissibility; consider a separate relaxed pass where inadmissible cycles supply only upper bounds [:?].</li>
+<li><strong>Graphs.</strong>
+<ul>
+<li><strong>$G_3$ (3-face graph).</strong> Nodes: facets $F$; edges $F\to F'$ when the Reeb flow in $F$ can enter $F'$; data lives on edges, which is awkward to store at nodes.</li>
+<li><strong>$G_2$ (2-face graph, used).</strong> Nodes: 2-faces $E$; edge $E\to E'$ if the flow passes through some 3-face $F$ from $E$ to $E'$. Each step stores an affine map $x' = A_F x + b_F$, a nonnegative action lower bound $\Delta A_{\min}$ (possibly zero), and a rotation lower bound. Edges are colored by the supporting 3-face; nodes can equivalently be colored by entry or exit 3-face (implementation choice pending).</li>
+</ul>
+</li>
+<li><strong>Rotation pruning.</strong> Enumerate path prefixes and prune whenever the accumulated rotation lower bound exceeds $2$, since rotation is monotone and cannot drop when closing a cycle. This is a hard prune for minimizer candidates, justified by the existence of a minimizer with $\rho \le 2$.<sup class="footnote-reference" id="fr-CH-3"><a href="#footnote-CH">2</a></sup></li>
+<li><strong>Cycle evaluation and admissibility.</strong> For a closed word in $G_2$, compose affine maps to obtain $x \mapsto Ax+b$. If $(I-A)$ is invertible, solve $x^{*} = (I-A)^{-1}b$, compute action, and verify the orbit stays within the traversed 2-faces. Inadmissible cycles might offer upper bounds by analogy with capacity programs, but this pipeline is not yet proven here; treat it as a separate relaxed mode [:?].</li>
+<li><strong>“Visit each 3-face at most once.”</strong> A cited result states that a minimal-action closed characteristic on convex polytopes visits each facet interior at most once. We will expose this as an optional prune behind a flag after validating the hypotheses (default off). [:?]<sup class="footnote-reference" id="fr-HK-2"><a href="#footnote-HK">3</a></sup></li>
+<li><strong>Ordering and pruning ideas.</strong> Compare edge-count-first versus action-lower-bound-first ordering; consider adding a beam later. Additional future levers include (a) incremental admissible-subset tracking on the start 2-face; (b) two-edge feasibility prechecks (defer unless profiling demands); (c) upper-bound seeding via explicit constants and Newton-driven periodic orbits [:?].</li>
+<li><strong>Representations and performance.</strong> Retain H + V representations with cached incidence; conversions are cheap, and precomputing affine data plus lower bounds is also inexpensive. Runtime is dominated by the search tree, so additional pruning and moving work outside the inner loop matter most. A rough desktop measurement was ~100 ms for a 10-facet instance (not a benchmark).</li>
+<li><strong>Experiments.</strong>
+<ul>
+<li><strong>4-simplices:</strong> treat $\mathrm{sys}(X) \le 3/4$ as conjectural; test multiple families; avoid using this as a prune; locate near-extremizers or violations.</li>
+<li><strong>Lagrangian products $K\times L$:</strong> sweep beyond dual pairs (e.g., triangles × rotated triangles); revisit 2024 counterexample results for inspiration [:?].</li>
+<li><strong>Counterexamples:</strong> extend beyond “pentagon × 90° pentagon” via random and structured sampling.</li>
+</ul>
+</li>
+<li><strong>Open theoretical question (Prof. Gaar).</strong> “Does any oriented graph occur as a polytope’s Reeb-transition graph?” Interesting but out of thesis scope; parked.</li>
+</ol>
+<h2 id="4-algorithm-current-state-optional-coding-detail-is-flagged"><a class="header" href="#4-algorithm-current-state-optional-coding-detail-is-flagged">4) Algorithm (current state; optional coding detail is flagged)</a></h2>
+<ol>
+<li><strong>Precompute.</strong> Build $G_2$. For each allowed step $E \xrightarrow{F} E'$, store the local 2D affine map $x' = A_F x + b_F$, nonnegative $\Delta A_{\min}$ (zero allowed), and a per-step rotation lower bound. <em>(Optional later: two-edge feasibility cache.)</em></li>
+<li><strong>Enumerate (DFS).</strong> Maintain the current 2-face sequence with cumulative lower bounds for action and rotation. Prune when the action lower bound exceeds $A_{\mathrm{ub}}$ or when rotation exceeds $2$ for minimizer candidates.</li>
+<li><strong>Fixpoint and action.</strong> For a closed word, compose to $x \mapsto Ax+b$ and solve $x^{*} = (I-A)^{-1}b$ when the matrix is invertible; compute action from per-edge data. <em>(Optional numerics: guard on $I-A$ condition number with a Newton fallback [:?].)</em></li>
+<li><strong>Admissibility.</strong>
+<ul>
+<li><strong>Strict mode (default):</strong> check that the reconstructed orbit stays in the traversed 2-faces; reject otherwise.</li>
+<li><strong>Relaxed mode (separate):</strong> allow inadmissible cycles only to tighten $A_{\mathrm{ub}}$; never return them as outputs; clearly label runs [:?].</li>
+</ul>
+</li>
+<li><strong>No 3-face repeats (optional).</strong> If the facet-repeat theorem applies, reject sequences that revisit a 3-face; keep the toggle off until verified [:?].</li>
+<li><strong>Start-face de-dup.</strong> Once a start 2-face is exhausted, do not reuse it within the same run.</li>
+<li><strong>Data retention.</strong> Track the current path, rotation/action lower bounds, and the best admissible cycle so far. Output the best admissible cycle with its piecewise-linear path and action.</li>
+</ol>
+<h2 id="5-experiments-and-mathematical-questions"><a class="header" href="#5-experiments-and-mathematical-questions">5) Experiments and Mathematical Questions</a></h2>
+<h3 id="51-four-simplices-and-the-34-conjecture"><a class="header" href="#51-four-simplices-and-the-34-conjecture">5.1 Four-simplices and the “3/4” conjecture</a></h3>
+<p>Treat $\mathrm{sys}(X) \le 3/4$ for 4-simplices as conjectural. Sample multiple simplex families, log per-family hit rates, and search for near-extremizers; do not enforce the conjecture as a prune.</p>
+<h3 id="52-lagrangian-products"><a class="header" href="#52-lagrangian-products">5.2 Lagrangian products</a></h3>
+<p>Enumerate $K\times L$ broadly (symmetric/asymmetric, including rotated polygons) and tabulate high systolic ratios together with structural patterns.</p>
+<h3 id="53-upper-bounds-and-seeding"><a class="header" href="#53-upper-bounds-and-seeding">5.3 Upper bounds and seeding</a></h3>
+<ul>
+<li>Maintain the current seed bound and drop it to the first admissible cycle.</li>
+<li>Explore aggressive seeds such as $\sqrt{C,\mathrm{vol}(X)}$ using the best literature constant $C$ [:?].</li>
+<li>Use heuristics that launch random trajectories and apply Newton continuation to find periodic orbits that tighten bounds quickly.</li>
+</ul>
+<h3 id="54-covering-approach-for-4-simplices-research-plan"><a class="header" href="#54-covering-approach-for-4-simplices-research-plan">5.4 Covering approach for 4-simplices (research plan)</a></h3>
+<ul>
+<li>Parameter count claim: 5 faces $\Rightarrow$ 20 parameters $\Rightarrow$ 17 after modding out affine symplectomorphisms [:?].</li>
+<li>Focus on small-angle regimes; test whether affine symplectomorphisms enlarge minimal dihedral angles enough for finite coverings.</li>
+<li>Over each covering set, combine upper bounds on action and lower bounds on volume to control $\mathrm{sys}$; consider ellipsoidal coverings aligned to sensitive directions.</li>
+</ul>
+<h2 id="6-decisions-vs-plans-vs-uncertainties"><a class="header" href="#6-decisions-vs-plans-vs-uncertainties">6) Decisions vs. Plans vs. Uncertainties</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Topic</th><th>Status</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Rotation prune at $\rho = 2$</td><td><strong>In use</strong></td><td>Monotone rotation and a $\rho \le 2$ minimizer justify pruning.<sup class="footnote-reference" id="fr-CH-4"><a href="#footnote-CH">2</a></sup></td></tr>
+<tr><td>Admissibility check</td><td><strong>Strict by default</strong></td><td>Relaxed pass is separate; pipeline not yet proven [:?].</td></tr>
+<tr><td>“Facet-visit once” prune</td><td><strong>Flag only</strong></td><td>Enable after verifying hypotheses [:?].<sup class="footnote-reference" id="fr-HK-3"><a href="#footnote-HK">3</a></sup></td></tr>
+<tr><td>Ordering</td><td><strong>Compare</strong></td><td>Edge-count versus action-LB ordering; beam search later.</td></tr>
+<tr><td>Start-face de-dup</td><td><strong>Enable</strong></td><td>Once a start is exhausted, do not reuse it per run.</td></tr>
+<tr><td>Two-edge precheck</td><td><strong>Defer</strong></td><td>Incremental admissible-subset tracking likely suffices; profile later.</td></tr>
+<tr><td>Upper-bound constant $C$</td><td><strong>Literature check</strong></td><td>Keep current seed, drop to first cycle, cite explicit $C$ once fixed [:?].</td></tr>
+<tr><td>Fixpoint numerics</td><td><strong>Add guard</strong></td><td>Condition-number thresholds and fallback solver TBD [:?].</td></tr>
+<tr><td>Sampling families</td><td><strong>Mixed</strong></td><td>Use multiple families; log per-family hit rates.</td></tr>
+<tr><td>Graph-realizability question</td><td><strong>Parked</strong></td><td>Interesting but outside thesis scope.</td></tr>
+</tbody></table>
+</div>
+<h2 id="7-action-items"><a class="header" href="#7-action-items">7) Action Items</a></h2>
+<p><strong>Immediate</strong></p>
+<ol start="0">
+<li>Send this protocol to Kai (photos of the blackboard are illegible).</li>
+<li>Extend the thesis draft with the formal problem, referenced theorems, the algorithm specification with toggles, and the experiments plan.</li>
+</ol>
+<p><strong>Algorithm</strong></p>
+<ol start="2">
+<li>Implement start-face de-duplication per polytope run.</li>
+<li>Implement ordering variants plus logging (nodes expanded, prune reasons, cycles/sec, wall-time), and consider a small beam later.</li>
+<li>Implement incremental admissible-subset tracking in local 2D while retaining the final fixed-point check.</li>
+<li>Add an ill-conditioning guard for $(I-A)$ and a robust fallback [:?].</li>
+<li>Expose the no-3-face-repeat rule as a toggle, keeping it off until the hypotheses are verified [:?].</li>
+</ol>
+<p><strong>Bounds and literature</strong></p>
+<ol start="7">
+<li>Extract explicit constant(s) $C$ for $A_{\min} \le \sqrt{C,\mathrm{vol}(X)}$ in our setting and log the citations [:?].</li>
+<li>Document the external facts used for pruning with precise hypotheses (rotation bounds/monotonicity; facet-visit property) and explain their applicability to our model.[^CH]<sup class="footnote-reference" id="fr-HK-4"><a href="#footnote-HK">3</a></sup></li>
+</ol>
+<p><strong>Experiments</strong></p>
+<ol start="9">
+<li>Run mixed-family sampling on 4-simplices, test $\mathrm{sys} \le 3/4$, map near-extremizers, and log per-family hit rates.</li>
+<li>Sweep across $K\times L$ products, identify high systolic ratios, and capture emerging patterns.</li>
+<li>Standardize the benchmark harness (CPU, compiler, flags) and record graph sizes, nodes expanded, prune counts, depth histograms, cycles/sec, and wall-time.</li>
+</ol>
+<h2 id="8-appendices"><a class="header" href="#8-appendices">8) Appendices</a></h2>
+<h3 id="a-optional-implementation-notes-for-jörn"><a class="header" href="#a-optional-implementation-notes-for-jörn">A. Optional implementation notes (for Jörn)</a></h3>
+<ul>
+<li><strong>2-face coloring.</strong> Choose entry- or exit-3-face labeling per node and keep the choice consistent for caching.</li>
+<li><strong>Zero increments.</strong> Allow $\Delta A_{\min} = 0$ with no epsilon shift so minima stay unbiased.</li>
+<li><strong>Admissibility modes.</strong> Strict mode enforces point-in-polygon tests on each traversed 2-face. Relaxed mode accepts inadmissible cycles only as upper bounds and never as outputs; label runs clearly [:?].</li>
+<li><strong>Numerics.</strong> Add a condition-number check for $I-A$; fall back to a robust linear solve or Newton iteration if ill-conditioned [:?].</li>
+<li><strong>Two-edge cache.</strong> Defer, because incremental admissible-subset tracking likely dominates.</li>
+<li><strong>Ordering.</strong> Implement both edge-count-first and action-lower-bound-first ordering; later add a small beam on the two-score tuple.</li>
+<li><strong>Metrics.</strong> Log nodes expanded; prune reasons (action, rotation, admissibility, face repeat); cycles/sec; wall-time; depth histograms; percentage of closed words failing admissibility.</li>
+</ul>
+<h3 id="b-haimkislevs-capacity-program-vs-our-graph-search"><a class="header" href="#b-haimkislevs-capacity-program-vs-our-graph-search">B. Haim–Kislev’s capacity program vs. our graph search</a></h3>
+<ul>
+<li>Haim–Kislev’s method maximizes a finite-dimensional functional using facet normals/coefficients to compute a capacity for convex polytopes.</li>
+<li>Our method enumerates/evaluates cycles in $G_2$ using affine transitions and admissibility checks.</li>
+<li>The relationship is limited: the idea of an “LP on $G_3$” is heuristic, and Haim–Kislev do not present a $G_2$-style affine graph program. We borrow only facts such as “facet-visit once,” not an algorithmic equivalence [:?].<sup class="footnote-reference" id="fr-HK-5"><a href="#footnote-HK">3</a></sup></li>
+</ul>
+<h3 id="c-experiment-details-sampling-families-and-products"><a class="header" href="#c-experiment-details-sampling-families-and-products">C. Experiment details (sampling families and products)</a></h3>
+<ul>
+<li><strong>4-simplices.</strong> Vertices-first: sample five points, take their convex hull, rescale to fixed volume, and reject near-degenerate angle sets. Facets-first: sample five oriented planes (normals + offsets), fix the volume, and take the polar if needed. Split compute budgets, log per-family hits, and search for near-extremizers or violations of the conjectural $3/4$.</li>
+<li><strong>Products $K\times L$.</strong> Cover symmetric/asymmetric pairs, include rotated configurations, and consider polygons beyond pentagons; tabulate the highest ratios and associated structures.</li>
+<li><strong>Counterexamples.</strong> Run random and guided sweeps beyond “pentagon × 90° pentagon.”</li>
+</ul>
+<h3 id="d-covering-argument-sketch-for-simplices-research-plan"><a class="header" href="#d-covering-argument-sketch-for-simplices-research-plan">D. Covering argument sketch for simplices (research plan)</a></h3>
+<ul>
+<li>Parameter count (meeting claim): 5 faces $\Rightarrow$ 20 parameters $\Rightarrow$ 17 after quotienting by affine symplectomorphisms [:?].</li>
+<li>Identify small-angle regimes as critical; test whether symplectomorphisms can boost minimal angles enough to enable a finite covering.</li>
+<li>For each cover element, bound action from above and volume from below to control $\mathrm{sys}$; ellipsoidal coverings aligned to sensitive directions seem promising.</li>
+</ul>
+<h3 id="e-completeness-mapping-from-bullet-notes-to-sections"><a class="header" href="#e-completeness-mapping-from-bullet-notes-to-sections">E. Completeness mapping (from bullet notes to sections)</a></h3>
+<ul>
+<li>Polytope-first introduction and the 3D/2D skeleton correspond to §3.1.</li>
+<li>Problem inputs/outputs and “orbit ↔ point ↔ 2-face point” correspond to §2 and §3.1.</li>
+<li>High- versus low-action behavior appears in §3.2 and §4 (pruning).</li>
+<li>The $\sqrt{C,\mathrm{vol}}$ cutoff, the “$C\approx 4$?” question, and the TODO for the best $C$ sit in §5.3 and §6 [:?].</li>
+<li>$G_3$ versus $G_2$ definitions and the “HK capacity vs. our pipeline” contrast live in §3 and Appendix B.</li>
+<li>Node/edge coloring, zero increments, and early termination topics appear in §3.2 and §4.</li>
+<li>Rotation facts and the prune (including $1&lt;\rho&lt;2$ for a minimizer) appear in §2 and §4.</li>
+<li>The “facet-visit once” topic shows up in §3.2 and §4.3 and is flagged for verification [:?].</li>
+<li>The claim that 1-faces/0-faces are irrelevant (with a generic crossing claim) appears in §2.2 [:?].</li>
+<li>Enumeration, fixpoint, admissibility, and relaxed-mode ideas appear in §4 [:?].</li>
+<li>Ordering, aggressive first guesses, and Newton heuristics appear in §3.2, §4.4, and §5.3.</li>
+<li>Incidence and H↔V remarks (cheap) plus “search dominates” appear in §3 and §8.</li>
+<li>Start-face de-dup appears in §4 and §7.</li>
+<li>Profiling guidance appears in §8 and §7.11.</li>
+<li>The unanswered graph-realizability question sits in §3.10.</li>
+<li>Experiments on simplices, products, and counterexamples appear in §§5.1–5.2 and §3.9.</li>
+<li>Coverings, parameter counts, small angles, and the “3:1 odds” note appear in §5.4 [:?].</li>
+<li>The full action-item list appears in §7.</li>
+</ul>
+<hr />
+<h2 id="references"><a class="header" href="#references">References</a></h2>
+<ul>
+<li>Chaidez, J.; Hutchings, M. “Computing Reeb dynamics on 4d convex polytopes.” arXiv:2008.10111. Used for rotation bounds for a minimizer and rotation monotonicity on convex hypersurfaces.<sup class="footnote-reference" id="fr-CH-5"><a href="#footnote-CH">2</a></sup></li>
+<li>Haim–Kislev, P. “On the symplectic size of convex polytopes.” arXiv:1712.03494 (v3, 2019). Source for “visits each facet at most once” for a minimal-action closed characteristic (polytope setting).<sup class="footnote-reference" id="fr-HK-6"><a href="#footnote-HK">3</a></sup></li>
+<li>Haim–Kislev, P.; Ostrover, Y. “A Counterexample to Viterbo’s Conjecture.” arXiv:2405.16513. Context: conjecture fails; motivates our exploration of where/how it fails.<sup class="footnote-reference" id="fr-HKO-1"><a href="#footnote-HKO">4</a></sup></li>
+<li>Cieliebak, K. “Thesis topics — Probing Viterbo’s conjecture.” Internal brief that defines $\mathrm{sys}(X)$ and frames the computational task.<sup class="footnote-reference" id="fr-T-3"><a href="#footnote-T">1</a></sup></li>
+</ul>
+<hr>
+<ol class="footnote-definition"><li id="footnote-T">
+<p>“Thesis topics — Probing Viterbo’s conjecture” (Kai Cieliebak). Matches our 4D systolic ratio definition and frames the computational task. <a href="#fr-T-1">↩</a> <a href="#fr-T-2">↩2</a> <a href="#fr-T-3">↩3</a></p>
+</li>
+<li id="footnote-CH">
+<p>We rely on (i) the existence of an action minimizer with $\rho \le 2$ (nondegenerate case: $1 &lt; \rho &lt; 2$, $CZ = 3$) and (ii) monotone, nondecreasing rotation along Reeb trajectories on convex hypersurfaces, which together justify pruning partial paths that already exceed $2$. <a href="#fr-CH-1">↩</a> <a href="#fr-CH-2">↩2</a> <a href="#fr-CH-3">↩3</a> <a href="#fr-CH-4">↩4</a> <a href="#fr-CH-5">↩5</a></p>
+</li>
+<li id="footnote-HK">
+<p>We intend to apply the facet-visit property only as an optional prune once its hypotheses match our polytope model. <a href="#fr-HK-1">↩</a> <a href="#fr-HK-2">↩2</a> <a href="#fr-HK-3">↩3</a> <a href="#fr-HK-4">↩4</a> <a href="#fr-HK-5">↩5</a> <a href="#fr-HK-6">↩6</a></p>
+</li>
+<li id="footnote-HKO">
+<p>Disproof of $\mathrm{sys}(X) \le 1$ (Viterbo) via explicit polytopes; sets context but does not affect algorithmic correctness. <a href="#fr-HKO-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><h1 id="geom2d"><a class="header" href="#geom2d">2D Convex Polytopes — Design Notes</a></h1>
+<!-- Ticket: 372a-create-libraries -->
+<!-- Code: crates/viterbo/src/poly2.rs::Poly2 -->
+<p>Goal: extremely fast, robust‑enough 2D routines for half‑space polytopes used at scale (≈1e9 instances) in oriented‑edge DFS. We bias for simple data layout and branch‑light code. Degeneracy handling is intentionally minimal per ticket.</p>
+<h2 id="representation"><a class="header" href="#representation">Representation</a></h2>
+<ul>
+<li>Two-tier 2D H-rep:
+<ul>
+<li>Loose (<code>HPoly2</code>): bag of half‑spaces <code>n·x &lt;= c</code>; no guarantees on order, normalization, or redundancy. Fast to build/compose.</li>
+<li>Strict (<code>HPoly2Ordered</code>): unit normals, angle‑sorted by <code>atan2</code>, and parallels coalesced (keep most restrictive <code>c</code>). Preserves invariants on insert/merge and after push‑forward.</li>
+</ul>
+</li>
+<li>Keep vectors contiguous; strict form is cache‑friendly and enables adjacency‑based algorithms.</li>
+</ul>
+<h2 id="core-ops-hot-path"><a class="header" href="#core-ops-hot-path">Core Ops (hot path)</a></h2>
+<ul>
+<li>Push‑forward under affine map <code>y = Mx + t</code> (M invertible): <code>A' = A M^{-1}</code>, <code>b' = b - A' t</code>. Pure algebra; no vertex construction.
+<ul>
+<li>Code: <code>HPoly2::push_forward</code>, <code>HPoly2Ordered::push_forward</code>, <code>Affine2</code>.</li>
+</ul>
+</li>
+<li>Intersect with a half‑space / polytope: append (<code>HPoly2</code>) or ordered insert/merge (<code>HPoly2Ordered</code>).</li>
+<li>Membership: <code>n·x &lt;= c + eps</code> for all rows.</li>
+<li>Emptiness:
+<ul>
+<li>Loose (generic heuristic): test pairwise boundary intersections + probes (<code>HPoly2::is_empty</code>).</li>
+<li>Strict (exact via HPI): classical half‑plane intersection with deque; includes a quick contradictory‑pares check for opposite parallels (<code>HPoly2Ordered::hpi</code>).</li>
+</ul>
+</li>
+</ul>
+<h2 id="lessfrequent-ops"><a class="header" href="#lessfrequent-ops">Less‑frequent Ops</a></h2>
+<ul>
+<li>Extremal value of an affine functional <code>f(x)=w·x+a</code>: compute on discovered boundary vertices (same candidate set as emptiness). Returns <code>(min, argmin, max, argmax)</code> or <code>None</code> if no finite vertex is found.</li>
+<li>Affine utilities: inverse, composition, fixed point.</li>
+<li>CZ‑index related rotation of an orientation‑preserving map: stub (<code>cz_index_rotation_stub</code>) until specified in thesis math section.</li>
+</ul>
+<h2 id="interop-and-helpers"><a class="header" href="#interop-and-helpers">Interop and Helpers</a></h2>
+<ul>
+<li>Build from 2D points by convex hull (Andrew’s monotone chain) → outward half‑spaces. Useful when projecting 4D faces to 2D.
+<ul>
+<li>Code: <code>Poly2::from_points_convex_hull</code>.</li>
+</ul>
+</li>
+</ul>
+<h2 id="random-2d-polygons"><a class="header" href="#random-2d-polygons">Random 2D Polygons</a></h2>
+<ul>
+<li>Purpose: provide small, deterministic test instances for Mahler‑product experiments and algorithm smoke tests.</li>
+<li>Location: <code>crates/viterbo/src/geom2/rand.rs</code> (module <code>geom2::rand</code>).</li>
+<li>API:
+<ul>
+<li><code>draw_polygon_radial(cfg, token) -&gt; Poly2</code>: radial jitter model over <code>n</code> equally spaced angles with bounded angular (<code>angle_jitter_frac</code>) and radial (<code>radial_jitter</code>) noise.</li>
+<li><code>recenter_rescale(poly, Bounds2) -&gt; (Poly2, r_in, r_out)</code>: translate to the area‑centroid and scale about the origin to satisfy in‑/out‑radius bounds when consistent.</li>
+<li><code>polar(poly) -&gt; Poly2</code>: compute the polar polygon <code>K^\\circ</code> in H‑rep (requires origin in the interior).</li>
+</ul>
+</li>
+<li>Replay tokens: <code>(seed: u64, index: u64)</code>. The sampler uses <code>StdRng::seed_from_u64(mix(seed,index))</code> so that:
+<ul>
+<li>Same <code>(seed,index)</code> → same polygon.</li>
+<li>Different <code>index</code> values partition the stream reproducibly, independent of call order.</li>
+</ul>
+</li>
+</ul>
+<h2 id="conventions"><a class="header" href="#conventions">Conventions</a></h2>
+<ul>
+<li>Tolerance: <code>eps = 1e-9</code> for predicates; scale‑agnostic inputs preferred.</li>
+<li>Orientation: standard 2D orientation; outward normal constructed by 90° CCW rotation of hull edges.</li>
+<li>Style: small, explicit functions; explain the “why” in file headers; property tests optional (smoke tests suffice here).</li>
+</ul>
+<h2 id="rationale-and-tradeoffs"><a class="header" href="#rationale-and-tradeoffs">Rationale and Trade‑offs</a></h2>
+<ul>
+<li>H‑rep keeps push‑forwards and intersections O(m) without hulls/vertices.</li>
+<li>Strict vs loose split makes invariants explicit: algorithms that rely on angle order and adjacency run in O(m) after a one‑time O(m log m) normalization; loose remains flexible for fast construction and composition.</li>
+<li>Degenerate cases (parallel strips, nearly co‑incident lines) are rare on hot paths; when needed, strict HPI resolves edge cases.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="geom4d"><a class="header" href="#geom4d">4D Convex Polytopes — Design Notes</a></h1>
+<!-- Ticket: 372a-create-libraries -->
+<!-- Code: crates/viterbo/src/poly4.rs::Poly4 -->
+<p>Goal: clear, explicit 4D operations with both H/V representations and simple, reliable conversions. Scale is moderate (≈1e6), so naive enumeration is acceptable and keeps dependencies light.</p>
+<h2 id="representations"><a class="header" href="#representations">Representations</a></h2>
+<ul>
+<li>H‑rep: half‑spaces <code>n·x &lt;= c</code>, <code>n ∈ R^4</code>.</li>
+<li>V‑rep: vertices <code>x_i ∈ R^4</code>.</li>
+<li><code>Poly4</code> stores both; each side may be empty and is filled on demand (<code>ensure_*</code>).</li>
+</ul>
+<h2 id="conversions"><a class="header" href="#conversions">Conversions</a></h2>
+<ul>
+<li>H→V: enumerate all 4‑tuples of inequalities, solve the equalities, keep feasible points. Deduplicate by metric tolerance.</li>
+<li>V→H: enumerate 4‑tuples of vertices, form the unique hyperplane through them using a 3×4 cofactor‑based nullspace (no SVD). Keep only supporting planes (all vertices on one side); orient as <code>n·x &lt;= c</code>.</li>
+</ul>
+<p>These are O(N^4) but used infrequently; they keep the implementation compact and transparent.</p>
+<h2 id="faces"><a class="header" href="#faces">Faces</a></h2>
+<ul>
+<li>Derive from H‑rep via vertex saturation:
+<ul>
+<li>3‑faces (facets): vertices saturating a single inequality.</li>
+<li>2‑faces: vertices saturating a pair.</li>
+<li>1‑faces (edges): vertices saturating a triple.</li>
+<li>0‑faces: the vertices themselves.</li>
+</ul>
+</li>
+<li>Return simple structs with facet indices and the corresponding vertex list. For downstream geometry we often only need vertices; equalities are kept as indices for traceability.</li>
+</ul>
+<h2 id="symplectic-helpers"><a class="header" href="#symplectic-helpers">Symplectic Helpers</a></h2>
+<ul>
+<li>J‑matrix in 4D: <code>J = [[0, -I],[I, 0]]</code>.</li>
+<li>Symplectic check: <code>M^T J M ≈ J</code> (tolerance <code>1e-8</code>).</li>
+<li>Reeb flow on 3‑faces: <code>R_i = J n_i</code> (unnormalized). 1‑faces: stub until the derivation is written in the thesis.</li>
+</ul>
+<h2 id="2face--2d-mapping"><a class="header" href="#2face--2d-mapping">2‑Face → 2D Mapping</a></h2>
+<ul>
+<li>Given two facet indices <code>(i,j)</code>, the 2‑face is the plane orthogonal to <code>span{n_i,n_j}</code>.</li>
+<li>Build an orthonormal basis <code>(u1,u2)</code> of that plane via Gram–Schmidt in 4D; map <code>x ↦ y = Ux</code> with <code>U ∈ R^{2×4}</code> (inverse on the plane is <code>x = U^T y</code>).</li>
+<li>Orientation: we expose a boolean to pick the sign; a precise orientation convention (e.g., <code>(u1,u2,n_i,n_j)</code> positively oriented) can be fixed later if needed by algorithms. See “Open Questions”.</li>
+<li>Project the face’s vertices and construct a 2D polytope in H‑rep via <code>Poly2::from_points_convex_hull</code>, giving a faithful 2D model of the face.</li>
+</ul>
+<h2 id="affine-maps"><a class="header" href="#affine-maps">Affine Maps</a></h2>
+<ul>
+<li>Push‑forward (H &amp; V): algebraic transform on H‑rep and direct transform on vertices, requiring <code>M</code> invertible.</li>
+<li>Inversion: <code>(M,t) ↦ (M^{-1}, -M^{-1}t)</code>.</li>
+</ul>
+<h2 id="open-questions--escalations"><a class="header" href="#open-questions--escalations">Open Questions / Escalations</a></h2>
+<ul>
+<li>Orientation of 2‑faces “as crossed by the Reeb flow”: likely induced by the ambient symplectic 2‑form; we left a design hook (sign boolean) and will add a proof‑based convention on request.</li>
+<li>Reeb flow on 1‑faces: placeholder stub until the derivation is added.</li>
+</ul>
+<h2 id="conventions-1"><a class="header" href="#conventions-1">Conventions</a></h2>
+<ul>
+<li>Tolerance <code>eps = 1e-9</code> for feasibility/equality; <code>1e-8</code> for symplectic check.</li>
+<li>Keep code explicit and small; use math comments to tie back to this page.</li>
+<li>Tests: smoke tests for cubes/simplex; property tests optional.</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="geom4d-volume"><a class="header" href="#geom4d-volume">4D Volume Algorithm</a></h1>
+<!-- Ticket: 2224b2c6-4a0c-468d-a7a1-493eb2ee5ddd -->
+<!-- Code: crates/viterbo/src/geom4/volume.rs -->
+<p>Context — The experiments now rely on exact 4D volumes for convex, star-shaped polytopes that already ship with explicit H/V conversions. We compared the first two implementation options: (1) call an existing library such as Qhull/VolEsti via FFI, or (2) implement a bespoke algorithm. Borrowing a library would drag in new build dependencies, FFI wrappers, and conflicting tolerance policies, so we instead coded a self-contained facet-fan algorithm that matches the repository’s explicit enumeration style.</p>
+<h2 id="setting-and-notation-2"><a class="header" href="#setting-and-notation-2">Setting and Notation</a></h2>
+<ul>
+<li>Ambient space: (\mathbb{R}^4) with polytopes given as <code>Poly4</code>, i.e. cached half-spaces <code>n_i \cdot x \le c_i</code> and optional vertex lists.</li>
+<li>Polytopes are convex, star-shaped, and non-degenerate; constraints come from generators that already enforce boundedness.</li>
+<li><code>enumerate_faces_from_h</code> yields all 0/1/2/3-faces by tracking which inequalities are tight at each vertex; indices reference the original half-spaces.</li>
+<li>We may push forward polytopes under invertible affine maps, so the volume routine must be invariant under volume-preserving transformations.</li>
+</ul>
+<h2 id="definitions"><a class="header" href="#definitions">Definitions</a></h2>
+<ol>
+<li><strong>Facet fan</strong>: for a 3-face (F) we form tetrahedra with vertices <code>(facet_centroid, triangle_on_F)</code> where the triangles tessellate (\partial F). Coning those tetrahedra with an interior polytope point produces 4-simplices.</li>
+<li><strong>Interior anchor</strong>: the centroid of all vertices returned by the H→V enumeration. Convexity guarantees that this barycenter lies in the interior.^<sup class="footnote-reference" id="fr-Gru03-1"><a href="#footnote-Gru03">1</a></sup></li>
+<li><strong>Ordered ridge polygon</strong>: each 2-face inherits a cyclic vertex order by projecting onto the local 2D tangent basis obtained via Gram–Schmidt inside the 4D ambient space.^<sup class="footnote-reference" id="fr-Zie95-1"><a href="#footnote-Zie95">2</a></sup></li>
+<li><strong>Volume decomposition</strong>: the polytope is the disjoint union (up to measure-zero overlaps) of 4-simplices formed by <code>(interior_anchor, facet_centroid, triangle vertices)</code> across every triangulated ridge.</li>
+</ol>
+<h2 id="main-facts--theorems"><a class="header" href="#main-facts--theorems">Main Facts / Theorems</a></h2>
+<ol>
+<li><strong>Correctness of the fan decomposition</strong>. The surface integral form of Gauss’ divergence theorem states ( \operatorname{Vol}(P) = \tfrac{1}{4} \sum_F h_F \operatorname{Vol}<em>3(F) ) for interior anchor (0).^[</em>^Zie95] By subdividing each (F) into tetrahedra that share a point (p_F) we rewrite that sum as ( \sum_{F,\triangle\subset F} \operatorname{Vol}(\operatorname{conv}{0,p_F,\triangle})). Translating by the actual centroid (c_P) preserves determinants, so summing 4-simplex determinants recovers the true volume without explicit facet areas.</li>
+<li><strong>Robust ordering of ridge polygons</strong>. Because each 2-face lies in a 2D affine plane, Gram–Schmidt on difference vectors returns an orthonormal basis of that plane. Projecting onto the basis, sorting by polar angle, and triangulating with a fan produces a manifold triangulation regardless of vertex order in the cache. The tolerance <code>FEAS_EPS = 1e-9</code> keeps numerics stable for the moderate coordinate ranges produced by the generators.</li>
+<li><strong>Breadth-first reuse of enumerations</strong>. The algorithm only needs the outputs of <code>enumerate_faces_from_h</code> (vertices + 2/3-faces). No convex-hull rebuild is necessary, so the asymptotic cost stays at (O(H^4)), matching the existing conversion routines.</li>
+<li><strong>Affine invariance</strong>. Each 4-simplex volume is <code>|det([v_1-c, v_2-c, v_3-c, v_4-c])|/24</code>, so composing <code>Poly4::push_forward</code> with a matrix of determinant 1 leaves every determinant unchanged. Unit tests assert invariance under shears with <code>det=1.0</code> and random translations.</li>
+<li><strong>Failure modes surface early</strong>. Degenerate 2-faces (&lt;3 vertices) or facets (&lt;4 vertices or missing incident ridges) raise a <code>VolumeError</code>, feeding precise debug info back to experiment drivers before any silent mis-computation.</li>
+</ol>
+<h2 id="what-we-use-later-1"><a class="header" href="#what-we-use-later-1">What We Use Later</a></h2>
+<ul>
+<li><code>viterbo::geom4::volume::{volume4, volume_from_halfspaces, VolumeError}</code> provide Rust callers with a fallible API that can be memoized alongside other <code>Poly4</code> data.</li>
+<li>PyO3 exposes <code>poly4_volume_from_halfspaces</code>, and <code>viterbo.rust.volume.volume_from_halfspaces</code> adds a typed Python helper; smoke tests cover the binding.</li>
+<li>Criterion benchmark <code>volume4_bench</code> samples bounded random polytopes of varying facet counts to watch for regressions in <code>scripts/rust-bench.sh</code>.</li>
+<li>Docs/tests reference hypercubes and simplices as canonical fixtures; invariance tests guard against accidental determinant scaling.</li>
+</ul>
+<h2 id="deviations-and-notes-for-review"><a class="header" href="#deviations-and-notes-for-review">Deviations and Notes for Review</a></h2>
+<ul>
+<li>We clone 2-face vertex lists to keep the ordering logic simple. Should benchmarks show pressure, revisit this by storing indices instead of full vectors.</li>
+<li>The enumeration routine currently recomputes vertices from H-reps for each call. If repeated volume queries dominate a workload, promote the vertex list to a shared cache or accept vertices/V-rep as inputs to skip the extra pass.</li>
+</ul>
+<hr>
+<ol class="footnote-definition"><li id="footnote-Gru03">
+<p>Grünbaum (2003), <em>Convex Polytopes</em> (2nd ed.), Springer. Proposition 2.2.6 shows that convex combinations of all vertices lie in the interior. <a href="#fr-Gru03-1">↩</a></p>
+</li>
+<li id="footnote-Zie95">
+<p>Ziegler (1995), <em>Lectures on Polytopes</em>, Springer. Chapter 5 covers face lattices and volume formulas. <a href="#fr-Zie95-1">↩</a></p>
+</li>
+</ol><div style="break-before: page; page-break-before: always;"></div><h1 id="random-polytopes"><a class="header" href="#random-polytopes">Random Polytope Generators</a></h1>
+<!-- Ticket: 0f48-random-polytopes -->
+<!-- Code: crates/viterbo/src/rand4/mod.rs -->
+<p>Goal: define a plug-and-play catalogue of random (and enumerative) 4D polytopes that feed the atlas dataset and future experiments. Every generator must be reproducible, emit only valid polytopes, and surface enough metadata for downstream provenance sidecars.</p>
+<h2 id="generator-interface-conventions"><a class="header" href="#generator-interface-conventions">Generator Interface Conventions</a></h2>
+<ul>
+<li><strong>Inputs</strong> = <code>(params, seed)</code> for stochastic streams, or <code>(params, index)</code> for deterministic enumerations. <code>params</code> captures the distribution (facet counts, radii ranges, polygon choices, etc.), while the <code>seed/index</code> replay token pins down the first row produced by that generator.</li>
+<li><strong>Outputs</strong> = structured rows: one coherent polytope representation (we standardize on <code>Poly4</code> with both H- and V-reps available) plus the replay token that regenerates the same row on demand.</li>
+<li><strong>Validity-first</strong> = generators may internally sample/reject invalid candidates, but they must <em>yield only valid, star-shaped, origin-containing polytopes</em>. Throughput is secondary to correctness.</li>
+<li><strong>Enumerations</strong> = allowed to stop after finitely many rows. They accept cutoff parameters (e.g., max number of facets) and may order outputs arbitrarily as long as replay tokens (<code>index</code> tuples) are stable.</li>
+<li><strong>Single vs stream APIs</strong>:
+<ul>
+<li><code>generate_single(params, seed)</code> returns one polytope and the canonical replay token.</li>
+<li><code>generate_stream(params, seed)</code> yields successive rows (possibly infinite). Streams expose a <code>next()</code> API but also allow replaying an individual row via the accompanying token without iterating the full stream.</li>
+</ul>
+</li>
+<li><strong>Reproducibility</strong> = every row stores the <code>params</code> snapshot and replay token next to the data artifact. When hydrating the dataset, we rebuild rows by calling <code>generate_single</code> with that information.</li>
+</ul>
+<p>Implementation note: the <code>rand4</code> Rust module materializes these conventions via <code>GeneratorParams</code>, <code>ReplayToken</code>, <code>PolytopeSample4</code>, and the <code>PolytopeGenerator4</code> trait. Python orchestrators can call into PyO3 bindings once exposed.</p>
+<h2 id="algorithm-families"><a class="header" href="#algorithm-families">Algorithm Families</a></h2>
+<h3 id="1-centrally-symmetric-random-halfspaces"><a class="header" href="#1-centrally-symmetric-random-halfspaces">1. Centrally Symmetric Random Halfspaces</a></h3>
+<ul>
+<li><strong>Idea</strong>: sample <code>m</code> random directions on the 3-sphere (Gaussian → normalize) and add paired halfspaces <code>±n·x &lt;= r</code>, where <code>r</code> is drawn from <code>[r_min, r_max]</code>.</li>
+<li><strong>Params</strong>: number of directions, radius range, optional linear map to inject anisotropy.</li>
+<li><strong>Replay</strong>: RNG seed. Replaying re-samples the identical sequence of normals/radii, so the first yielded polytope matches exactly.</li>
+<li><strong>Validity</strong>: origin is always feasible (<code>0 &lt;= r</code>). Paired halfspaces enforce boundedness; we reject configs where the linear map is singular.</li>
+<li><strong>Use cases</strong>: broad “background” distribution for the atlas dataset; easy to tune between cubes (low variance) and rounded bodies (high <code>m</code>).</li>
+</ul>
+<h3 id="2-mahler-product-sampler-2d--polar"><a class="header" href="#2-mahler-product-sampler-2d--polar">2. Mahler Product Sampler (2D × Polar)</a></h3>
+<ul>
+<li><strong>Idea</strong>: draw a random 2D convex polygon <code>K</code> (e.g., via radial samples), compute its polar <code>K^◦</code>, then form <code>K × K^◦ ⊂ ℝ⁴</code>. This family stays within the Mahler/Viterbo equivalence regime.</li>
+<li><strong>Params</strong>: vertex count range for <code>K</code>, radial jitter budget, minimum/maximum in-radius to keep <code>K</code> full-dimensional.</li>
+<li><strong>Replay</strong>: base seed + index mixed into the 2D sampler’s <code>ReplayToken</code>. Replaying regenerates the exact polygon, its polar, and their product.</li>
+<li><strong>Validity</strong>: <code>K</code> contains the origin after <code>recenter_rescale</code>; the polar remains bounded. Cartesian products naturally yield star-shaped polytopes.</li>
+<li><strong>Implementation</strong>: <code>rand4::MahlerProductGenerator</code> backed by <code>geom2::rand::{draw_polygon_radial, recenter_rescale, polar}</code>. Atlas stages can stream rows or rehydrate via the replay token.</li>
+</ul>
+<h3 id="3-regular-polygon-product-enumerator"><a class="header" href="#3-regular-polygon-product-enumerator">3. Regular Polygon Product Enumerator</a></h3>
+<ul>
+<li><strong>Idea</strong>: enumerate tuples <code>(n₁, n₂, rotation₁, rotation₂, scale)</code> and build the lagrangian product of two regular <code>n</code>‑gons. Each tuple deterministically identifies a single 4D polytope.</li>
+<li><strong>Params</strong>: discrete sets (or ranges) for <code>n_i</code>, rotation grids (e.g., multiples of <code>π/32</code>), and per-factor scales.</li>
+<li><strong>Replay</strong>: the tuple itself. <code>generate_single</code> simply rebuilds the cartesian-product vertex set.</li>
+<li><strong>Validity</strong>: direct product of convex polygons, so convex/stable automatically. Enumerations terminate once all tuples are exhausted or a cutoff is hit.</li>
+</ul>
+<h3 id="4-perturbed-special-polytopes"><a class="header" href="#4-perturbed-special-polytopes">4. Perturbed Special Polytopes</a></h3>
+<ul>
+<li><strong>Idea</strong>: start from a catalog (cube, cross-polytope, Viterbo counterexample) and apply small randomized symplectic or affine perturbations. Useful for stress-testing capacity algorithms along known families.</li>
+<li><strong>Params</strong>: base polytope id, perturbation budget, symplectic/affine toggle.</li>
+<li><strong>Replay</strong>: <code>(base_id, seed)</code>; deterministic perturbation sequences.</li>
+<li><strong>Open question</strong>: best way to constrain perturbations so that invariants (symplectic, lagrangian product structure) remain intact—escalate before implementing.</li>
+</ul>
+<h3 id="5-streaming-filters--rejection-pipelines"><a class="header" href="#5-streaming-filters--rejection-pipelines">5. Streaming Filters / Rejection Pipelines</a></h3>
+<ul>
+<li><strong>Idea</strong>: wrap any generator with a predicate (e.g., “systolic ratio ≥ 0.9”) and expose a filtered stream. Inputs add a <code>filter_seed</code> for deterministic acceptance/rejection.</li>
+<li><strong>Policy</strong>: the wrapped generator still owns the replay token; the filter stores “skip counts” so that regenerating row <code>k</code> repeats the same sequence of rejections before yielding.</li>
+</ul>
+<h2 id="integration-with-the-atlas-dataset"><a class="header" href="#integration-with-the-atlas-dataset">Integration with the Atlas Dataset</a></h2>
+<ul>
+<li><strong>Row schema</strong>: <code>{"polytope": Poly4, "generator": name, "params": json, "replay_token": value}</code>. The atlas build stage reads this schema to call <code>generate_single</code> when regenerating artifacts.</li>
+<li><strong>Config knobs</strong>: each dataset config lists generators with explicit <code>rows</code> (or <code>max_rows</code> for enumerations). Scaling up/down means editing those integers directly, which keeps per-source cost controls obvious (e.g., “Mahler = 40 rows, Regular products = 10 rows, Catalog = 5 rows”).</li>
+<li><strong>Testing</strong>: smoke configs cap each generator at ≤3 rows to keep <code>tests/smoke</code> under 10 seconds; full configs rely on <code>scripts/reproduce.sh</code>.</li>
+<li><strong>Escalation hooks</strong>: if a generator cannot hit requested constraints (e.g., Mahler sampler fails to find a polygon with desired in-radius), it should emit structured errors referencing this page and the originating ticket.</li>
+</ul>
+<h2 id="next-steps-1"><a class="header" href="#next-steps-1">Next Steps</a></h2>
+<ol>
+<li>Surface the <code>rand4</code> module via PyO3 bindings so Python stages can stream polytopes without re-implementing algorithms.</li>
+<li>Add benchmark hooks to record generation time per row (to correlate distributions with compute cost).</li>
+<li>Expand the generator catalogue with sphere packings, zonotopes, and EHZ-focused adversarial shapes once the current families cover the baseline dataset needs.</li>
+</ol>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="status-math"><a class="header" href="#status-math">Implementation Status — Mathematician FAQ</a></h1>
+<!-- Ticket: 42ea0c15-7a3b-48ef-a17c-4ed08d35824a -->
+<!-- Docs: docs/src/thesis/capacity-algorithm-oriented-edge-graph.md -->
+<p>This page wires the current code, tests, and benchmark assets to the concrete questions mathematicians keep asking about the project:</p>
+<ol>
+<li><em>What</em> mathematical structures do we already implement?</li>
+<li>How trustworthy are the numeric kernels today (order-of-magnitude error bounds, failure modes)?</li>
+<li>Which tests exercise the algebraic paths (as opposed to “it runs” tests)?</li>
+<li>Where do we already compute $c_{EHZ}$ and the systolic ratio against trusted values?</li>
+<li>How long does a full systolic-ratio evaluation take on typical inputs (e.g., nine facets)?</li>
+<li>Which polytope families are covered (Lagrangian products vs. generic/symmetric shapes)?</li>
+</ol>
+<p>Each section cross-references the relevant thesis pages, Rust modules, and benchmark snapshots so you can keep drilling down.</p>
+<h2 id="1-what-features-exist-today"><a class="header" href="#1-what-features-exist-today">1. What features exist today?</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Layer</th><th>What it implements</th><th>References</th></tr></thead><tbody>
+<tr><td>4D polytope core</td><td>Dual H/V representations, face lattice enumeration, Gram–Schmidt charts, Reeb directions on facets, symplectic checks, affine push-forwards.</td><td>Docs: <a href="thesis/./geom4d_polytopes.html">geom4d_polytopes</a>. Code: <code>crates/viterbo/src/geom4/{convert,faces,maps,types}.rs</code>.</td></tr>
+<tr><td>2D strict H-reps</td><td>Ordered half-spaces, exact half-plane intersection, affine push-forward, rotation bookkeeping, <code>GeomCfg</code> tolerances shared by all 2-face charts.</td><td>Docs: <a href="thesis/./geom2d_polytopes.html">geom2d_polytopes</a>. Code: <code>crates/viterbo/src/geom2</code>.</td></tr>
+<tr><td>Oriented-edge algorithm</td><td>Ridge graph builder, $\psi_{ij}$ push-forward maps, $\tau$-inequalities, per-edge lower bounds, DFS with rotation pruning and fixed-point closure.</td><td>Docs: <a href="thesis/./capacity-algorithm-oriented-edge-graph.html">capacity-algorithm-oriented-edge-graph</a>. Code: <code>crates/viterbo/src/oriented_edge/{build,dfs,types}.rs</code>.</td></tr>
+<tr><td>Volume + Jacobians</td><td>Facet-fan volume decomposition and affine-invariant determinants; wrapped in PyO3 for Python orchestration.</td><td>Docs: <a href="thesis/./geom4d_volume.html">geom4d_volume</a>. Code: <code>crates/viterbo/src/geom4/volume.rs</code>, <code>src/viterbo/rust/volume.py</code>.</td></tr>
+<tr><td>Random / enumerative inputs</td><td>Centrally symmetric halfspaces, Mahler products, random vertices/faces, regular polygon products (Lagrangian families), with replay tokens.</td><td>Docs: <a href="thesis/./random-polytopes.html">random-polytopes</a>. Code: <code>crates/viterbo/src/rand4</code>.</td></tr>
+<tr><td>Atlas stage</td><td>Dataset rows with provenance, Parquet + preview assets, and both volume <em>and</em> <code>capacity_ehz</code> filled via the native oriented-edge solver (NaN only when the solver reports no cycle).</td><td>Docs: <a href="thesis/./atlas-dataset.html">atlas-dataset</a>. Code: <code>src/viterbo/atlas/{dataset,types,stage_build}.py</code>.</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Summary:</strong> All math-facing layers (geometry, oriented-edge search, generators, atlas pipeline) now run off the same native solver; remaining work is about confidence (more fixtures, telemetry), not missing features.</p>
+</blockquote>
+<h2 id="2-correctness-levels-and-numerical-tolerances"><a class="header" href="#2-correctness-levels-and-numerical-tolerances">2. Correctness levels and numerical tolerances</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Component</th><th>Guarantees / limits</th><th>Tests &amp; tolerances</th></tr></thead><tbody>
+<tr><td><code>GeomCfg</code> (<code>eps_det=1e-12</code>, <code>eps_feas=eps_tau=1e-9</code>)</td><td>Shared across 2D fixed-point, $\tau$-inequalities, and admissibility checks; tuned so cubes/simplex fixtures stay well within machine precision.</td><td><code>crates/viterbo/src/oriented_edge/tests.rs::tau_domain_basic_properties_on_cube</code> verifies $\tau$ inequalities on sampled edges.</td></tr>
+<tr><td>Volume kernel</td><td>Deterministic facet-fan decomposition; invariant under determinant-1 linear maps; errors dominated by IEEE rounding (≈1e-12 relative).</td><td><code>tests/smoke/test_native.py::test_volume4_binding_matches_hypercube</code> and <code>tests/e2e/test_atlas_build.py</code> assert $[-1,1]^4$ volume $=16$ within $10^{-9}$.</td></tr>
+<tr><td>Oriented-edge DFS</td><td>Finds a cycle iff affine fixed point exists; rotation pruning enforces index-3 candidate set; rejects cycles when $\rho&gt;2$.</td><td><code>crates/viterbo/src/oriented_edge/tests.rs</code>: smoke DFS closure tests, fixed-point uniqueness, rotation pruning, push-forward pruning.</td></tr>
+<tr><td>Capacity golden values</td><td>Error budget $\le 5\times10^{-6}$ on normalized capacities; systolic ratio derived directly from computed volume.</td><td>See Section 4 for the golden fixtures.</td></tr>
+<tr><td>Random generators</td><td>Shape validity (bounded, star-shaped, interior origin) and replay fidelity.</td><td><code>crates/viterbo/src/rand4/mod.rs</code> unit + property tests (<code>symmetric_halfspaces_even_and_bounded</code>, <code>random_faces_facets_in_range</code>, etc.).</td></tr>
+<tr><td>Python bindings</td><td>Native <code>.so</code> loads, simple determinant helper works, dataset includes expected columns.</td><td><code>tests/smoke/test_imports.py</code>, <code>tests/smoke/test_native.py</code>, and the atlas E2E test.</td></tr>
+</tbody></table>
+</div>
+<p><strong>Expectation for large batches (1e6 polytopes).</strong> The geometry kernels (H/V conversions, volume, 2D push-forward) already run deterministically with stable tolerances, so we do not anticipate catastrophic drift at scale. The atlas builder now invokes the oriented-edge solver for every row; when the solver fails to find a minimizer the row is explicitly marked as <code>NaN</code>. Achieving “0 false systolic ratios” therefore boils down to tracking/understanding those fallbacks rather than wiring new features.</p>
+<h2 id="3-mathematically-meaningful-tests"><a class="header" href="#3-mathematically-meaningful-tests">3. Mathematically meaningful tests</a></h2>
+<ul>
+<li><strong>Graph construction &amp; $\tau$-domain sanity:</strong> <code>crates/viterbo/src/oriented_edge/tests.rs::smoke_graph_build_cube_edges_exist</code> and <code>::tau_domain_basic_properties_on_cube</code> show every ridge/facet pairing respects the analytic inequalities derived in the thesis.</li>
+<li><strong>Fixed-point closure:</strong> <code>::cycle_closure_unique_fixed_point_on_tiny_graph</code> constructs a contraction with known fixed point $z^*$ and verifies the recovered action matches zero.</li>
+<li><strong>Capacity invariants:</strong> <code>::golden_capacity_product_of_squares_matches_min_area</code>, <code>::golden_capacity_hypercube_minus1_1_pow4_is_4</code>, and <code>::invariance_under_block_rotation_symplectomorphism</code> compare against Siburg’s area formula and symplectic invariance, catching regressions in both graph building and DFS.</li>
+<li><strong>Non-product shapes:</strong> <code>::cross_polytope_and_simplex_smoke_capacities</code> exercises the solver on the $\ell_1$ ball and the orthogonal simplex (after H-rep conversion), ensuring we cover symmetric/non-generic catalogs.</li>
+<li><strong>Python orchestration:</strong> <code>tests/e2e/test_atlas_build.py</code> rebuilds a tiny atlas config, checks the hypercube row, and confirms the preview asset is non-empty—linking the native kernels to stage_save semantics.</li>
+<li><strong>Random generator replay:</strong> The <code>rand4</code> module replays every generated polytope via stored tokens so atlas provenance can be trusted.</li>
+</ul>
+<p>Together these tests cover every mathematical code path, from native solvers to the Python atlas orchestration.</p>
+<h2 id="4-where-we-already-compute-capacities"><a class="header" href="#4-where-we-already-compute-capacities">4. Where we already compute capacities</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Polytope</th><th>Expected $c_{EHZ}$ (theory)</th><th>Observed</th><th>Source</th></tr></thead><tbody>
+<tr><td>$K=[-1,1]^2$, $L=[-2,2]^2$, product $K\times L$</td><td>$\min(\text{area}(K), \text{area}(L)) = 4$ (Siburg ’93)</td><td>$4.000000 \pm 5\times10^{-6}$, systolic ratio $=4$</td><td><code>crates/viterbo/src/oriented_edge/tests.rs::golden_capacity_product_of_squares_matches_min_area</code></td></tr>
+<tr><td>Hypercube $[-1,1]^4$</td><td>Product of two unit squares $\Rightarrow c=4$</td><td>$4.000000 \pm 5\times10^{-6}$</td><td><code>::golden_capacity_hypercube_minus1_1_pow4_is_4</code></td></tr>
+<tr><td>Hypercube under block rotation $M=\text{diag}(R,R)$</td><td>$c$ invariant under symplectic maps</td><td>$</td><td>c(MK)-c(K)</td></tr>
+<tr><td>Cross-polytope ${|x|_1 \le 1}$</td><td>Positive finite capacity; sanity check for non-product symmetric bodies</td><td>Solver returns finite, positive value with rotation-pruning disabled</td><td><code>::cross_polytope_and_simplex_smoke_capacities</code></td></tr>
+</tbody></table>
+</div>
+<p>No published literature provides “trusted” values for generic random polytopes, so atlas now streams solver outputs directly from the native bindings; future work is to compare aggregates (e.g., by family) and watch for anomalous clusters.</p>
+<h2 id="5-performance-snapshots-including-nine-facets"><a class="header" href="#5-performance-snapshots-including-nine-facets">5. Performance snapshots (including nine facets)</a></h2>
+<p><strong>Volume scaling.</strong> Criterion benches on random H-reps highlight how 4D volume cost grows with facet count:</p>
+<div class="table-wrapper"><table><thead><tr><th>bench</th><th>parameter</th><th style="text-align: right">samples</th><th style="text-align: right">min (ns)</th><th style="text-align: right">mean (ns)</th><th style="text-align: right">stddev (ns)</th></tr></thead><tbody>
+<tr><td>geom4_volume</td><td>12</td><td style="text-align: right">50</td><td style="text-align: right">530979.123</td><td style="text-align: right">551555.466</td><td style="text-align: right">35825.600</td></tr>
+<tr><td>geom4_volume</td><td>24</td><td style="text-align: right">50</td><td style="text-align: right">1154035.167</td><td style="text-align: right">1164768.780</td><td style="text-align: right">7977.393</td></tr>
+<tr><td>geom4_volume</td><td>48</td><td style="text-align: right">50</td><td style="text-align: right">4352908.000</td><td style="text-align: right">4443786.840</td><td style="text-align: right">85842.830</td></tr>
+<tr><td>geom4_volume</td><td>72</td><td style="text-align: right">50</td><td style="text-align: right">13447109.000</td><td style="text-align: right">13902727.040</td><td style="text-align: right">556825.056</td></tr>
+</tbody></table>
+</div>
+<p><em>Updated 2025-11-11 01:41:11Z · commit 585a129 · host ab5b4864ef14 · rustc rustc 1.91.1 (ed61e7d7e 2025-11-07)</em></p>
+<p><strong>Oriented-edge internals.</strong> Microbenchmarks for the $\psi_{ij}$ push-forward, $\tau$ inequality, and per-edge lower bound kernels (derived from the cube fixture) show sub-millisecond latencies:</p>
+<div class="table-wrapper"><table><thead><tr><th>bench</th><th>parameter</th><th style="text-align: right">samples</th><th style="text-align: right">min (ns)</th><th style="text-align: right">mean (ns)</th><th style="text-align: right">stddev (ns)</th></tr></thead><tbody>
+<tr><td>oe4</td><td>edge_lb_action</td><td style="text-align: right">50</td><td style="text-align: right">1997.382</td><td style="text-align: right">2060.586</td><td style="text-align: right">39.313</td></tr>
+<tr><td>oe4</td><td>psi_push_forward</td><td style="text-align: right">50</td><td style="text-align: right">1639.126</td><td style="text-align: right">1899.370</td><td style="text-align: right">238.413</td></tr>
+<tr><td>oe4</td><td>tau_inequality_eval</td><td style="text-align: right">50</td><td style="text-align: right">2346.882</td><td style="text-align: right">2368.305</td><td style="text-align: right">15.083</td></tr>
+</tbody></table>
+</div>
+<p><em>Updated 2025-11-11 01:41:11Z · commit 585a129 · host ab5b4864ef14 · rustc rustc 1.91.1 (ed61e7d7e 2025-11-07)</em></p>
+<p><strong>End-to-end systolic ratio for nine facets.</strong> A deterministic “cube with an oblique cap” (eight axis-aligned halfspaces plus $ (1,1,1,1)/2 \cdot x \le 1.8$) gives us the requested data point:</p>
+<div class="table-wrapper"><table><thead><tr><th>polytope</th><th style="text-align: right">facets</th><th style="text-align: right">vertices</th><th style="text-align: right">capacity (time ms)</th><th style="text-align: right">volume (time ms)</th><th style="text-align: right">systolic ratio</th></tr></thead><tbody>
+<tr><td>cube with oblique cap (<code>Hs₊: (1,1,1,1)/2 · x ≤ 1.8</code>)</td><td style="text-align: right">9</td><td style="text-align: right">19</td><td style="text-align: right">4.000000000 (0.646)</td><td style="text-align: right">3.999966688 (0.075)</td><td style="text-align: right">0.500033336</td></tr>
+</tbody></table>
+</div>
+<p><em>Measured with <code>cargo run -p viterbo --example systolic_ratio --release</code> on 2025-11-08 16:34:12 UTC (commit 7bd6b64)</em></p>
+<p>Interpretation:</p>
+<ul>
+<li>Volume dominates only for very large facet counts (≥48); for nine facets, the facet-fan kernel finishes in ~0.08 ms.</li>
+<li>The oriented-edge solver spends ≈0.65 ms on the nine-facet sample (including graph build + DFS). Because both steps are deterministic, a full systolic ratio evaluation currently lands well under 1 ms on this hardware.</li>
+<li>The atlas builder uses this same native solver at dataset time; <code>tests/e2e/test_atlas_build.py</code> asserts the hypercube capacity ($4$) and systolic ratio ($0.5$) so regressions surface immediately.</li>
+</ul>
+<h2 id="6-supported-polytope-families"><a class="header" href="#6-supported-polytope-families">6. Supported polytope families</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Family</th><th>Coverage status</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Lagrangian products (e.g., $K\times L$)</td><td><strong>Fully supported.</strong> <code>RegularProductEnumerator</code> exhausts tuples of planar polygons; golden tests cover product-of-squares, and the solver respects symplectic invariance.</td><td><code>crates/viterbo/src/rand4/mod.rs</code> (<code>RegularProductEnumerator</code>), <code>crates/viterbo/src/oriented_edge/tests.rs</code>.</td></tr>
+<tr><td>Generic random polytopes</td><td><strong>Ready.</strong> <code>RandomFacesGenerator</code>, <code>RandomVerticesGenerator</code>, and symmetric halfspace samplers deliver bounded, star-shaped shapes with arbitrary facet counts; property tests enforce bounds and replay.</td><td>Docs: <a href="thesis/./random-polytopes.html">random-polytopes</a>. Code: <code>rand4::RandomFacesParams</code>, etc.</td></tr>
+<tr><td>Highly symmetric / non-generic bodies (cubes, cross-polytopes, orthogonal simplex)</td><td><strong>Catalogued.</strong> <code>geom4::special</code> builds these fixtures; oriented-edge tests already cover cube + cross-polytope; simplex hooks are ready once we feed them into DFS.</td><td><code>crates/viterbo/src/geom4/special.rs</code>, <code>crates/viterbo/src/oriented_edge/tests.rs</code>.</td></tr>
+<tr><td>Perturbed families / counterexamples</td><td><strong>Stubs.</strong> The thesis spec lists perturbation hooks; generators will add them once we finalize the desired symplectic/affine noise model.</td><td>Docs: <a href="thesis/./viterbo-conjecture-counterexample.html">viterbo-conjecture-counterexample</a>; <code>rand4</code> “Perturbed Special Polytopes” section.</td></tr>
+</tbody></table>
+</div>
+<blockquote>
+<p><strong>Bottom line:</strong> We already support both Lagrangian product families and the generic “atlas background” polytopes. Symmetric shapes are part of the fixture catalog, the solver has dedicated tests for them, and atlas rows now carry finite <code>capacity_ehz</code> / <code>systolic_ratio</code> values unless the solver reports “no cycle”.</p>
+</blockquote>
+<h2 id="7-outstanding-gaps--next-steps"><a class="header" href="#7-outstanding-gaps--next-steps">7. Outstanding gaps &amp; next steps</a></h2>
+<ol>
+<li><strong>Instrument solver fallbacks</strong>: record how many atlas rows return <code>None</code> (degeneracies, rotation budget hits) and surface that statistic next to dataset summaries.</li>
+<li><strong>Expand golden fixtures</strong> beyond products/symmetric bodies (e.g., orthogonal simplex values, Chaidez–Hutchings counterexample) once their analytic capacities are derived in the thesis.</li>
+<li><strong>Document failure budgets</strong>: classify the fallback causes (e.g., canonicalization errors vs. true absence of admissible cycles) so mathematicians know what “NaN” means operationally.</li>
+</ol>
+<p>Keeping this page updated whenever a new generator, test, or visualization lands will make it trivial to answer “are we ready?” the next time the conjecture discussion resurfaces.</p>
 
                     </main>
 

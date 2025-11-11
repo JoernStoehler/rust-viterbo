@@ -1,0 +1,446 @@
+<!DOCTYPE HTML>
+<html lang="en" class="light sidebar-visible" dir="ltr">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Protocol — 2025-11-04 Meeting - Probing Viterbo&#x27;s Conjecture (working title)</title>
+
+
+        <!-- Custom HTML head -->
+
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" id="highlight-css" href="../highlight.css">
+        <link rel="stylesheet" id="tomorrow-night-css" href="../tomorrow-night.css">
+        <link rel="stylesheet" id="ayu-highlight-css" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+
+        <!-- MathJax -->
+        <script async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Provide site root and default themes to javascript -->
+        <script>
+            const path_to_root = "../";
+            const default_light_theme = "light";
+            const default_dark_theme = "navy";
+            window.path_to_searchindex_js = "../searchindex.js";
+        </script>
+        <!-- Start loading toc.js asap -->
+        <script src="../toc.js"></script>
+    </head>
+    <body>
+    <div id="mdbook-help-container">
+        <div id="mdbook-help-popup">
+            <h2 class="mdbook-help-title">Keyboard shortcuts</h2>
+            <div>
+                <p>Press <kbd>←</kbd> or <kbd>→</kbd> to navigate between chapters</p>
+                <p>Press <kbd>S</kbd> or <kbd>/</kbd> to search in the book</p>
+                <p>Press <kbd>?</kbd> to show this help</p>
+                <p>Press <kbd>Esc</kbd> to hide this help</p>
+            </div>
+        </div>
+    </div>
+    <div id="body-container">
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                let theme = localStorage.getItem('mdbook-theme');
+                let sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            const default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? default_dark_theme : default_light_theme;
+            let theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            const html = document.documentElement;
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add("js");
+        </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            let sidebar = null;
+            const sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            } else {
+                sidebar = 'hidden';
+                sidebar_toggle.checked = false;
+            }
+            if (sidebar === 'visible') {
+                sidebar_toggle.checked = true;
+            } else {
+                html.classList.remove('sidebar-visible');
+            }
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <!-- populated by js -->
+            <mdbook-sidebar-scrollbox class="sidebar-scrollbox"></mdbook-sidebar-scrollbox>
+            <noscript>
+                <iframe class="sidebar-iframe-outer" src="../toc.html"></iframe>
+            </noscript>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky">
+                    <div class="left-buttons">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </label>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="default_theme">Auto</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search (`/`)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="/ s" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Probing Viterbo&#x27;s Conjecture (working title)</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <div class="search-wrapper">
+                            <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                            <div class="spinner-wrapper">
+                                <i class="fa fa-spinner fa-spin"></i>
+                            </div>
+                        </div>
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <!-- Author: Codex -->
+<h1 id="protocol--meeting-on-2025-11-04-10001150"><a class="header" href="#protocol--meeting-on-2025-11-04-10001150">Protocol — Meeting on 2025-11-04 (10:00–11:50)</a></h1>
+<p><strong>Date.</strong> 4 November 2025.<br />
+<strong>Attendees.</strong> Jörn Stöhler; Prof. Kai Cieliebak; Prof. Elisabeth Gaar (<a href="https://www.uni-augsburg.de/de/fakultaet/mntf/math/prof/opt/team/gaar/">University profile</a>).<br />
+<strong>Purpose.</strong> Present the thesis topic and current algorithm, collect Prof. Gaar’s feedback on combinatorial/optimization aspects, and align experiments plus correctness levers for the MSc thesis on systolic ratios of convex polytopes in $\mathbb{R}^4$. The agenda follows Kai’s thesis brief on “Probing Viterbo’s conjecture.”<sup class="footnote-reference" id="fr-T-1"><a href="#footnote-T">1</a></sup></p>
+<p>This protocol records the decisions, rationale, and next steps that emerged from the meeting. Full technical notes sit in the appendix for Jörn’s execution.</p>
+<h2 id="context-and-purpose"><a class="header" href="#context-and-purpose">Context and Purpose</a></h2>
+<p>We compute the minimal Reeb action on 4D convex polytopes and report the induced systolic ratio. The protocol captures what we decided, how it affects the project, and the immediate tasks ahead.</p>
+<h2 id="decisions-and-rationale"><a class="header" href="#decisions-and-rationale">Decisions and Rationale</a></h2>
+<ul>
+<li>Focus on 4D convex polytopes; always report both minimal Reeb action and the systolic ratio, starting with simplices and product families.</li>
+<li>Apply a rotation-based prune capped at $\rho \le 2$, using the guarantee that an action minimizer exists with at most that rotation.</li>
+<li>Keep the “visit each facet at most once” prune behind a feature flag until its hypotheses are verified for our model.</li>
+<li>Continue using the 2-face graph $G_2$ representation (details in the appendix) for pruning and evaluation.</li>
+<li>Report strict-admissibility results only; retain a clearly labeled relaxed mode exclusively for upper bounds.</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ul>
+<li><strong>Supervisors (Kai Cieliebak, Elisabeth Gaar).</strong> No immediate actions; optionally confirm default/optional levers and flag constraints for early experiments.</li>
+<li><strong>Author (Jörn Stöhler).</strong> Implement ordering and de-dup variants, document toggles, run first sweeps on simplices and products, and maintain technical guardrails/logs. A detailed checklist appears in §7.</li>
+</ul>
+<h2 id="open-questions"><a class="header" href="#open-questions">Open Questions</a></h2>
+<ul>
+<li>Which classes of polytopes or products should we prioritize (or avoid) in early experiments?</li>
+<li>Any objection to strict-mode results as canonical outputs, with relaxed mode reserved purely for upper bounds and exploratory intuition?</li>
+<li>Which references should we cite for explicit constants when seeding upper bounds?</li>
+</ul>
+<h2 id="reading-guide"><a class="header" href="#reading-guide">Reading Guide</a></h2>
+<p>The remainder of this page provides the complete notes and follow-ups. Read sequentially for narrative or jump to appendix sections tied to pruning and evaluation details.</p>
+<hr />
+<h2 id="1-executive-summary-decisions-and-impact"><a class="header" href="#1-executive-summary-decisions-and-impact">1) Executive Summary (Decisions and Impact)</a></h2>
+<ul>
+<li><strong>Working model.</strong> Study 4D convex polytopes, compute minimal Reeb action on $\partial X$ and the systolic ratio, and retain both H- and V-representations with cached 2-/3-face incidence so the stable data model remains intact.</li>
+<li><strong>Search representation.</strong> Use the 2-face graph $G_2$ with per-step affine transitions and nonnegative action increments (zeros permitted) for pruning strength.</li>
+<li><strong>Rotation prune.</strong> Enforce a hard prune at $\rho = 2$ for minimizer candidates; rotation is monotone on convex hypersurfaces and at least one minimizer satisfies $\rho \le 2$.<sup class="footnote-reference" id="fr-CH-1"><a href="#footnote-CH">2</a></sup></li>
+<li><strong>Admissibility.</strong> Default to strict admissibility (reject cycles whose reconstructed orbits exit the traversed 2-faces). Keep a separate relaxed mode that may accept inadmissible cycles solely as upper bounds [:?] so correctness stays clear while relaxed runs support optimization.</li>
+<li><strong>“Facet-visit once.”</strong> Treat “the minimizer visits each 3-face at most once” as an optional prune behind a flag [:?] and enable it only after checking its hypotheses, since it could dramatically reduce the search space when justified.<sup class="footnote-reference" id="fr-HK-1"><a href="#footnote-HK">3</a></sup></li>
+<li><strong>Ordering and de-duplication.</strong> Maintain depth-first search; compare edge-count-first with action-lower-bound-first ordering; enable start-face de-duplication (do not reuse a start 2-face once exhausted). These choices improve pruning and runtime.</li>
+<li><strong>Initial upper bound.</strong> Keep the current seed bound, drop $A_{\mathrm{ub}}$ to the first admissible cycle, and investigate the best explicit constant $C$ in $A_{\min} \le \sqrt{C,\mathrm{vol}(X)}$ applicable to our setting [:?] to accelerate convergence with proper citations.</li>
+<li><strong>Experiments.</strong> Run experiments on mixed-family 4-simplices to probe the conjectural $\mathrm{sys}(X) \le 3/4$, on broader Lagrangian products $K\times L$, and on counterexamples beyond “pentagon × 90°-rotated pentagon” for thesis-grade coverage.</li>
+</ul>
+<h2 id="2-background-definitions-for-clarity-not-all-discussed-live"><a class="header" href="#2-background-definitions-for-clarity-not-all-discussed-live">2) Background Definitions (for clarity; not all discussed live)</a></h2>
+<ul>
+<li><strong>Setting.</strong> Work in $\mathbb{R}^4 = \mathbb{C}^2$ with the standard Liouville form $\lambda_{\mathrm{st}} = \tfrac12 \sum_{i=1}^{2}(x_i,dy_i - y_i,dx_i)$. For convex, star-shaped $X \subset \mathbb{R}^4$ with boundary $Y = \partial X$, the Reeb field $R$ satisfies $\iota_R d\lambda_{\mathrm{st}} = 0$ and $\lambda_{\mathrm{st}}(R) = 1$. A closed Reeb orbit $\gamma \subset Y$ has action $A(\gamma)=\int_\gamma \lambda_{\mathrm{st}}$.</li>
+<li><strong>Minimal action and systolic ratio (4D).</strong> $A_{\min}(X) = \min_\gamma A(\gamma)$ and $\mathrm{sys}(X) = \dfrac{A_{\min}(X)^2}{2,\mathrm{vol}(X)}$, matching the $n=2$ specialization of the thesis brief’s general definition.<sup class="footnote-reference" id="fr-T-2"><a href="#footnote-T">1</a></sup></li>
+<li><strong>Rotation number and Conley–Zehnder.</strong> For nondegenerate $\gamma$, $CZ(\gamma) = \lfloor \rho(\gamma)\rfloor + \lceil \rho(\gamma)\rceil$. On convex $Y \subset \mathbb{R}^4$ we rely on: (i) $\rho(\gamma) &gt; 1$ for all $\gamma$; (ii) some action minimizer $\gamma_{\min}$ exists with $\rho(\gamma_{\min}) \le 2$ (nondegenerate case: $1&lt;\rho(\gamma_{\min})&lt;2$ and $CZ(\gamma_{\min}) = 3$). These facts support pruning.<sup class="footnote-reference" id="fr-CH-2"><a href="#footnote-CH">2</a></sup></li>
+<li><strong>Relevant faces.</strong> Orbits flow through 3-faces and cross 2-faces. The algorithm ignores 1-faces/0-faces: a minimizer does not flow through 1-faces (rotation would diverge), and crossings of 1-faces are, at worst, a generic technicality that does not change the algorithm [:?].</li>
+</ul>
+<h2 id="3-meeting-narrative-chronological"><a class="header" href="#3-meeting-narrative-chronological">3) Meeting Narrative (chronological)</a></h2>
+<ol>
+<li><strong>Project introduction.</strong> Jörn framed the problem via the polytope model, treated the action integral as a positive black box, and illustrated the 4D problem using a 3D/2D skeleton. Outcome: shared understanding of inputs/outputs, including the working equivalence “full orbit $\Longleftrightarrow$ point on the orbit $\Longleftrightarrow$ point on a 2-face of the orbit.”</li>
+<li><strong>Problem statement, admissibility, objective.</strong> Objective: compute $A_{\min}$ and $\mathrm{sys}(X)$ for 4D convex polytopes, focusing on polytopes and Lagrangian products. Admissibility means the reconstructed orbit stays inside its 2-faces. Decision: default strict admissibility; consider a separate relaxed pass where inadmissible cycles supply only upper bounds [:?].</li>
+<li><strong>Graphs.</strong>
+<ul>
+<li><strong>$G_3$ (3-face graph).</strong> Nodes: facets $F$; edges $F\to F'$ when the Reeb flow in $F$ can enter $F'$; data lives on edges, which is awkward to store at nodes.</li>
+<li><strong>$G_2$ (2-face graph, used).</strong> Nodes: 2-faces $E$; edge $E\to E'$ if the flow passes through some 3-face $F$ from $E$ to $E'$. Each step stores an affine map $x' = A_F x + b_F$, a nonnegative action lower bound $\Delta A_{\min}$ (possibly zero), and a rotation lower bound. Edges are colored by the supporting 3-face; nodes can equivalently be colored by entry or exit 3-face (implementation choice pending).</li>
+</ul>
+</li>
+<li><strong>Rotation pruning.</strong> Enumerate path prefixes and prune whenever the accumulated rotation lower bound exceeds $2$, since rotation is monotone and cannot drop when closing a cycle. This is a hard prune for minimizer candidates, justified by the existence of a minimizer with $\rho \le 2$.<sup class="footnote-reference" id="fr-CH-3"><a href="#footnote-CH">2</a></sup></li>
+<li><strong>Cycle evaluation and admissibility.</strong> For a closed word in $G_2$, compose affine maps to obtain $x \mapsto Ax+b$. If $(I-A)$ is invertible, solve $x^{*} = (I-A)^{-1}b$, compute action, and verify the orbit stays within the traversed 2-faces. Inadmissible cycles might offer upper bounds by analogy with capacity programs, but this pipeline is not yet proven here; treat it as a separate relaxed mode [:?].</li>
+<li><strong>“Visit each 3-face at most once.”</strong> A cited result states that a minimal-action closed characteristic on convex polytopes visits each facet interior at most once. We will expose this as an optional prune behind a flag after validating the hypotheses (default off). [:?]<sup class="footnote-reference" id="fr-HK-2"><a href="#footnote-HK">3</a></sup></li>
+<li><strong>Ordering and pruning ideas.</strong> Compare edge-count-first versus action-lower-bound-first ordering; consider adding a beam later. Additional future levers include (a) incremental admissible-subset tracking on the start 2-face; (b) two-edge feasibility prechecks (defer unless profiling demands); (c) upper-bound seeding via explicit constants and Newton-driven periodic orbits [:?].</li>
+<li><strong>Representations and performance.</strong> Retain H + V representations with cached incidence; conversions are cheap, and precomputing affine data plus lower bounds is also inexpensive. Runtime is dominated by the search tree, so additional pruning and moving work outside the inner loop matter most. A rough desktop measurement was ~100 ms for a 10-facet instance (not a benchmark).</li>
+<li><strong>Experiments.</strong>
+<ul>
+<li><strong>4-simplices:</strong> treat $\mathrm{sys}(X) \le 3/4$ as conjectural; test multiple families; avoid using this as a prune; locate near-extremizers or violations.</li>
+<li><strong>Lagrangian products $K\times L$:</strong> sweep beyond dual pairs (e.g., triangles × rotated triangles); revisit 2024 counterexample results for inspiration [:?].</li>
+<li><strong>Counterexamples:</strong> extend beyond “pentagon × 90° pentagon” via random and structured sampling.</li>
+</ul>
+</li>
+<li><strong>Open theoretical question (Prof. Gaar).</strong> “Does any oriented graph occur as a polytope’s Reeb-transition graph?” Interesting but out of thesis scope; parked.</li>
+</ol>
+<h2 id="4-algorithm-current-state-optional-coding-detail-is-flagged"><a class="header" href="#4-algorithm-current-state-optional-coding-detail-is-flagged">4) Algorithm (current state; optional coding detail is flagged)</a></h2>
+<ol>
+<li><strong>Precompute.</strong> Build $G_2$. For each allowed step $E \xrightarrow{F} E'$, store the local 2D affine map $x' = A_F x + b_F$, nonnegative $\Delta A_{\min}$ (zero allowed), and a per-step rotation lower bound. <em>(Optional later: two-edge feasibility cache.)</em></li>
+<li><strong>Enumerate (DFS).</strong> Maintain the current 2-face sequence with cumulative lower bounds for action and rotation. Prune when the action lower bound exceeds $A_{\mathrm{ub}}$ or when rotation exceeds $2$ for minimizer candidates.</li>
+<li><strong>Fixpoint and action.</strong> For a closed word, compose to $x \mapsto Ax+b$ and solve $x^{*} = (I-A)^{-1}b$ when the matrix is invertible; compute action from per-edge data. <em>(Optional numerics: guard on $I-A$ condition number with a Newton fallback [:?].)</em></li>
+<li><strong>Admissibility.</strong>
+<ul>
+<li><strong>Strict mode (default):</strong> check that the reconstructed orbit stays in the traversed 2-faces; reject otherwise.</li>
+<li><strong>Relaxed mode (separate):</strong> allow inadmissible cycles only to tighten $A_{\mathrm{ub}}$; never return them as outputs; clearly label runs [:?].</li>
+</ul>
+</li>
+<li><strong>No 3-face repeats (optional).</strong> If the facet-repeat theorem applies, reject sequences that revisit a 3-face; keep the toggle off until verified [:?].</li>
+<li><strong>Start-face de-dup.</strong> Once a start 2-face is exhausted, do not reuse it within the same run.</li>
+<li><strong>Data retention.</strong> Track the current path, rotation/action lower bounds, and the best admissible cycle so far. Output the best admissible cycle with its piecewise-linear path and action.</li>
+</ol>
+<h2 id="5-experiments-and-mathematical-questions"><a class="header" href="#5-experiments-and-mathematical-questions">5) Experiments and Mathematical Questions</a></h2>
+<h3 id="51-four-simplices-and-the-34-conjecture"><a class="header" href="#51-four-simplices-and-the-34-conjecture">5.1 Four-simplices and the “3/4” conjecture</a></h3>
+<p>Treat $\mathrm{sys}(X) \le 3/4$ for 4-simplices as conjectural. Sample multiple simplex families, log per-family hit rates, and search for near-extremizers; do not enforce the conjecture as a prune.</p>
+<h3 id="52-lagrangian-products"><a class="header" href="#52-lagrangian-products">5.2 Lagrangian products</a></h3>
+<p>Enumerate $K\times L$ broadly (symmetric/asymmetric, including rotated polygons) and tabulate high systolic ratios together with structural patterns.</p>
+<h3 id="53-upper-bounds-and-seeding"><a class="header" href="#53-upper-bounds-and-seeding">5.3 Upper bounds and seeding</a></h3>
+<ul>
+<li>Maintain the current seed bound and drop it to the first admissible cycle.</li>
+<li>Explore aggressive seeds such as $\sqrt{C,\mathrm{vol}(X)}$ using the best literature constant $C$ [:?].</li>
+<li>Use heuristics that launch random trajectories and apply Newton continuation to find periodic orbits that tighten bounds quickly.</li>
+</ul>
+<h3 id="54-covering-approach-for-4-simplices-research-plan"><a class="header" href="#54-covering-approach-for-4-simplices-research-plan">5.4 Covering approach for 4-simplices (research plan)</a></h3>
+<ul>
+<li>Parameter count claim: 5 faces $\Rightarrow$ 20 parameters $\Rightarrow$ 17 after modding out affine symplectomorphisms [:?].</li>
+<li>Focus on small-angle regimes; test whether affine symplectomorphisms enlarge minimal dihedral angles enough for finite coverings.</li>
+<li>Over each covering set, combine upper bounds on action and lower bounds on volume to control $\mathrm{sys}$; consider ellipsoidal coverings aligned to sensitive directions.</li>
+</ul>
+<h2 id="6-decisions-vs-plans-vs-uncertainties"><a class="header" href="#6-decisions-vs-plans-vs-uncertainties">6) Decisions vs. Plans vs. Uncertainties</a></h2>
+<div class="table-wrapper"><table><thead><tr><th>Topic</th><th>Status</th><th>Notes</th></tr></thead><tbody>
+<tr><td>Rotation prune at $\rho = 2$</td><td><strong>In use</strong></td><td>Monotone rotation and a $\rho \le 2$ minimizer justify pruning.<sup class="footnote-reference" id="fr-CH-4"><a href="#footnote-CH">2</a></sup></td></tr>
+<tr><td>Admissibility check</td><td><strong>Strict by default</strong></td><td>Relaxed pass is separate; pipeline not yet proven [:?].</td></tr>
+<tr><td>“Facet-visit once” prune</td><td><strong>Flag only</strong></td><td>Enable after verifying hypotheses [:?].<sup class="footnote-reference" id="fr-HK-3"><a href="#footnote-HK">3</a></sup></td></tr>
+<tr><td>Ordering</td><td><strong>Compare</strong></td><td>Edge-count versus action-LB ordering; beam search later.</td></tr>
+<tr><td>Start-face de-dup</td><td><strong>Enable</strong></td><td>Once a start is exhausted, do not reuse it per run.</td></tr>
+<tr><td>Two-edge precheck</td><td><strong>Defer</strong></td><td>Incremental admissible-subset tracking likely suffices; profile later.</td></tr>
+<tr><td>Upper-bound constant $C$</td><td><strong>Literature check</strong></td><td>Keep current seed, drop to first cycle, cite explicit $C$ once fixed [:?].</td></tr>
+<tr><td>Fixpoint numerics</td><td><strong>Add guard</strong></td><td>Condition-number thresholds and fallback solver TBD [:?].</td></tr>
+<tr><td>Sampling families</td><td><strong>Mixed</strong></td><td>Use multiple families; log per-family hit rates.</td></tr>
+<tr><td>Graph-realizability question</td><td><strong>Parked</strong></td><td>Interesting but outside thesis scope.</td></tr>
+</tbody></table>
+</div>
+<h2 id="7-action-items"><a class="header" href="#7-action-items">7) Action Items</a></h2>
+<p><strong>Immediate</strong></p>
+<ol start="0">
+<li>Send this protocol to Kai (photos of the blackboard are illegible).</li>
+<li>Extend the thesis draft with the formal problem, referenced theorems, the algorithm specification with toggles, and the experiments plan.</li>
+</ol>
+<p><strong>Algorithm</strong></p>
+<ol start="2">
+<li>Implement start-face de-duplication per polytope run.</li>
+<li>Implement ordering variants plus logging (nodes expanded, prune reasons, cycles/sec, wall-time), and consider a small beam later.</li>
+<li>Implement incremental admissible-subset tracking in local 2D while retaining the final fixed-point check.</li>
+<li>Add an ill-conditioning guard for $(I-A)$ and a robust fallback [:?].</li>
+<li>Expose the no-3-face-repeat rule as a toggle, keeping it off until the hypotheses are verified [:?].</li>
+</ol>
+<p><strong>Bounds and literature</strong></p>
+<ol start="7">
+<li>Extract explicit constant(s) $C$ for $A_{\min} \le \sqrt{C,\mathrm{vol}(X)}$ in our setting and log the citations [:?].</li>
+<li>Document the external facts used for pruning with precise hypotheses (rotation bounds/monotonicity; facet-visit property) and explain their applicability to our model.[^CH]<sup class="footnote-reference" id="fr-HK-4"><a href="#footnote-HK">3</a></sup></li>
+</ol>
+<p><strong>Experiments</strong></p>
+<ol start="9">
+<li>Run mixed-family sampling on 4-simplices, test $\mathrm{sys} \le 3/4$, map near-extremizers, and log per-family hit rates.</li>
+<li>Sweep across $K\times L$ products, identify high systolic ratios, and capture emerging patterns.</li>
+<li>Standardize the benchmark harness (CPU, compiler, flags) and record graph sizes, nodes expanded, prune counts, depth histograms, cycles/sec, and wall-time.</li>
+</ol>
+<h2 id="8-appendices"><a class="header" href="#8-appendices">8) Appendices</a></h2>
+<h3 id="a-optional-implementation-notes-for-jörn"><a class="header" href="#a-optional-implementation-notes-for-jörn">A. Optional implementation notes (for Jörn)</a></h3>
+<ul>
+<li><strong>2-face coloring.</strong> Choose entry- or exit-3-face labeling per node and keep the choice consistent for caching.</li>
+<li><strong>Zero increments.</strong> Allow $\Delta A_{\min} = 0$ with no epsilon shift so minima stay unbiased.</li>
+<li><strong>Admissibility modes.</strong> Strict mode enforces point-in-polygon tests on each traversed 2-face. Relaxed mode accepts inadmissible cycles only as upper bounds and never as outputs; label runs clearly [:?].</li>
+<li><strong>Numerics.</strong> Add a condition-number check for $I-A$; fall back to a robust linear solve or Newton iteration if ill-conditioned [:?].</li>
+<li><strong>Two-edge cache.</strong> Defer, because incremental admissible-subset tracking likely dominates.</li>
+<li><strong>Ordering.</strong> Implement both edge-count-first and action-lower-bound-first ordering; later add a small beam on the two-score tuple.</li>
+<li><strong>Metrics.</strong> Log nodes expanded; prune reasons (action, rotation, admissibility, face repeat); cycles/sec; wall-time; depth histograms; percentage of closed words failing admissibility.</li>
+</ul>
+<h3 id="b-haimkislevs-capacity-program-vs-our-graph-search"><a class="header" href="#b-haimkislevs-capacity-program-vs-our-graph-search">B. Haim–Kislev’s capacity program vs. our graph search</a></h3>
+<ul>
+<li>Haim–Kislev’s method maximizes a finite-dimensional functional using facet normals/coefficients to compute a capacity for convex polytopes.</li>
+<li>Our method enumerates/evaluates cycles in $G_2$ using affine transitions and admissibility checks.</li>
+<li>The relationship is limited: the idea of an “LP on $G_3$” is heuristic, and Haim–Kislev do not present a $G_2$-style affine graph program. We borrow only facts such as “facet-visit once,” not an algorithmic equivalence [:?].<sup class="footnote-reference" id="fr-HK-5"><a href="#footnote-HK">3</a></sup></li>
+</ul>
+<h3 id="c-experiment-details-sampling-families-and-products"><a class="header" href="#c-experiment-details-sampling-families-and-products">C. Experiment details (sampling families and products)</a></h3>
+<ul>
+<li><strong>4-simplices.</strong> Vertices-first: sample five points, take their convex hull, rescale to fixed volume, and reject near-degenerate angle sets. Facets-first: sample five oriented planes (normals + offsets), fix the volume, and take the polar if needed. Split compute budgets, log per-family hits, and search for near-extremizers or violations of the conjectural $3/4$.</li>
+<li><strong>Products $K\times L$.</strong> Cover symmetric/asymmetric pairs, include rotated configurations, and consider polygons beyond pentagons; tabulate the highest ratios and associated structures.</li>
+<li><strong>Counterexamples.</strong> Run random and guided sweeps beyond “pentagon × 90° pentagon.”</li>
+</ul>
+<h3 id="d-covering-argument-sketch-for-simplices-research-plan"><a class="header" href="#d-covering-argument-sketch-for-simplices-research-plan">D. Covering argument sketch for simplices (research plan)</a></h3>
+<ul>
+<li>Parameter count (meeting claim): 5 faces $\Rightarrow$ 20 parameters $\Rightarrow$ 17 after quotienting by affine symplectomorphisms [:?].</li>
+<li>Identify small-angle regimes as critical; test whether symplectomorphisms can boost minimal angles enough to enable a finite covering.</li>
+<li>For each cover element, bound action from above and volume from below to control $\mathrm{sys}$; ellipsoidal coverings aligned to sensitive directions seem promising.</li>
+</ul>
+<h3 id="e-completeness-mapping-from-bullet-notes-to-sections"><a class="header" href="#e-completeness-mapping-from-bullet-notes-to-sections">E. Completeness mapping (from bullet notes to sections)</a></h3>
+<ul>
+<li>Polytope-first introduction and the 3D/2D skeleton correspond to §3.1.</li>
+<li>Problem inputs/outputs and “orbit ↔ point ↔ 2-face point” correspond to §2 and §3.1.</li>
+<li>High- versus low-action behavior appears in §3.2 and §4 (pruning).</li>
+<li>The $\sqrt{C,\mathrm{vol}}$ cutoff, the “$C\approx 4$?” question, and the TODO for the best $C$ sit in §5.3 and §6 [:?].</li>
+<li>$G_3$ versus $G_2$ definitions and the “HK capacity vs. our pipeline” contrast live in §3 and Appendix B.</li>
+<li>Node/edge coloring, zero increments, and early termination topics appear in §3.2 and §4.</li>
+<li>Rotation facts and the prune (including $1&lt;\rho&lt;2$ for a minimizer) appear in §2 and §4.</li>
+<li>The “facet-visit once” topic shows up in §3.2 and §4.3 and is flagged for verification [:?].</li>
+<li>The claim that 1-faces/0-faces are irrelevant (with a generic crossing claim) appears in §2.2 [:?].</li>
+<li>Enumeration, fixpoint, admissibility, and relaxed-mode ideas appear in §4 [:?].</li>
+<li>Ordering, aggressive first guesses, and Newton heuristics appear in §3.2, §4.4, and §5.3.</li>
+<li>Incidence and H↔V remarks (cheap) plus “search dominates” appear in §3 and §8.</li>
+<li>Start-face de-dup appears in §4 and §7.</li>
+<li>Profiling guidance appears in §8 and §7.11.</li>
+<li>The unanswered graph-realizability question sits in §3.10.</li>
+<li>Experiments on simplices, products, and counterexamples appear in §§5.1–5.2 and §3.9.</li>
+<li>Coverings, parameter counts, small angles, and the “3:1 odds” note appear in §5.4 [:?].</li>
+<li>The full action-item list appears in §7.</li>
+</ul>
+<hr />
+<h2 id="references"><a class="header" href="#references">References</a></h2>
+<ul>
+<li>Chaidez, J.; Hutchings, M. “Computing Reeb dynamics on 4d convex polytopes.” arXiv:2008.10111. Used for rotation bounds for a minimizer and rotation monotonicity on convex hypersurfaces.<sup class="footnote-reference" id="fr-CH-5"><a href="#footnote-CH">2</a></sup></li>
+<li>Haim–Kislev, P. “On the symplectic size of convex polytopes.” arXiv:1712.03494 (v3, 2019). Source for “visits each facet at most once” for a minimal-action closed characteristic (polytope setting).<sup class="footnote-reference" id="fr-HK-6"><a href="#footnote-HK">3</a></sup></li>
+<li>Haim–Kislev, P.; Ostrover, Y. “A Counterexample to Viterbo’s Conjecture.” arXiv:2405.16513. Context: conjecture fails; motivates our exploration of where/how it fails.<sup class="footnote-reference" id="fr-HKO-1"><a href="#footnote-HKO">4</a></sup></li>
+<li>Cieliebak, K. “Thesis topics — Probing Viterbo’s conjecture.” Internal brief that defines $\mathrm{sys}(X)$ and frames the computational task.<sup class="footnote-reference" id="fr-T-3"><a href="#footnote-T">1</a></sup></li>
+</ul>
+<hr>
+<ol class="footnote-definition"><li id="footnote-T">
+<p>“Thesis topics — Probing Viterbo’s conjecture” (Kai Cieliebak). Matches our 4D systolic ratio definition and frames the computational task. <a href="#fr-T-1">↩</a> <a href="#fr-T-2">↩2</a> <a href="#fr-T-3">↩3</a></p>
+</li>
+<li id="footnote-CH">
+<p>We rely on (i) the existence of an action minimizer with $\rho \le 2$ (nondegenerate case: $1 &lt; \rho &lt; 2$, $CZ = 3$) and (ii) monotone, nondecreasing rotation along Reeb trajectories on convex hypersurfaces, which together justify pruning partial paths that already exceed $2$. <a href="#fr-CH-1">↩</a> <a href="#fr-CH-2">↩2</a> <a href="#fr-CH-3">↩3</a> <a href="#fr-CH-4">↩4</a> <a href="#fr-CH-5">↩5</a></p>
+</li>
+<li id="footnote-HK">
+<p>We intend to apply the facet-visit property only as an optional prune once its hypotheses match our polytope model. <a href="#fr-HK-1">↩</a> <a href="#fr-HK-2">↩2</a> <a href="#fr-HK-3">↩3</a> <a href="#fr-HK-4">↩4</a> <a href="#fr-HK-5">↩5</a> <a href="#fr-HK-6">↩6</a></p>
+</li>
+<li id="footnote-HKO">
+<p>Disproof of $\mathrm{sys}(X) \le 1$ (Viterbo) via explicit polytopes; sets context but does not affect algorithmic correctness. <a href="#fr-HKO-1">↩</a></p>
+</li>
+</ol>
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../meta/git-history-cleanup.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next prefetch" href="../thesis/geom2d_polytopes.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../meta/git-history-cleanup.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next prefetch" href="../thesis/geom2d_polytopes.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+
+    </div>
+    </body>
+</html>

@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Meta - Probing Viterbo&#x27;s Conjecture (working title)</title>
+        <title>Random Polytope Generators - Probing Viterbo&#x27;s Conjecture (working title)</title>
 
 
         <!-- Custom HTML head -->
@@ -177,23 +177,84 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="meta-documentation"><a class="header" href="#meta-documentation">Meta Documentation</a></h1>
-<p>This section hosts documentation about meta-level development workflows (not object-level content).</p>
+                        <h1 id="random-polytopes"><a class="header" href="#random-polytopes">Random Polytope Generators</a></h1>
+<!-- Ticket: 0f48-random-polytopes -->
+<!-- Code: crates/viterbo/src/rand4/mod.rs -->
+<p>Goal: define a plug-and-play catalogue of random (and enumerative) 4D polytopes that feed the atlas dataset and future experiments. Every generator must be reproducible, emit only valid polytopes, and surface enough metadata for downstream provenance sidecars.</p>
+<h2 id="generator-interface-conventions"><a class="header" href="#generator-interface-conventions">Generator Interface Conventions</a></h2>
 <ul>
-<li>Agent onboarding and always-relevant rules: see <code>AGENTS.md</code> at the workspace root.</li>
-<li>Topic-specific meta docs that only some tickets need live here (e.g., data IO, CI/tooling).</li>
-<li>Paper + helper scripts: see <code>docs/src/meta/misc-tools.md</code> when you need local copies of bibliography items.</li>
+<li><strong>Inputs</strong> = <code>(params, seed)</code> for stochastic streams, or <code>(params, index)</code> for deterministic enumerations. <code>params</code> captures the distribution (facet counts, radii ranges, polygon choices, etc.), while the <code>seed/index</code> replay token pins down the first row produced by that generator.</li>
+<li><strong>Outputs</strong> = structured rows: one coherent polytope representation (we standardize on <code>Poly4</code> with both H- and V-reps available) plus the replay token that regenerates the same row on demand.</li>
+<li><strong>Validity-first</strong> = generators may internally sample/reject invalid candidates, but they must <em>yield only valid, star-shaped, origin-containing polytopes</em>. Throughput is secondary to correctness.</li>
+<li><strong>Enumerations</strong> = allowed to stop after finitely many rows. They accept cutoff parameters (e.g., max number of facets) and may order outputs arbitrarily as long as replay tokens (<code>index</code> tuples) are stable.</li>
+<li><strong>Single vs stream APIs</strong>:
+<ul>
+<li><code>generate_single(params, seed)</code> returns one polytope and the canonical replay token.</li>
+<li><code>generate_stream(params, seed)</code> yields successive rows (possibly infinite). Streams expose a <code>next()</code> API but also allow replaying an individual row via the accompanying token without iterating the full stream.</li>
 </ul>
+</li>
+<li><strong>Reproducibility</strong> = every row stores the <code>params</code> snapshot and replay token next to the data artifact. When hydrating the dataset, we rebuild rows by calling <code>generate_single</code> with that information.</li>
+</ul>
+<p>Implementation note: the <code>rand4</code> Rust module materializes these conventions via <code>GeneratorParams</code>, <code>ReplayToken</code>, <code>PolytopeSample4</code>, and the <code>PolytopeGenerator4</code> trait. Python orchestrators can call into PyO3 bindings once exposed.</p>
+<h2 id="algorithm-families"><a class="header" href="#algorithm-families">Algorithm Families</a></h2>
+<h3 id="1-centrally-symmetric-random-halfspaces"><a class="header" href="#1-centrally-symmetric-random-halfspaces">1. Centrally Symmetric Random Halfspaces</a></h3>
+<ul>
+<li><strong>Idea</strong>: sample <code>m</code> random directions on the 3-sphere (Gaussian → normalize) and add paired halfspaces <code>±n·x &lt;= r</code>, where <code>r</code> is drawn from <code>[r_min, r_max]</code>.</li>
+<li><strong>Params</strong>: number of directions, radius range, optional linear map to inject anisotropy.</li>
+<li><strong>Replay</strong>: RNG seed. Replaying re-samples the identical sequence of normals/radii, so the first yielded polytope matches exactly.</li>
+<li><strong>Validity</strong>: origin is always feasible (<code>0 &lt;= r</code>). Paired halfspaces enforce boundedness; we reject configs where the linear map is singular.</li>
+<li><strong>Use cases</strong>: broad “background” distribution for the atlas dataset; easy to tune between cubes (low variance) and rounded bodies (high <code>m</code>).</li>
+</ul>
+<h3 id="2-mahler-product-sampler-2d--polar"><a class="header" href="#2-mahler-product-sampler-2d--polar">2. Mahler Product Sampler (2D × Polar)</a></h3>
+<ul>
+<li><strong>Idea</strong>: draw a random 2D convex polygon <code>K</code> (e.g., via radial samples), compute its polar <code>K^◦</code>, then form <code>K × K^◦ ⊂ ℝ⁴</code>. This family stays within the Mahler/Viterbo equivalence regime.</li>
+<li><strong>Params</strong>: vertex count range for <code>K</code>, radial jitter budget, minimum/maximum in-radius to keep <code>K</code> full-dimensional.</li>
+<li><strong>Replay</strong>: base seed + index mixed into the 2D sampler’s <code>ReplayToken</code>. Replaying regenerates the exact polygon, its polar, and their product.</li>
+<li><strong>Validity</strong>: <code>K</code> contains the origin after <code>recenter_rescale</code>; the polar remains bounded. Cartesian products naturally yield star-shaped polytopes.</li>
+<li><strong>Implementation</strong>: <code>rand4::MahlerProductGenerator</code> backed by <code>geom2::rand::{draw_polygon_radial, recenter_rescale, polar}</code>. Atlas stages can stream rows or rehydrate via the replay token.</li>
+</ul>
+<h3 id="3-regular-polygon-product-enumerator"><a class="header" href="#3-regular-polygon-product-enumerator">3. Regular Polygon Product Enumerator</a></h3>
+<ul>
+<li><strong>Idea</strong>: enumerate tuples <code>(n₁, n₂, rotation₁, rotation₂, scale)</code> and build the lagrangian product of two regular <code>n</code>‑gons. Each tuple deterministically identifies a single 4D polytope.</li>
+<li><strong>Params</strong>: discrete sets (or ranges) for <code>n_i</code>, rotation grids (e.g., multiples of <code>π/32</code>), and per-factor scales.</li>
+<li><strong>Replay</strong>: the tuple itself. <code>generate_single</code> simply rebuilds the cartesian-product vertex set.</li>
+<li><strong>Validity</strong>: direct product of convex polygons, so convex/stable automatically. Enumerations terminate once all tuples are exhausted or a cutoff is hit.</li>
+</ul>
+<h3 id="4-perturbed-special-polytopes"><a class="header" href="#4-perturbed-special-polytopes">4. Perturbed Special Polytopes</a></h3>
+<ul>
+<li><strong>Idea</strong>: start from a catalog (cube, cross-polytope, Viterbo counterexample) and apply small randomized symplectic or affine perturbations. Useful for stress-testing capacity algorithms along known families.</li>
+<li><strong>Params</strong>: base polytope id, perturbation budget, symplectic/affine toggle.</li>
+<li><strong>Replay</strong>: <code>(base_id, seed)</code>; deterministic perturbation sequences.</li>
+<li><strong>Open question</strong>: best way to constrain perturbations so that invariants (symplectic, lagrangian product structure) remain intact—escalate before implementing.</li>
+</ul>
+<h3 id="5-streaming-filters--rejection-pipelines"><a class="header" href="#5-streaming-filters--rejection-pipelines">5. Streaming Filters / Rejection Pipelines</a></h3>
+<ul>
+<li><strong>Idea</strong>: wrap any generator with a predicate (e.g., “systolic ratio ≥ 0.9”) and expose a filtered stream. Inputs add a <code>filter_seed</code> for deterministic acceptance/rejection.</li>
+<li><strong>Policy</strong>: the wrapped generator still owns the replay token; the filter stores “skip counts” so that regenerating row <code>k</code> repeats the same sequence of rejections before yielding.</li>
+</ul>
+<h2 id="integration-with-the-atlas-dataset"><a class="header" href="#integration-with-the-atlas-dataset">Integration with the Atlas Dataset</a></h2>
+<ul>
+<li><strong>Row schema</strong>: <code>{"polytope": Poly4, "generator": name, "params": json, "replay_token": value}</code>. The atlas build stage reads this schema to call <code>generate_single</code> when regenerating artifacts.</li>
+<li><strong>Config knobs</strong>: each dataset config lists generators with explicit <code>rows</code> (or <code>max_rows</code> for enumerations). Scaling up/down means editing those integers directly, which keeps per-source cost controls obvious (e.g., “Mahler = 40 rows, Regular products = 10 rows, Catalog = 5 rows”).</li>
+<li><strong>Testing</strong>: smoke configs cap each generator at ≤3 rows to keep <code>tests/smoke</code> under 10 seconds; full configs rely on <code>scripts/reproduce.sh</code>.</li>
+<li><strong>Escalation hooks</strong>: if a generator cannot hit requested constraints (e.g., Mahler sampler fails to find a polygon with desired in-radius), it should emit structured errors referencing this page and the originating ticket.</li>
+</ul>
+<h2 id="next-steps"><a class="header" href="#next-steps">Next Steps</a></h2>
+<ol>
+<li>Surface the <code>rand4</code> module via PyO3 bindings so Python stages can stream polytopes without re-implementing algorithms.</li>
+<li>Add benchmark hooks to record generation time per row (to correlate distributions with compute cost).</li>
+<li>Expand the generator catalogue with sphere packings, zonotopes, and EHZ-focused adversarial shapes once the current families cover the baseline dataset needs.</li>
+</ol>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../thesis/visualization.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../thesis/geom4d_volume.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../meta/benchmarks.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../thesis/status-math.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -203,11 +264,11 @@
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../thesis/visualization.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../thesis/geom4d_volume.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../meta/benchmarks.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../thesis/status-math.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
