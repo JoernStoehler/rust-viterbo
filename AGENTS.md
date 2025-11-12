@@ -5,6 +5,15 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 ## Active Temporary Notices
 - None
 
+## Turn Start Checklist
+Run these commands before making any edits so you know exactly where you are, what time the turn started, and which files are already dirty:
+
+1. `pwd` — confirm you are inside the expected worktree.
+2. `date -Is` — capture the exact start timestamp in ISO format for logs.
+3. `git status -sb` — list staged/unstaged changes so you can back up or avoid overwriting uncommitted work.
+
+If `git status -sb` shows modified files you didn’t create, make a gitignored timestamped backup (for example `cp path/file path/file.bak.$(date +%s)`) before touching them so you can access or recover the exact content the owner handed you.
+
 ## Source of Truth and Layers
 - Tickets (file-based via `agentx`) are the source of truth.
 - Thesis specs in `docs/src/thesis/` define algorithms and data at a higher level.
@@ -13,7 +22,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - Stay local: never involve `origin/...` for day-to-day work. All coordination happens inside this clone plus its agentx worktrees.
 - Cross‑refs in code or markdown `<!-- comments -->`:
   - `Docs: docs/src/thesis/<path>#<anchor>`
-  - `Ticket: <slug>`
+  - `Ticket: shared/tickets/<slug>.md`
   - `Code: <path>::<symbol>`
 - All code files start with a comment block that explains the purpose of the file, the why behind its architecture, and references useful further readings. These comment blocks help freshly onboarded agents get up to speed quickly. They are also colocated with the code to minimize search time, and to make maintenance both faster and more likely.
 
@@ -42,7 +51,7 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
   - `data/<experiment>/<artifact>.<ext>` with sidecar `data/<experiment>/<artifact>.<ext>.run.json`. Both live in Git LFS; commit the artifact and its `.run.json` together to keep provenance aligned.
   - `data/downloads/`: Paper downloads (text sources + PDFs). Also under Git LFS so offline copies travel with the repo.
   - `docs/assets/`: Small publication artifacts (including interactive figures) that stay in the regular git history for easy diffs/review.
-- `data/` rides through Git LFS. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. `scripts/reproduce.sh` is the single source of truth for regenerating *every* artifact that shows up in the docs/thesis (bench tables, figures, data files, etc.). Whenever you add or change an artifact, update `scripts/reproduce.sh` in the same ticket so nobody ever has to guess whether it belongs there.
+  - `data/` rides through Git LFS. Run `git lfs pull --include "data/**" --exclude ""` after switching branches (or after a fresh worktree) to hydrate the pointers locally. `scripts/reproduce.sh` is the single source of truth for regenerating *every* artifact that shows up in the docs/thesis (bench tables, figures, data files, etc.). Whenever you add or change an artifact, update `scripts/reproduce.sh` in the same ticket so nobody ever has to guess whether it belongs there.
 - Explicit, documented devops:
   - `AGENTS.md`: This file. Onboarding for all new agents.
   - `scripts/`: Devops scripts.
@@ -96,7 +105,6 @@ This is the always‑relevant guide for coding agents. Keep it lean, clear, unam
 - On timeout: `safe.sh` returns a non-zero code and kills the process group. Do not auto-retry inside scripts; adjust the plan or escalate if the budget is unclear.
 
 ### Agent Autonomy (verification defaults)
-<!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
 - Do not ask the project owner before running fast verification. Prefer these focused loops:
   - Python quick loop: `safe --timeout 10 -- bash scripts/python-lint-type-test.sh`
   - Rust quick loops:
@@ -243,7 +251,6 @@ See “Ticketing Workflow (agentx)” below for the file-based system.
 - Continuous Improvement: accept feedback from agents and the project owner; refactor with breaking changes, rewrite documentation, open additional tickets when it raises the quality of the project for future agents.
 
 ## Ticketing Workflow (agentx)
-<!-- Ticket: 5ae1e6a6-5011-4693-8860-eeec4828cc0e -->
 This project uses a minimal CLI (`agentx`) with a file‑based ticket stub (front matter + log). Learn this model first; it’s small and predictable.
 
 - Model (1–1–1–1):
@@ -332,3 +339,14 @@ This project uses a minimal CLI (`agentx`) with a file‑based ticket stub (fron
 - Don’t carry legacy shims or deprecations unless a ticket explicitly asks for a staged transition. Keeping low churn for its own sake causes rot.
 - Use `viterbo::api` and `viterbo::prelude` for convenience imports in internal code. These surfaces are curated for agents and may change at any time.
 - If an external‑looking boundary appears (e.g., PyO3), treat it as internal too unless a ticket declares support guarantees for a specific consumer.
+- The documentation, code comments, tests and scripts are focused on the current commit only. Do not mention past versions and do not attempt to maintain legacy compatibility layers or fallbacks.
+
+## Everyday Tips and Tricks
+- All output of your commands is truncated with warning beyond 250 lines or 10kB. It's a hard-coded limit in codex cli's harness.
+  - When reading a file, print line numbers so you see from where to resume reading if truncation occurs.
+  - When running commands that will produce long output, `tee` it to `/tmp` so you can if necessary read the full output in chunks from the file.
+  - When writing documentation or code, try to split them into smaller files to stay below the limits.
+  - When writing documentation that cannot be split, use sections with headers that can be `rg`ed individually.
+  - When searching relevant code, you may like `rg` and 
+
+<!-- END OF AGENTS.md -->

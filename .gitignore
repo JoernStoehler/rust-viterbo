@@ -41,3 +41,6 @@ build/
 
 # tx bundle symlink (created in each worktree)
 shared/
+
+# Local safety backups created per AGENTS.md turn checklist
+**/*.bak.*
