@@ -3,9 +3,9 @@ set -euo pipefail
 # reproduce.sh — end-to-end reproduction entrypoint (human-facing)
 # Purpose
 # - Build code, run tests (incl. E2E), regenerate data artifacts, and build the book for the current commit.
-# - Documents sensible per-stage timeouts by wrapping each stage in scripts/safe.sh.
+# - Documents sensible per-stage timeouts by wrapping each stage in group-timeout.
 # Policy
-# - Can be run directly (preferred for humans). Wrapping the whole script in safe.sh is optional.
+# - Can be run directly (preferred for humans). Wrapping the whole script in group-timeout is optional.
 # - This script is intentionally fail-fast. If any stage fails, the script must exit non‑zero.
 #   Do not add `|| true` here; use quick loops for advisory-only checks instead.
 # - Stage timeouts (tuned to catch mistakes yet allow expected runs):
@@ -25,40 +25,40 @@ cd "$ROOT_DIR"
 
 echo "=== Reproduce: ensure Python venv ==="
 if [[ ! -d ".venv" ]]; then
-  bash scripts/safe.sh --timeout 300 -- uv venv
+  group-timeout 300 uv venv
 fi
 
 echo "=== Reproduce: sync project deps (uv, locked) ==="
 # Keep env exact to the lock, include extras 'dev' like `.[dev]` used to.
-bash scripts/safe.sh --timeout 300 -- uv sync --extra dev --locked
+group-timeout 300 uv sync --extra dev --locked
 
 echo "=== Reproduce: Python lint/type/tests ==="
-bash scripts/safe.sh --timeout 300 -- bash scripts/python-lint-type-test.sh
+group-timeout 300 bash scripts/python-lint-type-test.sh
 
 echo "=== Reproduce: Rust lint/tests ==="
-bash scripts/safe.sh --timeout 300 -- bash scripts/rust-fmt.sh
-bash scripts/safe.sh --timeout 300 -- bash scripts/rust-test.sh
-bash scripts/safe.sh --timeout 300 -- bash scripts/rust-clippy.sh
+group-timeout 300 bash scripts/rust-fmt.sh
+group-timeout 300 bash scripts/rust-test.sh
+group-timeout 300 bash scripts/rust-clippy.sh
 
 echo "=== Reproduce: Criterion benchmarks (raw data/bench/criterion) ==="
-bash scripts/safe.sh --timeout 600 -- env BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh
+group-timeout 600 env BENCH_RUN_POSTPROCESS=0 bash scripts/rust-bench.sh
 
 echo "=== Reproduce: Criterion → docs assets stage ==="
-bash scripts/safe.sh --timeout 180 -- uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
+group-timeout 180 uv run python -m viterbo.bench.stage_docs --config configs/bench/docs_local.json
 
 echo "=== Reproduce: run end-to-end tests (pytest -m e2e) ==="
-bash scripts/safe.sh --timeout 600 -- uv run pytest -q -m e2e
+group-timeout 600 uv run pytest -q -m e2e
 
 echo "=== Reproduce: build native Python extension (maturin) ==="
-bash scripts/safe.sh --timeout 300 -- uv run maturin develop -m crates/viterbo-py/Cargo.toml
+group-timeout 300 uv run maturin develop -m crates/viterbo-py/Cargo.toml
 
 echo "=== Reproduce: copy native .so into src/viterbo ==="
-bash scripts/safe.sh --timeout 60 -- bash scripts/rust-build.sh --copy-only
+group-timeout 60 bash scripts/rust-build.sh --copy-only
 
 echo "=== Reproduce: run data pipeline (atlas test config) ==="
-bash scripts/safe.sh --timeout 300 -- uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/test.json
+group-timeout 300 uv run --locked python -m viterbo.atlas.stage_build --config configs/atlas/test.json
 
 echo "=== Reproduce: build thesis book (mdBook) ==="
-bash scripts/safe.sh --timeout 600 -- mdbook build docs
+group-timeout 600 mdbook build docs
 
 echo "=== Reproduce: done. Artifacts under data/atlas/"

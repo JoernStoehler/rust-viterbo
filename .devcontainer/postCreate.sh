@@ -15,12 +15,14 @@ PERSIST_DIR="$WORKSPACE_FOLDER/.persist"
 mkdir -p "$PERSIST_DIR"
 
 # Caches: rustup, cargo, sccache
-mkdir -p "$PERSIST_DIR"/{cargo-home,rustup,sccache,codex,gh-config,vibe-kanban,npm,npm-cache,uv-cache,pip-cache,ruff-cache,vibe-worktrees}
+mkdir -p "$PERSIST_DIR"/{cargo-home,rustup,elan,sccache,codex,gh-config,vibe-kanban,npm,npm-cache,uv-cache,pip-cache,ruff-cache,elan-cache,lake-cache,vibe-worktrees}
 touch "$PERSIST_DIR/bash_history"
 rm -rf "$HOME"/{.cargo,.rustup,.sccache,.codex,.local/share/vibe-kanban,.config/gh,.bash_history,.npm,.cache/npm,.cache/uv,.cache/pip,.cache/ruff} 2>/dev/null || true
+rm -rf "$HOME/.elan" "$HOME/.cache/elan" "$HOME/.cache/lake" 2>/dev/null || true
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share" "$HOME/.config"
 ln -sfn "$PERSIST_DIR/cargo-home"   "$HOME/.cargo"
 ln -sfn "$PERSIST_DIR/rustup"       "$HOME/.rustup"
+ln -sfn "$PERSIST_DIR/elan"         "$HOME/.elan"
 ln -sfn "$PERSIST_DIR/sccache"      "$HOME/.sccache"
 ln -sfn "$PERSIST_DIR/codex"        "$HOME/.codex"
 ln -sfn "$PERSIST_DIR/vibe-kanban"  "$HOME/.local/share/vibe-kanban"
@@ -31,6 +33,8 @@ ln -sfn "$PERSIST_DIR/npm-cache"    "$HOME/.cache/npm"
 ln -sfn "$PERSIST_DIR/uv-cache"     "$HOME/.cache/uv"
 ln -sfn "$PERSIST_DIR/pip-cache"    "$HOME/.cache/pip"
 ln -sfn "$PERSIST_DIR/ruff-cache"   "$HOME/.cache/ruff"
+ln -sfn "$PERSIST_DIR/elan-cache"   "$HOME/.cache/elan"
+ln -sfn "$PERSIST_DIR/lake-cache"   "$HOME/.cache/lake"
 sudo mkdir -p /var/tmp/vibe-kanban
 sudo chown "$(id -u):$(id -g)" /var/tmp/vibe-kanban
 rm -rf /var/tmp/vibe-kanban/worktrees 2>/dev/null || true
@@ -39,7 +43,7 @@ sudo mkdir -p /var/tmp/vk-target
 sudo chown "$(id -u):$(id -g)" /var/tmp/vk-target
 
 # Set envvars
-export PATH="/usr/local/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
+export PATH="/usr/local/bin:$HOME/.elan/bin:$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
 export CARGO_HOME="$HOME/.cargo"
 export RUSTUP_HOME="$HOME/.rustup"
 export CARGO_TARGET_DIR="/var/tmp/vk-target"
@@ -47,14 +51,40 @@ export CARGO_TARGET_DIR="/var/tmp/vk-target"
 # Install Rust toolchain
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 source "$HOME/.cargo/env"
-rustup component add rustfmt clippy
-rustup set profile default
+bash "$WORKSPACE_FOLDER/scripts/rust-setup.sh"
+
+# Install Lean toolchain (elan + lake)
+LEAN_TOOLCHAIN_FILE="$WORKSPACE_FOLDER/lean/lean-toolchain"
+if [[ -f "$LEAN_TOOLCHAIN_FILE" ]]; then
+  LEAN_TOOLCHAIN="$(cat "$LEAN_TOOLCHAIN_FILE")"
+  if ! command -v elan >/dev/null 2>&1; then
+    tmpdir="$(mktemp -d)"
+    curl -fsSL https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh -o "$tmpdir/elan-init.sh"
+    bash "$tmpdir/elan-init.sh" --default-toolchain "$LEAN_TOOLCHAIN" -y
+    rm -rf "$tmpdir"
+  fi
+  # Ensure PATH for this shell
+  if [[ -f "$HOME/.elan/env" ]]; then
+    # shellcheck disable=SC1090
+    source "$HOME/.elan/env"
+  fi
+  elan toolchain install "$LEAN_TOOLCHAIN"
+  elan default "$LEAN_TOOLCHAIN"
+  bash "$WORKSPACE_FOLDER/scripts/lean-setup.sh"
+else
+  echo "warning: lean toolchain file not found; skipping elan install" >&2
+fi
 
 # Install workspace helper commands into PATH via symlinks
-if [[ -f "${WORKSPACE_FOLDER}/scripts/safe.sh" ]]; then
-  ln -sfn "${WORKSPACE_FOLDER}/scripts/safe.sh" "$HOME/.local/bin/safe"
-  chmod +x "${WORKSPACE_FOLDER}/scripts/safe.sh"
-fi
+link_helper() {
+  local src="$1" name="$2"
+  if [[ -f "$src" ]]; then
+    ln -sfn "$src" "$HOME/.local/bin/$name"
+    chmod +x "$src"
+  fi
+}
+link_helper "${WORKSPACE_FOLDER}/scripts/group-timeout.sh" group-timeout
+link_helper "${WORKSPACE_FOLDER}/scripts/background.sh" background
 
 # Install pre-built binaries (much faster than cargo install)
 # -------------------- helper: fetch prebuilt tar/zip into ~/.cargo/bin --------------------
@@ -96,6 +126,9 @@ install_bin "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VER
 export RUSTC_WRAPPER="sccache"
 export SCCACHE_DIR="$HOME/.sccache"
 
+bash "$WORKSPACE_FOLDER/scripts/python-setup.sh"
+bash "$WORKSPACE_FOLDER/scripts/bash-setup.sh"
+
 # Install Codex CLI
 mkdir -p "$HOME/.local/bin" "$HOME/.cache/npm"
 npm config set prefix "$HOME/.local"
@@ -113,14 +146,4 @@ cargo --version || true
 for b in sccache cargo-deny cargo-audit cargo-nextest mdbook; do command -v "$b" >/dev/null && "$b" --version || true; done
 
 # Persist exports to .bashrc
-grep -q 'RUSTC_WRAPPER' "$HOME/.bashrc" 2>/dev/null || cat >> "$HOME/.bashrc" <<'EOF'
-export PATH="$HOME/.cargo/bin:$HOME/.local/bin:$PATH"
-export CARGO_HOME="$HOME/.cargo"
-export RUSTUP_HOME="$HOME/.rustup"
-export RUSTC_WRAPPER="sccache"
-export SCCACHE_DIR="$HOME/.sccache"
-export RUST_BACKTRACE=1
-export CARGO_TARGET_DIR="/var/tmp/vk-target"
-EOF
-
 echo "✅ Post-create setup completed successfully."

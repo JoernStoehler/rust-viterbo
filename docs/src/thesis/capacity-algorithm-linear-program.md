@@ -123,7 +123,7 @@ Assembly details.
   - lower bound (LP/SDP) and any exact matches,
   - solver logs (gap/time) for reproducibility.
 
-Defaults and budgets (safe wrapper).
+Defaults and budgets (group-timeout wrapper).
 - LP/graph enumeration: 10 s budget for m ≤ 80.
 - Exact QP per order: 1–5 s; stop after best‑so‑far is within factor 1.02 of LP lower bound or after 120 s total.
 - SDP (optional): 60–180 s small‑m runs only.

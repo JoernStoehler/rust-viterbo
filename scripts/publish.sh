@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)"
 BOOK_DIR="$ROOT_DIR/docs/book"
 
 echo "🔧 Building the book..."
-bash "$ROOT_DIR/scripts/safe.sh" --timeout 600 -- mdbook build "$ROOT_DIR/docs"
+group-timeout 600 mdbook build "$ROOT_DIR/docs"
 
 # Prepare a temporary worktree
 TMP_DIR="$(mktemp -d)"

@@ -1,6 +1,6 @@
 <!-- Author: Codex -->
 
-<!-- Ticket: <slug> -->
+<!-- Issue: <slug> -->
 
 <!-- Docs: docs/src/thesis/Ekeland-Hofer-Zehnder-Capacity.md -->
 <!-- Docs: docs/src/thesis/viterbo-conjecture-counterexample.md -->
@@ -44,7 +44,7 @@
 2. **Enumerate 2-bounce candidates.** For every direction \(u\) represented by a facet normal of \(K\) or \(T^{\circ}\), solve a parallel support pair problem to obtain antipodal points \(q_0,q_1\). Their action is \(2\,g_T(q_1-q_0)\).
 3. **Enumerate 3-bounce candidates.** For every cyclic triple of facets of \(K\) and compatible triple of edges of \(T^{\circ}\), solve the discrete reflection system to recover \((q_i,p_i)\) and evaluate the action.
 4. **Validate** each candidate (positivity of \(\lambda_i\), all points inside facets, total winding one) and keep the minimal action.
-5. **Return** the best action and its certificate. If no valid candidate survives numerical tolerances, fall back to the oriented-edge graph search for this instance and file a ticket.
+5. **Return** the best action and its certificate. If no valid candidate survives numerical tolerances, fall back to the oriented-edge graph search for this instance and file a issue.
 
 ## Geometry Preprocessing
 1. **Facet normalization.** Convert each supporting line of \(K\) to \((n_i, c_i)\) with \(\|n_i\|=1\) and \(n_i \cdot x \le c_i\). Ensure cyclic ordering (counter-clockwise) as described in `docs/src/thesis/geom2d_polytopes.md`.

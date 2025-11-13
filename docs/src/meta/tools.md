@@ -31,7 +31,7 @@ These are the only host-provided tools available to agents. If a capability isn�
 - Behavior: Writes the provided data into the process, collects everything emitted since the previous poll, and reports whether the child has exited.
 
 ### `functions.list_mcp_resources`
-- Purpose: Discover read-only resources exposed by MCP servers (tickets, specs, docs).
+- Purpose: Discover read-only resources exposed by MCP servers (issues, specs, docs).
 - Input: Optional `server` filter and pagination `cursor`.
 - Output: Resource descriptors (`uri`, title, summary) which you then pass to `functions.read_mcp_resource`.
 
@@ -87,6 +87,18 @@ Each entry describes the problem it solves, the observable pain when it is missi
 - **Behavior:** Every script assumes it runs under `group-timeout`, and executes the standard command sequence (Ruff format/lint, Pyright, pytest smoke; `cargo fmt`, `cargo nextest`, `cargo clippy`, benches, etc.). Invoke via `group-timeout 30 bash scripts/<name>.sh`.
 - **Note:** Manual standard commands such as `group-timeout 10 uv run pytest q k tests/test_example.py` allow to deviate from the canonical loop when advantageous, e.g. for even leaner edit-and-verify cycles.
 
+### `scripts/bash-setup.sh` / `scripts/python-setup.sh` / `scripts/rust-setup.sh`
+- **Problem:** Post-create and worktree provisioning duplicated shell snippets to wire PATH exports, Python venvs, and rustup components, which easily drifted.
+- **Behavior:** `bash-setup.sh` appends the standard env exports to `.bashrc`; `python-setup.sh` ensures `.venv` exists and runs `uv sync --extra dev --locked`; `rust-setup.sh` installs required rustup components and ensures the shared `CARGO_TARGET_DIR` exists. These scripts run automatically during container creation and when `provision-worktree.sh` finishes; rerun them manually if you suspect tooling drift.
+
+### `scripts/lean-{setup,lint,test}.sh`
+- **Problem:** The Lean workspace needs the same single-command ergonomics as Python/Rust so agents can hydrate toolchains, lint, and run smoke tests without bespoke incantations.
+- **Behavior:** `lean-setup.sh` ensures `elan` + `lake` are available and runs `lake update`; `lean-lint.sh` formats and builds the libraries; `lean-test.sh` builds and executes the `SympLeanTests` entrypoint. All three require `group-timeout`.
+- **Usage:**  
+  `group-timeout 30 bash scripts/lean-setup.sh`  
+  `group-timeout 60 bash scripts/lean-lint.sh`  
+  `group-timeout 60 bash scripts/lean-test.sh`
+
 ### `scripts/ci.sh`
 - **Problem:** There needs to be a quality gate before merging changes into main. It has to be documented, reproducible, and thorough. Timing targets must be documented to notice and fix slowdowns in test suites, builds, and docs generation.
 - **Behavior:** Runs the full suite of linting, type checking, testing, benchmarks, and docs build. Specifies independent upper-bound timeouts for each stage using `group-timeout`. Fails on first error.
@@ -103,35 +115,71 @@ Each entry describes the problem it solves, the observable pain when it is missi
 
 ### `scripts/provision-worktree.sh`
 - **Problem:** Provisioning a new worktree by hand leads to missing hooks, stale dependencies, or half-configured environments.
-- **Behavior:** Validates the source tree is clean, creates the new worktree/branch, hydrates LFS and caches, runs `hook-provision.sh`. This ensures every agent starts in a ready-to-go state.
-- **Usage:** `scripts/provision-worktree.sh --source <branch|folder|commit> --target <folder> [--branch <name>] [--skip-hook]`
+- **Behavior:** Validates the source tree is clean, creates the new worktree/branch, hydrates LFS and caches, then runs the provision hook. This ensures every agent starts in a ready-to-go state.
+- **Usage:** `group-timeout 30 bash scripts/provision-worktree.sh --source <branch|folder|commit> --target <folder> [--branch <name>] [--skip-hook]`
 
 ### `scripts/merge-worktree.sh`
 - **Problem:** Hand-merging worktrees invites forgotten rebases, stray commits, or unclean directories.
 - **Behavior:** Checks both directories, rebases the worktree branch onto the target, performs a validation, then fast-forwards. Options like `--ignore-uncommitted`, `--skip-rebase`, and `--dry-run` let you adjust the workflow consciously instead of forgetting steps.
-- **Usage:** `scripts/merge-worktree.sh --source <folder> --target <branch|folder> [--ignore-uncommitted] [--skip-rebase] [--dry-run]`
+- **Usage:** `group-timeout 60 bash scripts/merge-worktree.sh --source <folder> --target <branch|folder> [--ignore-uncommitted] [--skip-rebase] [--dry-run]`
 
 ### `scripts/agentx.sh`
-- **Problem:** Agents need a first-class CLI to manage Codex sessions (list/view/run/archive/abort) without diving into Python internals.
-- **Behavior:** Maintains session metadata (`session`, `worktree`, `pid`, `turn`, config overrides, archive state) under `~/.config/agentx/state.json`, updates the table on each command, and launches Codex turns via `group-timeout` + `background`.
-- **Model:** Codex CLI manages the sessions, i.e. the context history an agent has access to. Sessions consist of turns, each turn starts with an externally provided prompt, is followed by reasoning trace, tool invocations, tool outputs, and ends with an agent-written final message. We don't allow reusing a session in a different worktree to avoid confusion. Active sessions have an ongoing incomplete turn, a PID, can be aborted, and their worktree exists on disk. Inactive sessions have no ongoing turn, no PID, can be started, and their worktree exists on disk. Archived sessions are inactive and may have their worktree deleted to save space.
-- **Usage:** `scripts/agentx.sh <command> [args...]` where the following commands are supported:
-  - `list [--fields <field1,field2,...>] [--sort-by <field1,...>] [--filter <field>=<value1,...>]`: list all sessions with optional field selection, sorting, and filtering.
-    Available fields: `session_id` (UUID), `worktree` (string), `branch` (string), `git_state` (unicode symbols), `status` (active,inactive,archived), `turns_completed` (integer), `last_updated` (timestamp), `created_at` (timestamp), `pid` (integer or null).
-    Default is to show all fields, sort by `last_updated` descending, and filter to active and inactive sessions only.
-  - `view --session <session_id>`: short-cut to show only one session.
-  - `view --worktree <path>`: short-cut to show only the sessions for a given worktree.
-  - `run --worktree <path> [--session <session_id>] [--prompt "<prompt>"|--prompt-file <file>] [args...]`: start a new or continue an existing session in the given worktree with optional extra arguments passed to the codex cli command (e.g. `... -c reasoning_budget=low`).
-  - `abort --session <session_id>`: send SIGTERM to the active session's PID to force-stop the ongoing turn mid-action. No final message will be produced for the aborted agent turn.
-  - `archive --session <session_id> [--delete-worktree]`: mark the session as archived to prevent further runs; optionally delete the worktree to save space. not intended to be reversed.
-  - `await --session <session_id>`: block until the given session's active turn completes or is aborted; prints the final message or an abort notice. Requires being wrapped in `group-timeout`.
-- **Note:** Agents should always use `scripts/agentx.sh run ...` to start or continue sessions instead of invoking Codex CLI directly. This ensures proper session tracking, timeouts, and backgrounding.
-- **Note:** For a simpler synchronous interface, use `scripts/subagent.sh` instead.
+- **Problem:** Codex sessions need lifecycle management plus traceability for every PID that interacts with the repo. Manual `codex` invocations leave zombie processes, orphan worktrees, and no consistent audit trail.
+- **Behavior:** The CLI fronts three data sources and presents them through a single interface:
+  1. `~/.config/agentx/state.json` (authoritative session ledger). `refresh_state` walks this file on every command, reconciles finished turns, and persists `status`, `pid`, `stdout/stderr/exitcode` log paths, and hook metadata under a `flock`.
+  2. `~/.codex/sessions/**/*.jsonl` (Codex’ own session logs). The first line exposes the session UUID, cwd, git branch, and prompt instructions. `agentx list` now harvests those logs to expose `status=log` rows even if a session was never tracked (or was tracked but later pruned from state.json).
+  3. `/proc/<pid>` (live processes). Codex binaries that run with `--yolo` are detected, deduplicated per process tree, and surfaced as `status=unmanaged` rows so runaways are visible and can be killed or attached later.
+- **Mental model:** A session is an append-only Codex conversation. It may be `active` (turn running with a PID), `inactive` (turn finished, ready for resume), `stopped` (aborted), or `archived` (frozen; optionally the worktree is gone). Rows from session logs but not tracked in state appear as `log`. Live processes that are not managed by agentx appear as `unmanaged`. The default table therefore lists *all* known activity; use filters to scope it down.
+
+#### Commands and usage
+`bash scripts/agentx.sh <command> [options]`
+
+- **list** ` [--fields a,b] [--sort-by field[,field2...]] [--filter key=v1,v2]`  
+  Prints every known session plus unmanaged Codex processes. Default fields are `session_id,status,worktree,branch,pid,updated_at`. Add `cmd` (process command line) or `session_file` (path inside `~/.codex/sessions`) via `--fields`. `--sort-by` accepts one or multiple comma-separated fields (e.g., `--sort-by status,updated_at`). Filtering on `status=active,inactive,unmanaged` is the standard triage flow; for a concise view run `bash scripts/agentx.sh list --fields session_id,status,pid,cmd --filter status=active,unmanaged`.
+- **view** `--session <id>` or `--worktree <path>`  
+  Dumps the raw JSON entry for the target session/worktree. Use this to inspect hook metadata, exit codes, or log paths without parsing the state file manually.
+- **run** `--worktree <path> [--session <id>] [--prompt "..."] [--prompt-file <path>] [--message "..."] [-- ...extra Codex flags...]`  
+  Starts a new turn or resumes a paused one. Requires an explicit `--prompt` or `--prompt-file`. Uses `scripts/background.sh` to detach, records logs under `/tmp/background-*/`, and updates `state.json`. Always go through this command; if you call `codex` directly, the PID shows up as `status=unmanaged` and nobody else can tell what it is doing.
+- **await** `--session <id>`  
+  Blocks until the session’s active turn finishes (or aborts) and then prints the captured final message.
+- **abort** `--session <id>`  
+  Sends SIGTERM/SIGKILL to the running Codex process, writes exit code `143`, and flips the session to `stopped`.
+- **archive** `--session <id> [--delete-worktree]`  
+  Marks the session as archived so it cannot be resumed. Pass `--delete-worktree` to remove the corresponding directory when it lives under `.persist/agentx/worktrees`.
+
+#### Field and status reference
+- `session_id`: Codex UUID (for tracked sessions) or synthetic `unmanaged:pid-<pid>`.
+- `status`: `active`, `inactive`, `stopped`, `archived` (from state), `log` (from `.codex/sessions` only), `unmanaged` (live process).
+- `worktree`: Resolved path; comes from state.json when present, otherwise the Codex log line or `/proc/<pid>/cwd`.
+- `branch`: Derived from git info in the log payload; falls back to the value from `state.json`.
+- `pid`: Numeric PID for active sessions or unmanaged processes. `None`/empty otherwise.
+- `updated_at`: ISO timestamp—last state mutation for tracked sessions, process start time for unmanaged entries, Codex log timestamp for `status=log`.
+- `cmd`: Only populated for `unmanaged` rows so you can see exactly which Codex binary/flags are running.
+- `session_file`: Canonical path under `~/.codex/sessions` for rows that came from the log sweep.
+
+Status transitions and cleanup expectations:
+- `active` → `inactive` automatically when the background Codex turn finishes and `agentx await` (or the periodic refresher) records the exit code. Resume future work with `agentx run --session <id>`.
+- `inactive` → `archived` via `agentx archive --session <id>` once the issue is closed; optionally delete the worktree.
+- `stopped` appears when `agentx abort` (or a crash) ends a turn. Either restart the turn (still `inactive`) or document the outcome in the issue.
+- `log` rows exist because a `.codex/sessions/*.jsonl` entry had no matching `state.json` row. Import them by resuming that session via `agentx run --session <uuid>` or delete the `.jsonl` file if the session is intentionally retired.
+- `unmanaged` rows are live `codex --yolo` processes that agentx does not own. Either kill the PID or restart the work under `agentx run` so everyone sees the worktree/issue context. Leaving unmanaged rows around is considered a bug.
+
+#### Hooks & developer notes
+- Hooks (`AGENTX_HOOK_BEFORE_TURN_BEGIN`, `_BEFORE_TURN_LAUNCH`, `_AFTER_TURN_LAUNCH`, `_AFTER_TURN_END_SUCCESS`, `_AFTER_TURN_END_FAILURE`, `_AFTER_TURN_ABORTED`) run *inside the worktree* with `AGENTX_HOOK_SESSION_ID=<uuid>` in the environment. Use them for per-issue instrumentation, extra linting, or notifications.
+- The CLI creates per-session scratch dirs under `~/.config/agentx/sessions/<id>` for hook state.
+- `scripts/background.sh` is a required dependency; it performs the actual detach and log capture.
+- The Python snippets inside `agentx.sh` deliberately avoid third-party deps: keep them fast (single `flock` per command) and deterministic. If you extend the format of `state.json` or need additional fields, document the change here and in `AGENTS.md`.
+- Use `scripts/subagent.sh` for single-turn helper sessions. It shares the same Codex infrastructure but is synchronous and intentionally ephemeral; see below for details.
 
 ### `scripts/subagent.sh`
 - **Problem:** Delegating a scoped task (search, grep-intensive triage, fix linter errors) to a helper agent should not pollute the main session or risk runaway jobs.
 - **Behavior:** Requires `group-timeout`, spawns a fresh Codex session, runs exactly one turn with the provided prompt/config overrides, waits for completion, prints the final message/log summary.
 - **Usage:** `group-timeout <seconds> bash scripts/subagent.sh --worktree <path> [--prompt "<prompt>"|--prompt-file <file>] [args...]` where extra args are passed to Codex CLI (e.g. `... -c reasoning_budget=low`).
+
+### `scripts/issue-list.sh`
+- **Problem:** Grepping entire Markdown files just to see who owns or is assigned to an issue wastes time.
+- **Behavior:** Scans `issues/*.md (except docs/src/meta/issue-template.md)`, parses the YAML header, and prints one tab-separated line per issue: `status	owners	assignees	tags	path	title`. Skips `issues/template.md`.
+- **Usage:** `bash scripts/issue-list.sh | rg my-session-id` (filter by session, tag, or filename). Piping into `awk '{print $1,$5}'` gives quick dashboards.
 
 ### `scripts/paper-download.sh`
 - **Problem:** Searching, pulling, parsing bibliography references manually is error-prone and redundant work.
@@ -142,11 +190,3 @@ Each entry describes the problem it solves, the observable pain when it is missi
 - **Problem:** We publish docs via GitHub Pages without CI; the build/push workflow must be reproducible.
 - **Behavior:** Builds the mdBook (`mdbook build docs`), stages a temporary `gh-pages` worktree, copies `docs/book/`, commits with a timestamped message, and pushes to the `gh-pages` branch. Wrap it in `group-timeout` to keep the workflow predictable.
 - **Usage:** `group-timeout 60 bash scripts/publish.sh`
-
-## Legacy Reference
-
-### `scripts/agentx.py`
-- Purpose: Historical Python implementation of the agent orchestrator. It embodied a similar session/worktree/PID/turn metadata model and invoked Codex directly. Keep it around only for archeology; all active development uses `scripts/agentx.sh`.
-
-### `scripts/safe.sh`
-- Purpose: Early attempt at a timeout wrapper. Superseded by `group-timeout`.

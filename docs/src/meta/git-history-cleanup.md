@@ -1,4 +1,4 @@
-<!-- When to read: Only for rare, owner‑approved history rewrites. Not needed for normal tickets. -->
+<!-- When to read: Only for rare, owner‑approved history rewrites. Not needed for normal issues. -->
 
 # Git History Cleanup (Situational)
 
@@ -14,7 +14,7 @@ Steps (quick guide)
   - `git clone --mirror /workspaces/rust-viterbo /tmp/history-cleanup.git`
   - `cd /tmp/history-cleanup.git`
 - Remove legacy bench artifacts:
-  - `git filter-repo --force --invert-paths --path data/bench/release --path data/bench/release/ --path data/bench/tmp --path data/bench/tmp/ --path data/bench/.rustc_info.json --path data/target --path data/target/ --message-callback 'return message + b\"\n[chore] Drop legacy bench artifacts (Ticket <uuid>)\n\"'`
+  - `git filter-repo --force --invert-paths --path data/bench/release --path data/bench/release/ --path data/bench/tmp --path data/bench/tmp/ --path data/bench/.rustc_info.json --path data/target --path data/target/ --message-callback 'return message + b\"\n[chore] Drop legacy bench artifacts (Issue <uuid>)\n\"'`
 - Verify:
   - `git rev-list --objects --all | grep data/bench/release` (should be empty)
   - `git fsck --full`
@@ -26,7 +26,7 @@ Steps (quick guide)
   - Run quick loops:
     - `bash scripts/python-lint-type-test.sh`
     - `bash scripts/rust-test.sh`
-- Record actions: commands run and key hashes in the ticket; no extra files are required for the rewrite itself.
+- Record actions: commands run and key hashes in the issue; no extra files are required for the rewrite itself.
 
 Notes
 - Do not attempt without owner approval and a quiet window; history rewrites disrupt collaborators’ clones and LFS pointers.

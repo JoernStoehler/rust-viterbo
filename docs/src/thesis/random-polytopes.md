@@ -1,6 +1,6 @@
 # Random Polytope Generators {#random-polytopes}
 
-<!-- Ticket: 0f48-random-polytopes -->
+<!-- Issue: 0f48-random-polytopes -->
 <!-- Code: crates/viterbo/src/rand4/mod.rs -->
 
 Goal: define a plug-and-play catalogue of random (and enumerative) 4D polytopes that feed the atlas dataset and future experiments. Every generator must be reproducible, emit only valid polytopes, and surface enough metadata for downstream provenance sidecars.
@@ -55,7 +55,7 @@ Implementation note: the `rand4` Rust module materializes these conventions via 
 - **Row schema**: `{"polytope": Poly4, "generator": name, "params": json, "replay_token": value}`. The atlas build stage reads this schema to call `generate_single` when regenerating artifacts.
 - **Config knobs**: each dataset config lists generators with explicit `rows` (or `max_rows` for enumerations). Scaling up/down means editing those integers directly, which keeps per-source cost controls obvious (e.g., “Mahler = 40 rows, Regular products = 10 rows, Catalog = 5 rows”).
 - **Testing**: smoke configs cap each generator at ≤3 rows to keep `tests/smoke` under 10 seconds; full configs rely on `scripts/reproduce.sh`.
-- **Escalation hooks**: if a generator cannot hit requested constraints (e.g., Mahler sampler fails to find a polygon with desired in-radius), it should emit structured errors referencing this page and the originating ticket.
+- **Escalation hooks**: if a generator cannot hit requested constraints (e.g., Mahler sampler fails to find a polygon with desired in-radius), it should emit structured errors referencing this page and the originating issue.
 
 ## Next Steps
 

@@ -1,51 +1,46 @@
+<!-- Purpose: External-facing entry point for reviewers and researchers. Keep it concise, explain what the thesis is, how to reproduce it end-to-end, and how to extend it. Internal process details belong in AGENTS.md or docs/src/meta/. -->
 # Probing Viterbo’s Conjecture — MSc Thesis
 
 [![Thesis](https://img.shields.io/badge/Thesis-Online-2ea44f)](https://JoernStoehler.github.io/rust-viterbo/)
 
-This repository contains the thesis itself (book) and the code that produces its results; it is the authoritative, reproducible source for text, figures, and data artifacts.
+This repository hosts the MSc thesis text and every artifact needed to verify its claims: Rust + Python code, data pipelines, Lean specs, benchmark outputs, and the rendered mdBook.
 
-## Abstract
+## What this thesis answers
+- Maps where convex polytopes in $\mathbb{R}^4$ violate or approach Viterbo’s systolic bound.
+- Automates Reeb-orbit search (oriented-edge graph method, LP certificates) to measure minimal actions.
+- Provides a reproducible dataset and runtime-efficient kernels so others can explore variants of the conjecture.
 
-We study the systolic ratio on convex polytopes in $\mathbb{R}^4$ to understand where Viterbo’s conjecture fails or nearly holds. The work combines algorithmic computation of Reeb dynamics and actions with data‑driven exploration to map the landscape efficiently and reproducibly.
+## Repository overview
+- `docs/`: mdBook sources for the thesis (built version linked above).
+- `src/`, `crates/`: Python orchestration + Rust kernels that generate every figure/table.
+- `data/`: Git LFS snapshots of published artifacts (regenerate via `scripts/reproduce.sh`).
+- `lean/`: Lean4 workspace for in-progress formal specs of symplectic polytopes and oriented-edge reasoning.
+- `configs/`: JSON configs for experiments; edit or add new configs to drive fresh studies.
 
-## Background
+## Reproduce the thesis end-to-end
+1. **Pick an environment**
+   - *GitHub Codespaces*: create a codespace on `main`, wait for “✅ Post-create setup completed successfully.”
+   - *Local VS Code dev container*: `git clone https://github.com/<you>/rust-viterbo`, open in VS Code, “Reopen in Container,” wait for the same success message. Install Git LFS first or run `git lfs install --local` after cloning.
+2. **Hydrate LFS artifacts** (if not already present): `git lfs pull --include "data/**" --exclude ""`.
+3. **Run the single entrypoint**:
+   ```bash
+   bash scripts/reproduce.sh
+   ```
+   The script creates the Python venv, syncs deps, runs lint/tests (Python + Rust plus the Lean quick loops described below), rebuilds the native extension, executes the tiny atlas pipeline, generates benches, and builds the mdBook.
+4. **Preview the thesis**: `mdbook serve docs -p 4000` and open the printed URL.
 
-For a star‑shaped compact domain $X \subset \mathbb{R}^{2n}$, the systolic ratio is $\mathrm{sys}(X) = A_{\min}(X)^n / \bigl(n!\,\mathrm{vol}(X)\bigr)$, where $A_{\min}(X)$ is the minimal action of a closed Reeb orbit on $\partial X$.  
-Viterbo conjectured $\mathrm{sys}(X) \le 1$ for convex $X$. A recent explicit polytope in $\mathbb{R}^4$ violates this bound; our goal is to chart where convex polytopes sit relative to this threshold and why.
+## Build new research on top
+- Read `AGENTS.md` for contributor conventions (issue workflow, quick loops, provenance rules).
+- Lean workspace: use the helper commands under `group-timeout`:
+```bash
+group-timeout 30 bash scripts/lean-setup.sh
+group-timeout 60 bash scripts/lean-lint.sh
+group-timeout 60 bash scripts/lean-test.sh
+```
+These commands also run automatically during container provisioning and when new worktrees are created; rerun them manually whenever you need to refresh the Lean cache.
+- Python/Rust development mirrors the thesis structure: add configs under `configs/<experiment>/`, stages in `src/viterbo/<experiment>/`, and kernels in `crates/viterbo`. Run the standard loops (`scripts/python-lint-type-test.sh`, `scripts/rust-*.sh`) before opening a PR.
+- All new data artifacts live in `data/<experiment>/...` with JSON provenance sidecars via `viterbo.provenance.write`.
 
-References
-- [1] J. Chaidez, M. Hutchings, Computing Reeb dynamics on 4d convex polytopes, arXiv:2008.10111.
-- [2] P. Haim‑Kislev, Y. Ostrover, A Counterexample to Viterbo’s Conjecture, arXiv:2405.16513.
-
-## Reproduce
-
-Pick an environment; both give the same results.
-
-**Remote** (GitHub Codespaces):
-  1) Fork the repo (or use it directly if you have permissions).
-  2) Code → Create codespace on main.
-  3) Wait for “✅ Post-create setup completed successfully.” in the terminal.
-
-**Local** (VS Code Dev Container):
-  1) Clone: `git clone https://github.com/<you>/rust-viterbo && cd rust-viterbo`
-  2) Open in VS Code (Dev Containers extension).
-  3) “Reopen in Container”.
-  4) Wait for “✅ Post-create setup completed successfully.”
-
-After the environment is ready:
-1) Run `bash scripts/reproduce.sh` to build the code, tests (including E2E), data artifacts, and the book.
-2) Run `mdbook serve docs -p 4000` and view the book in your browser.
-
-**Git LFS**
-- Install Git LFS (https://git-lfs.com/) before cloning locally (or run `git lfs install --local` inside the repo/worktree).
-- Hydrate the tracked artifacts with `git lfs pull --include "data/**" --exclude ""` so `data/` contents are available before running pipelines.
-
-## Onboard
-
-- Quick path: read `AGENTS.md` (always‑relevant onboarding) and `docs/src/meta/overview.md`.
-- Manual path: Python orchestration lives in `src/viterbo/<experiment>/stage_*.py` and configs under `configs/<experiment>/`; Rust math kernels live in `crates/viterbo` and are optionally exposed to Python via PyO3 in `crates/viterbo-py`.
-
-## License
-
-- MIT — see `LICENSE`.
-- Acknowledgements: Supervision by K. Cieliebak; project informed by [1] and motivated by [2].
+## License & citation
+- MIT License — see `LICENSE`.
+- Please cite the project via the thesis link above; individual chapter references live in `docs/src/thesis/`.

@@ -1,30 +1,30 @@
 # Benchmarks → Docs Pipeline
 
-This note records the Phase 1 design + Phase 2 implementation work for surfacing Criterion micro-benchmarks inside the mdBook site. It follows the flow described in `AGENTS.md`: tickets → specs → code/tests → data.
+This note records the Phase 1 design + Phase 2 implementation work for surfacing Criterion micro-benchmarks inside the mdBook site. It follows the flow described in `AGENTS.md`: issues → specs → code/tests → data.
 
 ## Layout, naming, retention
 - **Raw output** lives under `target/criterion/...` while `cargo bench` runs. `scripts/rust-bench.sh` copies only the `criterion` subtree into `data/bench/criterion/` (Git LFS) right after the run so we keep curated JSON without polluting `data/` with arbitrary build detritus.
-- **Build junk** (`data/bench/release`, `tmp/`, `.rustc_info.json`) stays untracked via `.gitignore`. If Cargo drops new cache directories, add them here before running benches on a ticket.
+- **Build junk** (`data/bench/release`, `tmp/`, `.rustc_info.json`) stays untracked via `.gitignore`. If Cargo drops new cache directories, add them here before running benches on a issue.
 - **Derived tables** land in `docs/assets/bench/` as `<timestamp>_<group>.csv` plus a Markdown twin for mdBook. Each CSV gets a `.run.json` sidecar with `git_commit`, UTC `timestamp`, host/rust info, and the row count. Small symlinks (`current.csv`, `current_<group>.csv`, `current_<group>.md`) point at the latest export so docs can `{{#include}}` a stable path.
 - **Retention**: the Python stage keeps the most recent five exports per group by default (value stored in `configs/bench/docs_local.json`). Older CSV/MD pairs + their `.run.json` sidecars are deleted to avoid asset bloat while still keeping short-term history for review diffs.
 
 ## How to run
 1. Make sure the benches you want exist (currently `crates/viterbo/benches/poly2_bench.rs`) and hydrate Git LFS for `data/**` if needed.
-2. Run the benches through the wrapper (safe-wrapped):
+2. Run the benches through the wrapper under `group-timeout`:
    ```bash
-   bash scripts/safe.sh --timeout 300 -- bash scripts/rust-bench.sh
+   group-timeout 300 bash scripts/rust-bench.sh
    # optional envs: BENCH_EXPORT_DIR=/tmp/bench, BENCH_RUN_POSTPROCESS=1 (to immediately run the stage)
    ```
    This writes raw Criterion JSON to `target/criterion`, rsyncs the curated snapshot into `data/bench/criterion`, and leaves Cargo caches alone.
 3. Refresh the docs tables via the Python stage (defaults live in `configs/bench/docs_local.json`):
    ```bash
-   bash scripts/safe.sh --timeout 120 -- uv run python -m viterbo.bench.stage_docs \
+   group-timeout 120 uv run python -m viterbo.bench.stage_docs \
      --config configs/bench/docs_local.json
    # add --bench-root /custom/path or --keep 10 if you need overrides
    ```
 4. Commit the tiny files in `docs/assets/bench/` together with the `data/bench/criterion/**` snapshot (Git LFS handles the bulk). If you want the wrapper to handle step 3 automatically, export `BENCH_RUN_POSTPROCESS=1` when invoking `scripts/rust-bench.sh`.
 
-`scripts/reproduce.sh` now runs both steps (bench + docs stage) unconditionally so every thesis build and mdBook render derives from freshly generated measurements. Whenever a ticket adds a new artifact or visualization, update `reproduce.sh` in the same PR.
+`scripts/reproduce.sh` now runs both steps (bench + docs stage) unconditionally so every thesis build and mdBook render derives from freshly generated measurements. Whenever a issue adds a new artifact or visualization, update `reproduce.sh` in the same PR.
 
 ## Latest snapshot
 

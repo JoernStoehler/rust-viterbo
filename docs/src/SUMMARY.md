@@ -9,6 +9,7 @@
 - [Meta](meta/overview.md)
   - [Benchmarks → Docs](meta/benchmarks.md)
   - [OE: Charts and Rotation](meta/oriented-edge-charts-and-rotation.md)
+  - [Lean Onboarding](meta/lean-onboarding.md)
   - [Git History Cleanup](meta/git-history-cleanup.md)
   - [Protocol — 2025-11-04 Meeting](meta/protocol-2025-11-04.md)
 - [2D Polytopes (H-rep)](thesis/geom2d_polytopes.md)

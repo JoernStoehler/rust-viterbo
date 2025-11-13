@@ -1,9 +1,9 @@
 # 2D Convex Polytopes — Design Notes {#geom2d}
 
-<!-- Ticket: 372a-create-libraries -->
+<!-- Issue: 372a-create-libraries -->
 <!-- Code: crates/viterbo/src/poly2.rs::Poly2 -->
 
-Goal: extremely fast, robust‑enough 2D routines for half‑space polytopes used at scale (≈1e9 instances) in oriented‑edge DFS. We bias for simple data layout and branch‑light code. Degeneracy handling is intentionally minimal per ticket.
+Goal: extremely fast, robust‑enough 2D routines for half‑space polytopes used at scale (≈1e9 instances) in oriented‑edge DFS. We bias for simple data layout and branch‑light code. Degeneracy handling is intentionally minimal per issue.
 
 ## Representation
 - Two-tier 2D H-rep:

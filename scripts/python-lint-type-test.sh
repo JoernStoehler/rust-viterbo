@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# python-lint-type-test.sh — fast Python lint/type/test loop (requires safe.sh)
+# python-lint-type-test.sh — fast Python lint/type/test loop (requires group-timeout)
 # Contract
-# - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
-# - No internal timeouts; inherits the top-level timeout from safe.sh.
+# - Must be invoked under group-timeout (checks GROUP_TIMEOUT_ACTIVE=1).
+# - No internal timeouts; inherits the top-level timeout from group-timeout.
 # Stages (cheap):
 # - Ruff format/lint, ensure venv + uv sync (locked), pyright basic, pytest (non-e2e).
 set -euo pipefail
 
-if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
-  echo "error: scripts/python-lint-type-test.sh must be run under scripts/safe.sh (global timeout). See AGENTS.md → Command Line Quick Reference." >&2
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+if [[ "${GROUP_TIMEOUT_ACTIVE:-}" != "1" ]]; then
+  printf 'error: %s must be run under group-timeout (global timeout). See AGENTS.md → Command Line Quick Reference.\n' "$SCRIPT_NAME" >&2
   exit 2
 fi
 

@@ -115,8 +115,8 @@ Key points:
 Runbook snippet:
 
 ```bash
-safe --timeout 60 -- python -m viterbo.atlas.stage_build --config configs/atlas/test.json
-safe --timeout 60 -- python -m viterbo.atlas.stage_visualize --dataset data/atlas/test.parquet \
+group-timeout 60 python -m viterbo.atlas.stage_build --config configs/atlas/test.json
+group-timeout 60 python -m viterbo.atlas.stage_visualize --dataset data/atlas/test.parquet \
     --out docs/assets/atlas/test_preview.json --limit 32
 ```
 

@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # rust-build.sh — build/copy the PyO3 native extension into src/viterbo/
 # Contract
-# - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
+# - Must be invoked under group-timeout (checks GROUP_TIMEOUT_ACTIVE=1).
 # - Default behavior: build via maturin develop, then copy the built .so
 #   next to the Python package (src/viterbo/) so it travels with the repo.
 # - Use --copy-only to skip the build and only copy from the current venv.
-# - No internal timeouts; inherits top-level timeout from safe.sh.
+# - No internal timeouts; inherits top-level timeout from group-timeout.
 set -euo pipefail
 
-if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
-  echo "error: scripts/rust-build.sh must be run under scripts/safe.sh (global timeout). See AGENTS.md → Command Line Quick Reference." >&2
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+if [[ "${GROUP_TIMEOUT_ACTIVE:-}" != "1" ]]; then
+  printf 'error: %s must be run under group-timeout (global timeout). See AGENTS.md → Command Line Quick Reference.\n' "$SCRIPT_NAME" >&2
   exit 2
 fi
 

@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
-# ci.sh — strict CI entrypoint (requires safe.sh)
+# ci.sh — strict CI entrypoint (requires group-timeout)
 # Contract
-# - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
+# - Must be invoked under group-timeout (checks GROUP_TIMEOUT_ACTIVE=1).
 # - Strict: formatting, lint, and type errors fail the run (no `|| true`).
 # - Builds the native extension unconditionally so failures surface early.
 # - Optionally runs benches and renders docs tables (controlled via RUN_BENCH_IN_CI=0/1).
-# - No internal timeouts; inherits top-level timeout from safe.sh.
+# - No internal timeouts; inherits top-level timeout from group-timeout.
 set -euo pipefail
 
-if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
-  echo "error: scripts/ci.sh must be run under scripts/safe.sh (global timeout). See AGENTS.md → Command Line Quick Reference." >&2
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+if [[ "${GROUP_TIMEOUT_ACTIVE:-}" != "1" ]]; then
+  printf 'error: %s must be run under group-timeout (global timeout). See AGENTS.md → Command Line Quick Reference.\n' "$SCRIPT_NAME" >&2
   exit 2
 fi
 

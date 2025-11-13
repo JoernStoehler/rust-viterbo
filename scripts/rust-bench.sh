@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# rust-bench.sh — cargo bench convenience wrapper (requires safe.sh)
+# rust-bench.sh — cargo bench convenience wrapper (requires group-timeout)
 # Contract
-# - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
-# - No internal timeouts; inherits the top-level timeout from safe.sh.
+# - Must be invoked under group-timeout (checks GROUP_TIMEOUT_ACTIVE=1).
+# - No internal timeouts; inherits the top-level timeout from group-timeout.
 # - Defaults cargo target dir to a shared repo-local path (.persist/cargo-target) for cross-worktree
 #   reuse via sccache. Criterion output is rsynced into data/bench after the run so Git LFS only
 #   tracks the JSON that matters.
@@ -10,15 +10,16 @@
 # - BENCH_RUN_POSTPROCESS=1 enables running the Python bench stage after export (default: 0 — run it explicitly via python -m viterbo....).
 # - BENCH_EXPORT_RESULTS=0 skips the rsync copy (default: 1).
 # Usage:
-#   safe -t 300 -- bash scripts/rust-bench.sh [-p viterbo] [-- <extra cargo bench args>]
+#   group-timeout 300 bash scripts/rust-bench.sh [-p viterbo] [-- <extra cargo bench args>]
 # Examples:
-#   safe -t 300 -- bash scripts/rust-bench.sh
-#   safe -t 120 -- bash scripts/rust-bench.sh -- --no-run         # compile benches only
-#   BENCH_RUN_POSTPROCESS=1 safe -t 300 -- bash scripts/rust-bench.sh      # auto-run docs stage
+#   group-timeout 300 bash scripts/rust-bench.sh
+#   group-timeout 120 bash scripts/rust-bench.sh -- --no-run         # compile benches only
+#   BENCH_RUN_POSTPROCESS=1 group-timeout 300 bash scripts/rust-bench.sh      # auto-run docs stage
 set -euo pipefail
 
-if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
-  echo "error: scripts/rust-bench.sh must be run under scripts/safe.sh (global timeout). See AGENTS.md → Command Line Quick Reference." >&2
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+if [[ "${GROUP_TIMEOUT_ACTIVE:-}" != "1" ]]; then
+  printf 'error: %s must be run under group-timeout (global timeout). See AGENTS.md → Command Line Quick Reference.\n' "$SCRIPT_NAME" >&2
   exit 2
 fi
 
@@ -37,7 +38,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Bench defaults tuned from quick sweeps (m=50) to reduce run time while keeping
-# low variance for our numerics/HPC kernels. See ticket discussion for details.
+# low variance for our numerics/HPC kernels. See issue discussion for details.
 # Rationale:
 # - Warm-up 1.0s crosses initial cache/JIT effects without long waits.
 # - Measurement 4.0s gives stable means for poly2 benches with outliers ~10–20%.

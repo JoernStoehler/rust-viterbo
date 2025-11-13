@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
-# rust-test.sh — cargo check/test convenience wrapper (requires safe.sh)
+# rust-test.sh — cargo check/test convenience wrapper (requires group-timeout)
 # Contract
-# - Must be invoked under scripts/safe.sh (checks SAFE_WRAPPED=1).
-# - No internal timeouts; inherits the top-level timeout from safe.sh.
+# - Must be invoked under group-timeout (checks GROUP_TIMEOUT_ACTIVE=1).
+# - No internal timeouts; inherits the top-level timeout from group-timeout.
 # Usage:
-#   safe -t 120 -- bash scripts/rust-test.sh [-p viterbo] [-- <extra cargo args>]
+#   group-timeout 120 bash scripts/rust-test.sh [-p viterbo] [-- <extra cargo args>]
 # Examples:
-#   safe -t 120 -- bash scripts/rust-test.sh
-#   safe -t 180 -- bash scripts/rust-test.sh -p viterbo
+#   group-timeout 120 bash scripts/rust-test.sh
+#   group-timeout 180 bash scripts/rust-test.sh -p viterbo
 set -euo pipefail
 
-if [[ "${SAFE_WRAPPED:-}" != "1" ]]; then
-  echo "error: scripts/rust-test.sh must be run under scripts/safe.sh (global timeout). See AGENTS.md → Command Line Quick Reference." >&2
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+if [[ "${GROUP_TIMEOUT_ACTIVE:-}" != "1" ]]; then
+  printf 'error: %s must be run under group-timeout (global timeout). See AGENTS.md → Command Line Quick Reference.\n' "$SCRIPT_NAME" >&2
   exit 2
 fi
 

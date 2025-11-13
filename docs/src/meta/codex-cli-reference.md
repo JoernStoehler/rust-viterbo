@@ -26,7 +26,7 @@
 - **Mitigation:** Switch to deterministic chunked reads (e.g., `python3 - <<'PY' ...`) or pipe through `head`/`tail` windows sized to stay under the observed ceiling. This preserves full coverage without fighting the hidden cap.
 
 ## Practical Tips
-- **Large File Reads:** Prefer scripted chunkers (Python loop, `split -l`, `nl | sed`) so every call stays ≤10 KB. Document the chunk size in tickets when reproducibility matters.
+- **Large File Reads:** Prefer scripted chunkers (Python loop, `split -l`, `nl | sed`) so every call stays ≤10 KB. Document the chunk size in issues when reproducibility matters.
 - **Config Experiments:** Store alternate configs under `meta/codex-profiles/` (git-ignored) and symlink into `~/.codex/` to avoid polluting personal settings.
 - **Logging:** Use `tail -f .persist/codex/log/codex-tui.log` in another terminal when debugging CLI behavior; it logs every tool call with `max_output_tokens`, sandbox mode, and exit codes.
 - **Web Restrictions:** When documenting OpenAI-product behavior (like this file), gather citations from official OpenAI domains via Codex web search to satisfy project policy before paraphrasing anything else.

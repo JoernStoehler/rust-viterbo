@@ -2,7 +2,7 @@
 //! Focus sizes: m in {0, 10, 20, 50, 100}.
 //! Results: by default under target/criterion; use scripts/rust-bench.sh to copy them into
 //! data/bench/criterion for Git LFS tracking:
-//!   safe -t 300 -- bash scripts/rust-bench.sh -p viterbo
+//!   group-timeout 300 bash scripts/rust-bench.sh -p viterbo
 
 use criterion::{criterion_group, criterion_main, BatchSize, BenchmarkId, Criterion};
 use nalgebra::Vector2;

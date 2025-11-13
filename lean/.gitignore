@@ -1,0 +1,7 @@
+/.lake
+/build
+/lake-packages
+/lake-manifest.json.old
+/.elan-cache
+*.olean
+*.trace
